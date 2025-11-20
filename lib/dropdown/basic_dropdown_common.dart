@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 
 /// Widget that measures its child's size and reports it via [onChange].
 class MeasureSize extends StatefulWidget {
   final Widget child;
   final ValueChanged<Size> onChange;
+
   const MeasureSize({super.key, required this.child, required this.onChange});
 
   @override
@@ -28,6 +30,7 @@ typedef DropDownItemCallback<T> = void Function(DropDownItem<T>? selected);
 class DropDownItem<T> {
   final T value;
   final String label;
+
   const DropDownItem({required this.value, required this.label});
 }
 
@@ -36,7 +39,8 @@ abstract class SearchDropdownBase<T> extends StatefulWidget {
   final List<DropDownItem<T>> items;
   final DropDownItem<T>? selectedItem;
   final DropDownItemCallback<T> onChanged;
-  final Widget Function(BuildContext, DropDownItem<T>, bool isSelected) popupItemBuilder;
+  final Widget Function(BuildContext, DropDownItem<
+      T>, bool isSelected) popupItemBuilder;
   final InputDecoration decoration;
   final double width;
   final double maxDropdownHeight;
@@ -64,7 +68,25 @@ abstract class SearchDropdownBase<T> extends StatefulWidget {
   });
 }
 
-abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>> extends State<W> {
+/// Dropdown interaction state
+enum DropdownInteractionState {
+  /// User is not actively editing the text field
+  idle,
+
+  /// User is actively typing/editing to search
+  editing,
+}
+
+abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
+    extends State<W> {
+  // Constants for UI measurements (#6)
+  static const double _dropdownMargin = 4.0;
+  static const double _defaultFallbackItemPadding = 16.0;
+  static const double _fallbackItemTextMultiplier = 1.2;
+  static const int _maxScrollRetries = 10;
+  static const Duration _scrollAnimationDuration = Duration(milliseconds: 200);
+  static const Duration _scrollDebounceDelay = Duration(milliseconds: 150);
+
   final GlobalKey internalFieldKey = GlobalKey();
   late final TextEditingController controller;
   late final ScrollController scrollController;
@@ -74,18 +96,34 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>> exten
   final LayerLink layerLink = LayerLink();
   final OverlayPortalController overlayPortalController = OverlayPortalController();
 
-  double get fallbackItemExtent => widget.textSize * 1.2 + 16.0;
-  double get itemExtent => widget.itemHeight ?? measuredItemHeight ?? fallbackItemExtent;
+  double get fallbackItemExtent =>
+      widget.textSize * _fallbackItemTextMultiplier +
+          _defaultFallbackItemPadding;
 
-  bool isUserEditing = false;
+  double get itemExtent =>
+      widget.itemHeight ?? measuredItemHeight ?? fallbackItemExtent;
 
-  // ---- Internal selection state (source of truth) ----
+  // State management (#15 - simplified with enum)
+  DropdownInteractionState _interactionState = DropdownInteractionState.idle;
+
+  bool get isUserEditing =>
+      _interactionState == DropdownInteractionState.editing;
+
+  set isUserEditing(bool value) {
+    _interactionState = value
+        ? DropdownInteractionState.editing
+        : DropdownInteractionState.idle;
+  }
+
+  // Internal selection state (source of truth)
   DropDownItem<T>? _selected;
-  bool _squelchOnChanged = false; // gate TextField.onChanged for programmatic sets
+  bool _squelchOnChanged = false;
 
-  // Expose controlled access for subclasses in other files.
+  // Expose controlled access for subclasses in other files
   DropDownItem<T>? get internalSelected => _selected;
+
   void setInternalSelection(DropDownItem<T>? item) => _selected = item;
+
   void withSquelch(void Function() action) {
     _squelchOnChanged = true;
     try {
@@ -94,25 +132,44 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>> exten
       _squelchOnChanged = false;
     }
   }
+
   bool get squelching => _squelchOnChanged;
+
   String get selectedLabelText => _selected?.label ?? '';
 
+  // Optimized filtering (#8)
   late List<({String label, DropDownItem<T> item})> _normalizedItems;
   List<DropDownItem<T>>? _lastItemsRef;
+  List<DropDownItem<T>>? _cachedFilteredItems;
+  String _lastFilterInput = '';
 
   List<DropDownItem<T>> get filtered {
     final String input = controller.text.trim().toLowerCase();
 
     if (!identical(_lastItemsRef, widget.items)) {
       _initializeNormalizedItems();
+      _cachedFilteredItems = null;
+      _lastFilterInput = '';
     }
+
     if (!isUserEditing || input.isEmpty) {
       return widget.items;
     }
-    return _normalizedItems
+
+    // Return cached result if input hasn't changed (#8)
+    if (_lastFilterInput == input && _cachedFilteredItems != null) {
+      return _cachedFilteredItems!;
+    }
+
+    // Compute and cache filtered list
+    final result = _normalizedItems
         .where((entry) => entry.label.contains(input))
         .map((entry) => entry.item)
         .toList(growable: false);
+
+    _lastFilterInput = input;
+    _cachedFilteredItems = result;
+    return result;
   }
 
   void _initializeNormalizedItems() {
@@ -122,17 +179,19 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>> exten
         .toList(growable: false);
   }
 
+  // Scroll debouncing (#9)
+  Timer? _scrollDebounceTimer;
+
   @override
   void initState() {
     super.initState();
 
     controller = TextEditingController(text: widget.selectedItem?.label ?? '');
     scrollController = ScrollController();
-    focusNode = FocusNode()..addListener(handleFocus);
+    focusNode = FocusNode()
+      ..addListener(handleFocus);
 
-    // Initialize internal selection SoT
     _selected = widget.selectedItem;
-
     _initializeNormalizedItems();
 
     controller.addListener(() {
@@ -153,7 +212,7 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>> exten
   void attemptSelectByInput(String input) {
     final String trimmedInput = input.trim().toLowerCase();
 
-    // Find exact match (replaces firstWhereOrNull from collection package)
+    // Find exact match
     DropDownItem<T>? match;
     for (final item in widget.items) {
       if (item.label.trim().toLowerCase() == trimmedInput) {
@@ -171,7 +230,7 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>> exten
       }
       if (isUserEditing) {
         isUserEditing = false;
-        if (mounted) setState(() {});
+        _safeSetState(() {}); // #12
       }
       return;
     }
@@ -198,7 +257,7 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>> exten
       return;
     }
 
-    // Case 5: No match, no selection → optionally clear stray text only if not editing
+    // Case 5: No match, no selection → clear stray text only if not editing
     if (_selected == null && trimmedInput.isNotEmpty && !isUserEditing) {
       controller.clear();
     }
@@ -210,14 +269,6 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>> exten
 
   void handleFocus() {
     if (focusNode.hasFocus) {
-      // Isolation toggle: do NOT push caret to the end on focus.
-      // This avoids forcing EditableText's horizontal scroll to the end.
-      // Future.microtask(() {
-      //   controller.selection = TextSelection.fromPosition(
-      //     TextPosition(offset: controller.text.length),
-      //   );
-      // });
-
       if (!overlayPortalController.isShowing) {
         showOverlay();
       }
@@ -233,7 +284,7 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>> exten
     // Auto-hide if list becomes empty while typing
     if (filtered.isEmpty) {
       if (overlayPortalController.isShowing) removeOverlay();
-      if (mounted) setState(() {});
+      _safeSetState(() {}); // #12
       return;
     }
 
@@ -242,15 +293,28 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>> exten
       return;
     }
 
-    if (mounted) setState(() {});
+    _safeSetState(() {}); // #12
+
+    // Debounced scroll animation (#9)
+    _scrollDebounceTimer?.cancel();
+    _scrollDebounceTimer = Timer(_scrollDebounceDelay, () {
+      _performScrollToMatch();
+    });
+  }
+
+  void _performScrollToMatch() {
+    if (!mounted) return;
+
     try {
-      if (scrollController.hasClients && scrollController.position.hasContentDimensions) {
+      if (scrollController.hasClients &&
+          scrollController.position.hasContentDimensions) {
         final String input = controller.text.trim().toLowerCase();
-        final int idx = filtered.indexWhere((item) => item.label.toLowerCase().contains(input));
+        final int idx = filtered.indexWhere((item) =>
+            item.label.toLowerCase().contains(input));
         if (idx >= 0) {
           scrollController.animateTo(
             idx * itemExtent,
-            duration: const Duration(milliseconds: 200),
+            duration: _scrollAnimationDuration,
             curve: Curves.easeInOut,
           );
         }
@@ -280,21 +344,35 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>> exten
   }
 
   void waitThenScrollToSelected() {
-    final int si = filtered.indexWhere((it) => it.value == _selected?.value);
-    if (si < 0) return;
+    final int selectedIndex = filtered.indexWhere((it) =>
+    it.value == _selected?.value);
+    if (selectedIndex < 0) return;
+
+    int retryCount = 0;
 
     void tryScroll() {
-      if (!mounted) return;
+      if (!mounted || retryCount >= _maxScrollRetries) {
+        // #3 - Added retry limit to prevent infinite loop
+        if (retryCount >= _maxScrollRetries) {
+          debugPrint(
+              '[SCROLL] Max retries reached, aborting scroll to selected');
+        }
+        return;
+      }
+
+      retryCount++;
 
       if (widget.itemHeight == null && measuredItemHeight == null) {
         WidgetsBinding.instance.addPostFrameCallback((_) => tryScroll());
         return;
       }
-      if (!scrollController.hasClients || !scrollController.position.hasContentDimensions) {
+      if (!scrollController.hasClients ||
+          !scrollController.position.hasContentDimensions) {
         WidgetsBinding.instance.addPostFrameCallback((_) => tryScroll());
         return;
       }
-      final double target = (si * itemExtent)
+
+      final double target = (selectedIndex * itemExtent)
           .clamp(0.0, scrollController.position.maxScrollExtent);
       scrollController.jumpTo(target);
     }
@@ -309,22 +387,28 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>> exten
     final List<DropDownItem<T>> list = filtered;
     if (list.isEmpty) return const SizedBox.shrink();
 
-    final RenderBox? inputBox = (widget.inputKey ?? internalFieldKey).currentContext?.findRenderObject() as RenderBox?;
-    final MediaQueryData mq = MediaQuery.of(context);
-    final double sh = mq.size.height;
-    final double bi = mq.viewInsets.bottom;
-    const double m = 4.0;
+    final RenderBox? inputBox = (widget.inputKey ?? internalFieldKey)
+        .currentContext?.findRenderObject() as RenderBox?;
+    final MediaQueryData mediaQuery = MediaQuery.of(context);
+    final double screenHeight = mediaQuery.size.height;
+    final double bottomInset = mediaQuery.viewInsets.bottom;
     final Offset offset = inputBox?.localToGlobal(Offset.zero) ?? Offset.zero;
     final Size size = inputBox?.size ?? Size(widget.width, 40.0);
-    final double availBelow = sh - bi - (offset.dy + size.height + m);
-    final double availAbove = offset.dy - m;
-    final bool below = availBelow > widget.maxDropdownHeight / 2;
-    final double mh = (below ? availBelow : availAbove).clamp(0.0, widget.maxDropdownHeight);
+
+    // Calculate available space above and below (#13 - clear variable names)
+    final double availableBelow = screenHeight - bottomInset -
+        (offset.dy + size.height + _dropdownMargin);
+    final double availableAbove = offset.dy - _dropdownMargin;
+    final bool showBelow = availableBelow > widget.maxDropdownHeight / 2;
+    final double maxHeight = (showBelow ? availableBelow : availableAbove)
+        .clamp(0.0, widget.maxDropdownHeight);
 
     return CompositedTransformFollower(
       link: layerLink,
       showWhenUnlinked: false,
-      offset: below ? Offset(0.0, size.height + m) : Offset(0.0, -mh - m),
+      offset: showBelow
+          ? Offset(0.0, size.height + _dropdownMargin)
+          : Offset(0.0, -maxHeight - _dropdownMargin),
       child: FocusScope(
         canRequestFocus: false,
         child: GestureDetector(
@@ -334,12 +418,16 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>> exten
             elevation: widget.elevation,
             child: ConstrainedBox(
               constraints: BoxConstraints(
-                maxHeight: mh,
+                maxHeight: maxHeight,
                 minWidth: size.width,
                 maxWidth: size.width,
               ),
               child: DefaultTextStyle(
-                style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontSize: widget.textSize),
+                style: Theme
+                    .of(context)
+                    .textTheme
+                    .bodyMedium!
+                    .copyWith(fontSize: widget.textSize),
                 child: Scrollbar(
                   controller: scrollController,
                   thumbVisibility: true,
@@ -375,28 +463,29 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>> exten
     final DropDownItem<T> item = list[idx];
     final bool hover = idx == hoverIndex;
     final bool sel = item.value == _selected?.value;
+    final bool isSingleItem = list.length == 1;
 
     Widget w = widget.popupItemBuilder(context, item, sel);
     if (idx == 0 && measuredItemHeight == null) {
       w = MeasureSize(
         child: w,
         onChange: (Size s) {
-          if (mounted) {
-            setState(() => measuredItemHeight = s.height);
-          }
+          _safeSetState(() => measuredItemHeight = s.height); // #12
         },
       );
     }
 
     return MouseRegion(
       onEnter: (_) {
-        if (mounted) setState(() => hoverIndex = idx);
+        _safeSetState(() => hoverIndex = idx); // #12
       },
       onExit: (_) {
-        if (mounted) setState(() => hoverIndex = -1);
+        _safeSetState(() => hoverIndex = -1); // #12
       },
       child: InkWell(
-        hoverColor: Theme.of(context).hoverColor,
+        hoverColor: Theme
+            .of(context)
+            .hoverColor,
         onTap: () {
           withSquelch(() {
             controller.text = item.label;
@@ -406,15 +495,25 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>> exten
           dismissDropdown();
         },
         child: Container(
-          color: (hover || sel) ? Theme.of(context).hoverColor : null,
+          color: (hover || sel || isSingleItem) ? Theme
+              .of(context)
+              .hoverColor : null,
           child: w,
         ),
       ),
     );
   }
 
+  // Helper method to safely call setState (#12)
+  void _safeSetState(void Function() fn) {
+    if (mounted) {
+      setState(fn);
+    }
+  }
+
   @override
   void dispose() {
+    _scrollDebounceTimer?.cancel(); // #9 - Clean up timer
     removeOverlay();
     focusNode.removeListener(handleFocus);
     focusNode.dispose();

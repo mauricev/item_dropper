@@ -24,7 +24,18 @@ class SearchDropdown<T> extends SearchDropdownBase<T> {
 }
 
 class _SearchDropdownState<T> extends SearchDropdownBaseState<T, SearchDropdown<T>> {
-  // NEW: dedicated scroll controller for the TextField to control horizontal viewport
+  // UI Layout Constants
+  static const double _containerBorderRadius = 8.0;
+  static const double _textFieldVerticalPadding = 2.0;
+  static const double _textFieldHorizontalPadding = 12.0;
+  static const double _suffixIconWidth = 60.0;
+  static const double _iconSize = 16.0;
+  static const double _iconButtonSize = 24.0;
+  static const double _clearButtonRightPosition = 40.0;
+  static const double _arrowButtonRightPosition = 10.0;
+  static const double _scrollResetPosition = 0.0;
+
+  // Dedicated scroll controller for the TextField to control horizontal viewport
   late final ScrollController _textScrollCtrl;
 
   @override
@@ -43,7 +54,7 @@ class _SearchDropdownState<T> extends SearchDropdownBaseState<T, SearchDropdown<
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && _textScrollCtrl.hasClients) {
           try {
-            _textScrollCtrl.jumpTo(0.0);
+            _textScrollCtrl.jumpTo(_scrollResetPosition);
           } catch (_) {
             // no-op: jumpTo can throw if the position isn't attached yet
           }
@@ -85,11 +96,25 @@ class _SearchDropdownState<T> extends SearchDropdownBaseState<T, SearchDropdown<
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted && _textScrollCtrl.hasClients) {
             try {
-              _textScrollCtrl.jumpTo(0.0);
+              _textScrollCtrl.jumpTo(_scrollResetPosition);
             } catch (_) {}
           }
         });
       }
+    }
+  }
+
+  void _handleSubmit(String value) {
+    // When Enter is pressed and there's exactly one filtered item, select it
+    final filteredList = filtered;
+    if (filteredList.length == 1) {
+      final item = filteredList.first;
+      withSquelch(() {
+        controller.text = item.label;
+        controller.selection = const TextSelection.collapsed(offset: 0);
+      });
+      attemptSelectByInput(item.label);
+      dismissDropdown();
     }
   }
 
@@ -130,7 +155,7 @@ class _SearchDropdownState<T> extends SearchDropdownBaseState<T, SearchDropdown<
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
             ),
-            borderRadius: BorderRadius.circular(8.0),
+            borderRadius: BorderRadius.circular(_containerBorderRadius),
           ),
           child: SizedBox(
             width: widget.width,
@@ -153,6 +178,7 @@ class _SearchDropdownState<T> extends SearchDropdownBaseState<T, SearchDropdown<
                 controller.selection = TextSelection.collapsed(offset: textLength);
                 showOverlay();
               },
+              onSubmitted: _handleSubmit,
               onChanged: (value) {
                 if (squelching) return;
 
@@ -193,25 +219,35 @@ class _SearchDropdownState<T> extends SearchDropdownBaseState<T, SearchDropdown<
                   borderSide: BorderSide(color: widget.enabled ? Colors.blue : Colors.grey.shade400),
                 ),
                 isDense: true,
-                contentPadding: const EdgeInsets.symmetric(vertical: 2.0, horizontal: 12.0),
+                contentPadding: const EdgeInsets.symmetric(
+                  vertical: _textFieldVerticalPadding,
+                  horizontal: _textFieldHorizontalPadding,
+                ),
                 suffixIconConstraints: const BoxConstraints.tightFor(
-                  width: 60.0,                      // <-- MATCH this to suffixIcon width
-                  height: kMinInteractiveDimension, // keep touch target
+                  width: _suffixIconWidth,
+                  height: kMinInteractiveDimension,
                 ),
                 suffixIcon: SizedBox(
-                  width: 60.0, // was 80.0 -> give us 10px of play
+                  width: _suffixIconWidth,
                   height: kMinInteractiveDimension,
                   child: Stack(
                     alignment: Alignment.centerRight,
-                    clipBehavior: Clip.none, // allow slight right overflow
+                    clipBehavior: Clip.none,
                     children: [
                       Positioned(
-                        right: 20.0, // was 30.0 -> move clear 10px right
+                        right: _clearButtonRightPosition,
                         child: IconButton(
-                          icon: Icon(Icons.clear, size: 16.0, color: widget.enabled ? Colors.black : Colors.grey),
-                          iconSize: 16.0,
+                          icon: Icon(
+                            Icons.clear,
+                            size: _iconSize,
+                            color: widget.enabled ? Colors.black : Colors.grey,
+                          ),
+                          iconSize: _iconSize,
                           padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints.tightFor(width: 24.0, height: 24.0),
+                          constraints: const BoxConstraints.tightFor(
+                            width: _iconButtonSize,
+                            height: _iconButtonSize,
+                          ),
                           onPressed: widget.enabled
                               ? () {
                             withSquelch(() => controller.clear());
@@ -222,16 +258,20 @@ class _SearchDropdownState<T> extends SearchDropdownBaseState<T, SearchDropdown<
                         ),
                       ),
                       Positioned(
-                        right: -10.0, // was 0.0 -> nudge arrow 10px right
+                        right: _arrowButtonRightPosition,
                         child: IconButton(
                           icon: Icon(
-                            overlayPortalController.isShowing ? Icons.arrow_drop_up : Icons.arrow_drop_down,
-                            size: 16.0,
+                            overlayPortalController.isShowing ? Icons
+                                .arrow_drop_up : Icons.arrow_drop_down,
+                            size: _iconSize,
                             color: widget.enabled ? Colors.black : Colors.grey,
                           ),
-                          iconSize: 16.0,
+                          iconSize: _iconSize,
                           padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints.tightFor(width: 24.0, height: 24.0),
+                          constraints: const BoxConstraints.tightFor(
+                            width: _iconButtonSize,
+                            height: _iconButtonSize,
+                          ),
                           onPressed: widget.enabled
                               ? () {
                             if (overlayPortalController.isShowing) {

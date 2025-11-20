@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'basic_dropdown_common.dart';
 import 'basic_dropdown_single_select.dart';
 
-Widget popupItemBuilder(
-    BuildContext context, DropDownItem item, bool isSelected) {
+Widget popupItemBuilder<T>(BuildContext context, DropDownItem<T> item,
+    bool isSelected) {
   return Container(
     color: isSelected ? Colors.grey.shade200 : null,
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -20,21 +20,20 @@ InputDecoration returnInputDecorationForDropdown(String? hintText) {
   );
 }
 
-Widget dropDown(
-    {required double width,
-    required List<DropDownItem> listItems,
-    DropDownItem? initiallySelected,
-    required Function(DropDownItem?) onChanged,
-    String? hintText,
-    bool showKeyboard = false,
-    double? maxDropdownHeight,
-    bool enabled = true}) {
-  return SearchDropdown<dynamic>(
+Widget dropDown<T>({required double width,
+  required List<DropDownItem<T>> listItems,
+  DropDownItem<T>? initiallySelected,
+  required Function(DropDownItem<T>?) onChanged,
+  String? hintText,
+  bool showKeyboard = false,
+  double? maxDropdownHeight,
+  bool enabled = true}) {
+  return SearchDropdown<T>(
     width: width,
     items: listItems,
     selectedItem: initiallySelected,
     onChanged: onChanged,
-    popupItemBuilder: popupItemBuilder,
+    popupItemBuilder: popupItemBuilder<T>,
     decoration: returnInputDecorationForDropdown(hintText),
     showKeyboard: showKeyboard,
     textSize: 10,
