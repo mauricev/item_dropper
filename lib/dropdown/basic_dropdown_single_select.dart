@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'basic_dropdown_common.dart';
 
 class SearchDropdown<T> extends SearchDropdownBase<T> {
@@ -45,6 +46,9 @@ class _SearchDropdownState<T> extends SearchDropdownBaseState<T, SearchDropdown<
 
     // Minimal hook: when the field loses focus, reset horizontal scroll to start
     focusNode.addListener(_handleFocusSnapScroll);
+
+    // Attach keyboard event handler for arrow key navigation
+    focusNode.onKeyEvent = _handleKeyEvent;
   }
 
   void _handleFocusSnapScroll() {
@@ -105,17 +109,40 @@ class _SearchDropdownState<T> extends SearchDropdownBaseState<T, SearchDropdown<
   }
 
   void _handleSubmit(String value) {
-    // When Enter is pressed and there's exactly one filtered item, select it
-    final filteredList = filtered;
-    if (filteredList.length == 1) {
-      final item = filteredList.first;
-      withSquelch(() {
-        controller.text = item.label;
-        controller.selection = const TextSelection.collapsed(offset: 0);
-      });
-      attemptSelectByInput(item.label);
-      dismissDropdown();
+    // When Enter is pressed, select keyboard-highlighted item or the single item
+    if (keyboardHighlightIndex >= 0) {
+      // Keyboard navigation is active, select highlighted item
+      selectKeyboardHighlightedItem();
+    } else {
+      // No keyboard navigation, check for single item auto-select
+      final filteredList = filtered;
+      if (filteredList.length == 1) {
+        final item = filteredList.first;
+        withSquelch(() {
+          controller.text = item.label;
+          controller.selection = const TextSelection.collapsed(offset: 0);
+        });
+        attemptSelectByInput(item.label);
+        dismissDropdown();
+      }
     }
+  }
+
+  KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
+    // Handle both KeyDownEvent (initial press) and KeyRepeatEvent (auto-repeat when held)
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
+
+    if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+      handleArrowDown();
+      return KeyEventResult.handled;
+    } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+      handleArrowUp();
+      return KeyEventResult.handled;
+    }
+
+    return KeyEventResult.ignored;
   }
 
   @override

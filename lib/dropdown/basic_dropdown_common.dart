@@ -93,6 +93,7 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
   late final FocusNode focusNode;
   double? measuredItemHeight;
   int hoverIndex = -1;
+  int keyboardHighlightIndex = -1; // Track keyboard navigation highlight
   final LayerLink layerLink = LayerLink();
   final OverlayPortalController overlayPortalController = OverlayPortalController();
 
@@ -284,7 +285,7 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
     // Auto-hide if list becomes empty while typing
     if (filtered.isEmpty) {
       if (overlayPortalController.isShowing) removeOverlay();
-      _safeSetState(() {}); // #12
+      _safeSetState(() {});
       return;
     }
 
@@ -293,7 +294,9 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
       return;
     }
 
-    _safeSetState(() {}); // #12
+    // Reset keyboard highlight when search results change
+    keyboardHighlightIndex = -1;
+    _safeSetState(() {});
 
     // Debounced scroll animation (#9)
     _scrollDebounceTimer?.cancel();
@@ -341,6 +344,72 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
       overlayPortalController.hide();
     }
     hoverIndex = -1;
+    keyboardHighlightIndex = -1;
+  }
+
+  // Arrow key navigation methods
+  void handleArrowDown() {
+    final list = filtered;
+    if (list.isEmpty) return;
+
+    _safeSetState(() {
+      if (keyboardHighlightIndex < list.length - 1) {
+        keyboardHighlightIndex++;
+      } else {
+        keyboardHighlightIndex = 0; // Wrap to top
+      }
+    });
+    _scrollToKeyboardHighlight();
+  }
+
+  void handleArrowUp() {
+    final list = filtered;
+    if (list.isEmpty) return;
+
+    _safeSetState(() {
+      if (keyboardHighlightIndex > 0) {
+        keyboardHighlightIndex--;
+      } else {
+        keyboardHighlightIndex = list.length - 1; // Wrap to bottom
+      }
+    });
+    _scrollToKeyboardHighlight();
+  }
+
+  void _scrollToKeyboardHighlight() {
+    if (keyboardHighlightIndex < 0) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      try {
+        if (scrollController.hasClients &&
+            scrollController.position.hasContentDimensions) {
+          final double target = (keyboardHighlightIndex * itemExtent)
+              .clamp(0.0, scrollController.position.maxScrollExtent);
+          scrollController.animateTo(
+            target,
+            duration: _scrollAnimationDuration,
+            curve: Curves.easeInOut,
+          );
+        }
+      } catch (e) {
+        debugPrint('[KEYBOARD NAV] Scroll failed: $e');
+      }
+    });
+  }
+
+  void selectKeyboardHighlightedItem() {
+    final list = filtered;
+    if (keyboardHighlightIndex >= 0 && keyboardHighlightIndex < list.length) {
+      final item = list[keyboardHighlightIndex];
+      withSquelch(() {
+        controller.text = item.label;
+        controller.selection = const TextSelection.collapsed(offset: 0);
+      });
+      attemptSelectByInput(item.label);
+      dismissDropdown();
+    }
   }
 
   void waitThenScrollToSelected() {
@@ -464,6 +533,7 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
     final bool hover = idx == hoverIndex;
     final bool sel = item.value == _selected?.value;
     final bool isSingleItem = list.length == 1;
+    final bool keyboardHighlighted = idx == keyboardHighlightIndex;
 
     Widget w = widget.popupItemBuilder(context, item, sel);
     if (idx == 0 && measuredItemHeight == null) {
@@ -495,7 +565,7 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
           dismissDropdown();
         },
         child: Container(
-          color: (hover || sel || isSingleItem) ? Theme
+          color: (hover || sel || isSingleItem || keyboardHighlighted) ? Theme
               .of(context)
               .hoverColor : null,
           child: w,
