@@ -163,6 +163,11 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
   static const Duration _scrollDebounceDelay = Duration(milliseconds: 150);
   static const double kDropdownItemHeight = 40.0;
   static const double kCenteringDivisor = 2.0;
+  static const double kDropdownMargin = 4.0;
+  static const double kDropdownElevation = 4.0;
+  static const double kDropdownFontSize = 12.0;
+  static const double kDropdownMaxHeightDivisor = 2.0;
+  static const double kSelectedItemBackgroundAlpha = 0.12;
 
   // Shared highlight index constants
   static const int kNoHighlight = -1;
@@ -586,7 +591,7 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
           .of(context)
           .colorScheme
           .secondary
-          .withValues(alpha: 0.12);
+          .withValues(alpha: kSelectedItemBackgroundAlpha);
     } else {
       background = null;
     }
@@ -633,8 +638,8 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
   }) {
     if (items.isEmpty) return const SizedBox.shrink();
 
-    // For positioning and size calculations, we need the input field's RenderBox
-    // But for the dropdown width constraint, we use the passed width parameter
+    // For positioning calculations, we need the input field's RenderBox
+    // For width, we ONLY use the passed width parameter (never measure)
     final RenderBox? inputBox = context.findRenderObject() as RenderBox?;
     if (inputBox == null) return const SizedBox.shrink();
 
@@ -642,14 +647,13 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
     final double screenHeight = mediaQuery.size.height;
     final EdgeInsets viewInsets = mediaQuery.viewInsets;
     final Offset inputFieldOffset = inputBox.localToGlobal(Offset.zero);
-    final Size dropdownSize = Size(width,
-        inputBox.size.height); // Use the passed width, not the measured width
+    final double inputFieldHeight = inputBox.size.height;
 
-    const double dropdownMargin = 4.0;
     final double availableSpaceBelow = screenHeight - viewInsets.bottom -
-        (inputFieldOffset.dy + dropdownSize.height + dropdownMargin);
-    final double availableSpaceAbove = inputFieldOffset.dy - dropdownMargin;
-    final bool shouldShowBelow = availableSpaceBelow > maxDropdownHeight / 2;
+        (inputFieldOffset.dy + inputFieldHeight + kDropdownMargin);
+    final double availableSpaceAbove = inputFieldOffset.dy - kDropdownMargin;
+    final bool shouldShowBelow = availableSpaceBelow >
+        maxDropdownHeight / kDropdownMaxHeightDivisor;
     final double constrainedMaxHeight = (shouldShowBelow
         ? availableSpaceBelow
         : availableSpaceAbove).clamp(
@@ -659,24 +663,24 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
       link: layerLink,
       showWhenUnlinked: false,
       offset: shouldShowBelow
-          ? Offset(0.0, dropdownSize.height + dropdownMargin)
-          : Offset(0.0, -constrainedMaxHeight - dropdownMargin),
+          ? Offset(0.0, inputFieldHeight + kDropdownMargin)
+          : Offset(0.0, -constrainedMaxHeight - kDropdownMargin),
       child: FocusScope(
         canRequestFocus: false,
         child: Material(
-          elevation: 4.0,
+          elevation: kDropdownElevation,
           child: ConstrainedBox(
             constraints: BoxConstraints(
               maxHeight: constrainedMaxHeight,
-              minWidth: dropdownSize.width,
-              maxWidth: dropdownSize.width,
+              minWidth: width,
+              maxWidth: width,
             ),
             child: DefaultTextStyle(
               style: Theme
                   .of(context)
                   .textTheme
                   .bodyMedium!
-                  .copyWith(fontSize: 12.0),
+                  .copyWith(fontSize: kDropdownFontSize),
               child: Scrollbar(
                 controller: scrollController,
                 thumbVisibility: true,

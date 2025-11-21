@@ -304,7 +304,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
       link: _layerLink,
       child: OverlayPortal(
         controller: _overlayController,
-        overlayChildBuilder: (context) => _buildOverlay(),
+        overlayChildBuilder: (_) => _buildOverlay(),
         child: _buildInputField(),
       ),
     );
@@ -435,7 +435,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
             SearchDropdownBaseState.defaultDropdownPopupItemBuilder;
 
     return SearchDropdownBaseState.sharedDropdownOverlay(
-      context: context,
+      context: this.context,
       items: filteredItems,
       maxDropdownHeight: widget.maxDropdownHeight,
       width: widget.width,
