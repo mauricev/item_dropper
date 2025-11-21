@@ -254,64 +254,29 @@ class _SearchDropdownState<T> extends SearchDropdownBaseState<T, SearchDropdown<
                   width: _suffixIconWidth,
                   height: kMinInteractiveDimension,
                 ),
-                suffixIcon: SizedBox(
-                  width: _suffixIconWidth,
-                  height: kMinInteractiveDimension,
-                  child: Stack(
-                    alignment: Alignment.centerRight,
-                    clipBehavior: Clip.none,
-                    children: [
-                      Positioned(
-                        right: _clearButtonRightPosition,
-                        child: IconButton(
-                          icon: Icon(
-                            Icons.clear,
-                            size: _iconSize,
-                            color: widget.enabled ? Colors.black : Colors.grey,
-                          ),
-                          iconSize: _iconSize,
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints.tightFor(
-                            width: _iconButtonSize,
-                            height: _iconButtonSize,
-                          ),
-                          onPressed: widget.enabled
-                              ? () {
-                            withSquelch(() => controller.clear());
-                            attemptSelectByInput('');
-                            if (mounted) setState(() => hoverIndex = -1);
-                          }
-                              : null,
-                        ),
-                      ),
-                      Positioned(
-                        right: _arrowButtonRightPosition,
-                        child: IconButton(
-                          icon: Icon(
-                            overlayPortalController.isShowing ? Icons
-                                .arrow_drop_up : Icons.arrow_drop_down,
-                            size: _iconSize,
-                            color: widget.enabled ? Colors.black : Colors.grey,
-                          ),
-                          iconSize: _iconSize,
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints.tightFor(
-                            width: _iconButtonSize,
-                            height: _iconButtonSize,
-                          ),
-                          onPressed: widget.enabled
-                              ? () {
-                            if (overlayPortalController.isShowing) {
-                              dismissDropdown();
-                            } else {
-                              focusNode.requestFocus();
-                            }
-                          }
-                              : null,
-                        ),
-                      ),
-                    ],
-                  ),
+                suffixIcon: DropdownSuffixIcons(
+                  isDropdownShowing: overlayPortalController.isShowing,
+                  enabled: widget.enabled,
+                  onClearPressed: () {
+                    withSquelch(() => controller.clear());
+                    attemptSelectByInput('');
+                    if (mounted) {
+                      setState(() =>
+                      hoverIndex = SearchDropdownBaseState.kNoHighlight);
+                    }
+                  },
+                  onArrowPressed: () {
+                    if (overlayPortalController.isShowing) {
+                      dismissDropdown();
+                    } else {
+                      focusNode.requestFocus();
+                    }
+                  },
+                  iconSize: _iconSize,
+                  suffixIconWidth: _suffixIconWidth,
+                  iconButtonSize: _iconButtonSize,
+                  clearButtonRightPosition: _clearButtonRightPosition,
+                  arrowButtonRightPosition: _arrowButtonRightPosition,
                 ),
               ),
             ),

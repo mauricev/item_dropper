@@ -63,8 +63,8 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   final OverlayPortalController _overlayController = OverlayPortalController();
 
   List<DropDownItem<T>> _selected = [];
-  int _keyboardHighlightIndex = -1;
-  int _hoverIndex = -1;
+  int _keyboardHighlightIndex = SearchDropdownBaseState.kNoHighlight;
+  int _hoverIndex = SearchDropdownBaseState.kNoHighlight;
   double? _measuredItemHeight;
 
   // Filtering
@@ -107,27 +107,31 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
     if (_lastFilterInput == input && _cachedFilteredItems != null) {
       return _cachedFilteredItems!;
     }
-    final result = _normalizedItems
+    final List<DropDownItem<T>> filteredResult = _normalizedItems
         .where((entry) =>
     entry.label.contains(input) &&
         !removed.contains(entry.item.value))
         .map((entry) => entry.item)
         .toList(growable: false);
     _lastFilterInput = input;
-    _cachedFilteredItems = result;
-    return result;
+    _cachedFilteredItems = filteredResult;
+    return filteredResult;
   }
 
   bool _isSelected(DropDownItem<T> item) {
     return _selected.any((selected) => selected.value == item.value);
   }
 
+  void _clearHighlights() {
+    _keyboardHighlightIndex = SearchDropdownBaseState.kNoHighlight;
+    _hoverIndex = SearchDropdownBaseState.kNoHighlight;
+  }
+
   void _handleFocusChange() {
     if (_focusNode.hasFocus) {
       if (!_overlayController.isShowing && _filtered.isNotEmpty) {
         setState(() {
-          _hoverIndex = -1;
-          _keyboardHighlightIndex = -1;
+          _clearHighlights();
         });
         _overlayController.show();
       }
@@ -142,13 +146,12 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   void _updateSelection(void Function() selectionUpdate) {
     setState(() {
       selectionUpdate();
-      final filtered = _filtered;
-      if (filtered.isNotEmpty) {
+      final List<DropDownItem<T>> remainingFilteredItems = _filtered;
+      if (remainingFilteredItems.isNotEmpty) {
         _keyboardHighlightIndex = 0;
-        _hoverIndex = -1;
+        _hoverIndex = SearchDropdownBaseState.kNoHighlight;
       } else {
-        _keyboardHighlightIndex = -1;
-        _hoverIndex = -1;
+        _clearHighlights();
         _overlayController.hide();
       }
     });
@@ -162,8 +165,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
         _selected.add(item);
       }
       // After selection, clear highlights
-      _keyboardHighlightIndex = -1;
-      _hoverIndex = -1;
+      _clearHighlights();
     });
   }
 
@@ -171,8 +173,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
     _updateSelection(() {
       _selected.removeWhere((selected) => selected.value == item.value);
       // After removal, clear highlights
-      _keyboardHighlightIndex = -1;
-      _hoverIndex = -1;
+      _clearHighlights();
     });
   }
 
@@ -199,14 +200,15 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   }
 
   void _handleArrowDown() {
-    final list = _filtered;
-    if (list.isEmpty) return;
+    final List<DropDownItem<T>> filteredItems = _filtered;
+    if (filteredItems.isEmpty) return;
     // If no keyboard highlight but hover index exists, start from there
-    if (_keyboardHighlightIndex == -1 && _hoverIndex != -1) {
+    if (_keyboardHighlightIndex == SearchDropdownBaseState.kNoHighlight &&
+        _hoverIndex != SearchDropdownBaseState.kNoHighlight) {
       _keyboardHighlightIndex = _hoverIndex;
     }
     setState(() {
-      if (_keyboardHighlightIndex < list.length - 1) {
+      if (_keyboardHighlightIndex < filteredItems.length - 1) {
         _keyboardHighlightIndex++;
       } else {
         _keyboardHighlightIndex = 0;
@@ -216,26 +218,28 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   }
 
   void _handleArrowUp() {
-    final list = _filtered;
-    if (list.isEmpty) return;
+    final List<DropDownItem<T>> filteredItems = _filtered;
+    if (filteredItems.isEmpty) return;
     // If no keyboard highlight but hover index exists, start from there
-    if (_keyboardHighlightIndex == -1 && _hoverIndex != -1) {
+    if (_keyboardHighlightIndex == SearchDropdownBaseState.kNoHighlight &&
+        _hoverIndex != SearchDropdownBaseState.kNoHighlight) {
       _keyboardHighlightIndex = _hoverIndex;
     }
     setState(() {
       if (_keyboardHighlightIndex > 0) {
         _keyboardHighlightIndex--;
       } else {
-        _keyboardHighlightIndex = list.length - 1;
+        _keyboardHighlightIndex = filteredItems.length - 1;
       }
     });
     _scrollToKeyboardHighlight();
   }
 
   void _handleEnter() {
-    final list = _filtered;
-    if (_keyboardHighlightIndex >= 0 && _keyboardHighlightIndex < list.length) {
-      _toggleItem(list[_keyboardHighlightIndex]);
+    final List<DropDownItem<T>> filteredItems = _filtered;
+    if (_keyboardHighlightIndex >= 0 &&
+        _keyboardHighlightIndex < filteredItems.length) {
+      _toggleItem(filteredItems[_keyboardHighlightIndex]);
       // highlight will be set in _toggleItem
     }
   }
@@ -307,11 +311,10 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   }
 
   Widget _buildInputField() {
-    return SizedBox(
-        width: widget.width,
-        child: Container(
-          key: widget.inputKey ?? _fieldKey,
-          decoration: BoxDecoration(
+    return Container(
+      key: widget.inputKey ?? _fieldKey,
+      width: widget.width,
+      decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [Colors.white, Colors.grey.shade200],
               begin: Alignment.topCenter,
@@ -328,8 +331,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
                 onChanged: (value) {
                   setState(() {
                     _cachedFilteredItems = null;
-                    _hoverIndex = -1;
-                    _keyboardHighlightIndex = -1;
+                    _clearHighlights();
                   });
 
                   if (_filtered.isNotEmpty &&
@@ -374,77 +376,35 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
                     width: _suffixIconWidth,
                     height: kMinInteractiveDimension,
                   ),
-                  suffixIcon: SizedBox(
-                    width: _suffixIconWidth,
-                    height: kMinInteractiveDimension,
-                    child: Stack(
-                      alignment: Alignment.centerRight,
-                      clipBehavior: Clip.none,
-                      children: [
-                        Positioned(
-                          right: _clearButtonRightPosition,
-                          child: IconButton(
-                            icon: Icon(
-                              Icons.clear,
-                              size: _iconSize,
-                              color: widget.enabled ? Colors.black : Colors
-                                  .grey,
-                            ),
-                            iconSize: _iconSize,
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints.tightFor(
-                              width: _iconButtonSize,
-                              height: _iconButtonSize,
-                            ),
-                            onPressed: widget.enabled
-                                ? () {
-                              setState(() {
-                                _searchController.clear();
-                                _selected.clear();
-                                _cachedFilteredItems = null;
-                                _lastFilterInput = '';
-                                widget.onChanged([]);
-                              });
-                            }
-                                : null,
-                          ),
-                        ),
-                        Positioned(
-                          right: _arrowButtonRightPosition,
-                          child: IconButton(
-                            icon: Icon(
-                              _overlayController.isShowing
-                                  ? Icons.arrow_drop_up
-                                  : Icons.arrow_drop_down,
-                              size: _iconSize,
-                              color: widget.enabled ? Colors.black : Colors
-                                  .grey,
-                            ),
-                            iconSize: _iconSize,
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints.tightFor(
-                              width: _iconButtonSize,
-                              height: _iconButtonSize,
-                            ),
-                            onPressed: widget.enabled
-                                ? () {
-                              if (_overlayController.isShowing) {
-                                _focusNode.unfocus();
-                              } else {
-                                _focusNode.requestFocus();
-                              }
-                            }
-                                : null,
-                          ),
-                        ),
-                      ],
-                    ),
+                  suffixIcon: DropdownSuffixIcons(
+                    isDropdownShowing: _overlayController.isShowing,
+                    enabled: widget.enabled,
+                    onClearPressed: () {
+                      setState(() {
+                        _searchController.clear();
+                        _selected.clear();
+                        _cachedFilteredItems = null;
+                        _lastFilterInput = '';
+                        widget.onChanged([]);
+                      });
+                    },
+                    onArrowPressed: () {
+                      if (_overlayController.isShowing) {
+                        _focusNode.unfocus();
+                      } else {
+                        _focusNode.requestFocus();
+                      }
+                    },
+                    iconSize: _iconSize,
+                    suffixIconWidth: _suffixIconWidth,
+                    iconButtonSize: _iconButtonSize,
+                    clearButtonRightPosition: _clearButtonRightPosition,
+                    arrowButtonRightPosition: _arrowButtonRightPosition,
                   ),
                 ),
               ),
             ],
           ),
-        ),
     );
   }
 
@@ -469,12 +429,14 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   }
 
   Widget _buildOverlay() {
-    final list = _filtered;
-    final builderToUse = widget.popupItemBuilder ??
-        SearchDropdownBaseState.defaultDropdownPopupItemBuilder;
+    final List<DropDownItem<T>> filteredItems = _filtered;
+    final Widget Function(BuildContext, DropDownItem<T>, bool) itemBuilder =
+        widget.popupItemBuilder ??
+            SearchDropdownBaseState.defaultDropdownPopupItemBuilder;
+
     return SearchDropdownBaseState.sharedDropdownOverlay(
       context: context,
-      items: list,
+      items: filteredItems,
       maxDropdownHeight: widget.maxDropdownHeight,
       width: widget.width,
       controller: _overlayController,
@@ -482,32 +444,39 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
       layerLink: _layerLink,
       hoverIndex: _hoverIndex,
       keyboardHighlightIndex: _keyboardHighlightIndex,
-      onHover: (idx) => setState(() => _hoverIndex = idx),
+      onHover: (int itemIndex) => setState(() => _hoverIndex = itemIndex),
       onItemTap: _toggleItem,
-      isSelected: (item) => _selected.any((x) => x.value == item.value),
-      builder: (context, item, isSelected) {
-        final idx = list.indexWhere((x) => x.value == item.value);
+      isSelected: (DropDownItem<T> item) =>
+          _selected.any((x) => x.value == item.value),
+      builder: (BuildContext builderContext, DropDownItem<T> item,
+          bool isSelected) {
+        final int itemIndex = filteredItems.indexWhere((x) =>
+        x.value == item.value);
         return MouseRegion(
           onEnter: (_) {
-            if (_keyboardHighlightIndex != -1) {
+            if (_keyboardHighlightIndex !=
+                SearchDropdownBaseState.kNoHighlight) {
               setState(() {
-                _keyboardHighlightIndex = -1;
-                _hoverIndex = idx;
+                _clearHighlights();
+                _hoverIndex = itemIndex;
               });
             } else {
-              setState(() => _hoverIndex = idx);
+              setState(() => _hoverIndex = itemIndex);
             }
           },
-          onExit: (_) => setState(() => _hoverIndex = -1),
-          child: SearchDropdownBaseState.sharedDropdownItem(
-            context: context,
+          onExit: (_) =>
+              setState(() =>
+              _hoverIndex = SearchDropdownBaseState.kNoHighlight),
+          child: SearchDropdownBaseState.sharedDropdownItem<T>(
+            context: builderContext,
             item: item,
-            isHovered: idx == _hoverIndex && _keyboardHighlightIndex == -1,
-            isKeyboardHighlighted: idx == _keyboardHighlightIndex,
+            isHovered: itemIndex == _hoverIndex &&
+                _keyboardHighlightIndex == SearchDropdownBaseState.kNoHighlight,
+            isKeyboardHighlighted: itemIndex == _keyboardHighlightIndex,
             isSelected: isSelected,
-            isSingleItem: list.length == 1,
+            isSingleItem: filteredItems.length == 1,
             onTap: () => _toggleItem(item),
-            builder: builderToUse,
+            builder: itemBuilder,
           ),
         );
       },

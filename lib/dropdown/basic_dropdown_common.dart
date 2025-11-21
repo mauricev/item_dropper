@@ -16,9 +16,9 @@ class MeasureSizeState extends State<MeasureSize> {
   @override
   Widget build(BuildContext context) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final ro = context.findRenderObject();
-      if (ro is RenderBox) {
-        widget.onChange(ro.size);
+      final RenderObject? renderObject = context.findRenderObject();
+      if (renderObject is RenderBox) {
+        widget.onChange(renderObject.size);
       }
     });
     return widget.child;
@@ -32,6 +32,83 @@ class DropDownItem<T> {
   final String label;
 
   const DropDownItem({required this.value, required this.label});
+}
+
+/// Shared suffix icon widget for dropdown fields
+/// Displays clear and dropdown arrow buttons
+class DropdownSuffixIcons extends StatelessWidget {
+  final bool isDropdownShowing;
+  final bool enabled;
+  final VoidCallback onClearPressed;
+  final VoidCallback onArrowPressed;
+  final double iconSize;
+  final double suffixIconWidth;
+  final double iconButtonSize;
+  final double clearButtonRightPosition;
+  final double arrowButtonRightPosition;
+
+  const DropdownSuffixIcons({
+    super.key,
+    required this.isDropdownShowing,
+    required this.enabled,
+    required this.onClearPressed,
+    required this.onArrowPressed,
+    this.iconSize = 16.0,
+    this.suffixIconWidth = 60.0,
+    this.iconButtonSize = 24.0,
+    this.clearButtonRightPosition = 40.0,
+    this.arrowButtonRightPosition = 10.0,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: suffixIconWidth,
+      height: kMinInteractiveDimension,
+      child: Stack(
+        alignment: Alignment.centerRight,
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(
+            right: clearButtonRightPosition,
+            child: IconButton(
+              icon: Icon(
+                Icons.clear,
+                size: iconSize,
+                color: enabled ? Colors.black : Colors.grey,
+              ),
+              iconSize: iconSize,
+              padding: EdgeInsets.zero,
+              constraints: BoxConstraints.tightFor(
+                width: iconButtonSize,
+                height: iconButtonSize,
+              ),
+              onPressed: enabled ? onClearPressed : null,
+            ),
+          ),
+          Positioned(
+            right: arrowButtonRightPosition,
+            child: IconButton(
+              icon: Icon(
+                isDropdownShowing
+                    ? Icons.arrow_drop_up
+                    : Icons.arrow_drop_down,
+                size: iconSize,
+                color: enabled ? Colors.black : Colors.grey,
+              ),
+              iconSize: iconSize,
+              padding: EdgeInsets.zero,
+              constraints: BoxConstraints.tightFor(
+                width: iconButtonSize,
+                height: iconButtonSize,
+              ),
+              onPressed: enabled ? onArrowPressed : null,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 abstract class SearchDropdownBase<T> extends StatefulWidget {
@@ -87,7 +164,7 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
   static const double kDropdownItemHeight = 40.0;
   static const double kCenteringDivisor = 2.0;
 
-  // Highlight index constants
+  // Shared highlight index constants
   static const int kNoHighlight = -1;
 
   final GlobalKey internalFieldKey = GlobalKey();
@@ -166,14 +243,14 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
     }
 
     // Compute and cache filtered list
-    final result = _normalizedItems
+    final List<DropDownItem<T>> filteredResult = _normalizedItems
         .where((entry) => entry.label.contains(input))
         .map((entry) => entry.item)
         .toList(growable: false);
 
     _lastFilterInput = input;
-    _cachedFilteredItems = result;
-    return result;
+    _cachedFilteredItems = filteredResult;
+    return filteredResult;
   }
 
   void _initializeNormalizedItems() {
@@ -359,15 +436,15 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
   }
 
   void handleArrowDown() {
-    final list = filtered;
-    if (list.isEmpty) return;
+    final List<DropDownItem<T>> filteredItems = filtered;
+    if (filteredItems.isEmpty) return;
     if (keyboardHighlightIndex == kNoHighlight && hoverIndex != kNoHighlight) {
       keyboardHighlightIndex = hoverIndex;
     }
     _safeSetState(() {
       hoverIndex = kNoHighlight;
       // Only move down if not at bottom
-      if (keyboardHighlightIndex < list.length - 1) {
+      if (keyboardHighlightIndex < filteredItems.length - 1) {
         keyboardHighlightIndex++;
       }
       // else do nothing (stop at bottom)
@@ -376,8 +453,8 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
   }
 
   void handleArrowUp() {
-    final list = filtered;
-    if (list.isEmpty) return;
+    final List<DropDownItem<T>> filteredItems = filtered;
+    if (filteredItems.isEmpty) return;
     if (keyboardHighlightIndex == kNoHighlight && hoverIndex != kNoHighlight) {
       keyboardHighlightIndex = hoverIndex;
     }
@@ -428,14 +505,16 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
   }
 
   void selectKeyboardHighlightedItem() {
-    final list = filtered;
-    if (keyboardHighlightIndex >= 0 && keyboardHighlightIndex < list.length) {
-      final item = list[keyboardHighlightIndex];
+    final List<DropDownItem<T>> filteredItems = filtered;
+    if (keyboardHighlightIndex >= 0 &&
+        keyboardHighlightIndex < filteredItems.length) {
+      final DropDownItem<
+          T> selectedItem = filteredItems[keyboardHighlightIndex];
       withSquelch(() {
-        controller.text = item.label;
+        controller.text = selectedItem.label;
         controller.selection = const TextSelection.collapsed(offset: 0);
       });
-      attemptSelectByInput(item.label);
+      attemptSelectByInput(selectedItem.label);
       dismissDropdown();
     }
   }
@@ -507,7 +586,7 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
           .of(context)
           .colorScheme
           .secondary
-          .withOpacity(0.12);
+          .withValues(alpha: 0.12);
     } else {
       background = null;
     }
@@ -554,38 +633,43 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
   }) {
     if (items.isEmpty) return const SizedBox.shrink();
 
+    // For positioning and size calculations, we need the input field's RenderBox
+    // But for the dropdown width constraint, we use the passed width parameter
     final RenderBox? inputBox = context.findRenderObject() as RenderBox?;
     if (inputBox == null) return const SizedBox.shrink();
 
-    final mediaQuery = MediaQuery.of(context);
-    final screenHeight = mediaQuery.size.height;
-    final viewInsets = mediaQuery.viewInsets;
-    final offset = inputBox.localToGlobal(Offset.zero);
-    final size = inputBox.size;
+    final MediaQueryData mediaQuery = MediaQuery.of(context);
+    final double screenHeight = mediaQuery.size.height;
+    final EdgeInsets viewInsets = mediaQuery.viewInsets;
+    final Offset inputFieldOffset = inputBox.localToGlobal(Offset.zero);
+    final Size dropdownSize = Size(width,
+        inputBox.size.height); // Use the passed width, not the measured width
 
-    const dropdownMargin = 4.0;
-    final availableBelow = screenHeight - viewInsets.bottom -
-        (offset.dy + size.height + dropdownMargin);
-    final availableAbove = offset.dy - dropdownMargin;
-    final showBelow = availableBelow > maxDropdownHeight / 2;
-    final maxHeight = (showBelow ? availableBelow : availableAbove).clamp(
+    const double dropdownMargin = 4.0;
+    final double availableSpaceBelow = screenHeight - viewInsets.bottom -
+        (inputFieldOffset.dy + dropdownSize.height + dropdownMargin);
+    final double availableSpaceAbove = inputFieldOffset.dy - dropdownMargin;
+    final bool shouldShowBelow = availableSpaceBelow > maxDropdownHeight / 2;
+    final double constrainedMaxHeight = (shouldShowBelow
+        ? availableSpaceBelow
+        : availableSpaceAbove).clamp(
         0.0, maxDropdownHeight);
 
     return CompositedTransformFollower(
       link: layerLink,
       showWhenUnlinked: false,
-      offset: showBelow
-          ? Offset(0.0, size.height + dropdownMargin)
-          : Offset(0.0, -maxHeight - dropdownMargin),
+      offset: shouldShowBelow
+          ? Offset(0.0, dropdownSize.height + dropdownMargin)
+          : Offset(0.0, -constrainedMaxHeight - dropdownMargin),
       child: FocusScope(
         canRequestFocus: false,
         child: Material(
           elevation: 4.0,
           child: ConstrainedBox(
             constraints: BoxConstraints(
-              maxHeight: maxHeight,
-              minWidth: size.width,
-              maxWidth: size.width,
+              maxHeight: constrainedMaxHeight,
+              minWidth: dropdownSize.width,
+              maxWidth: dropdownSize.width,
             ),
             child: DefaultTextStyle(
               style: Theme
@@ -622,10 +706,10 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
   }
 
   Widget buildDropdownOverlay() {
-    final List<DropDownItem<T>> list = filtered;
+    final List<DropDownItem<T>> filteredItems = filtered;
     return SearchDropdownBaseState.sharedDropdownOverlay(
       context: context,
-      items: list,
+      items: filteredItems,
       maxDropdownHeight: widget.maxDropdownHeight,
       width: widget.width,
       controller: overlayPortalController,
@@ -633,8 +717,8 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
       layerLink: layerLink,
       hoverIndex: hoverIndex,
       keyboardHighlightIndex: keyboardHighlightIndex,
-      onHover: (idx) => _safeSetState(() => hoverIndex = idx),
-      onItemTap: (item) {
+      onHover: (int itemIndex) => _safeSetState(() => hoverIndex = itemIndex),
+      onItemTap: (DropDownItem<T> item) {
         withSquelch(() {
           controller.text = item.label;
           controller.selection = const TextSelection.collapsed(offset: 0);
@@ -642,24 +726,26 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
         attemptSelectByInput(item.label);
         dismissDropdown();
       },
-      isSelected: (item) => item.value == _selected?.value,
-      builder: (context, item, isSelected) {
-        final idx = list.indexWhere((x) => x.value == item.value);
+      isSelected: (DropDownItem<T> item) => item.value == _selected?.value,
+      builder: (BuildContext builderContext, DropDownItem<T> item,
+          bool isSelected) {
+        final int itemIndex = filteredItems.indexWhere((x) =>
+        x.value == item.value);
         return MouseRegion(
           onEnter: (_) {
             if (keyboardHighlightIndex == kNoHighlight) {
-              _safeSetState(() => hoverIndex = idx);
+              _safeSetState(() => hoverIndex = itemIndex);
             }
           },
           onExit: (_) => _safeSetState(() => hoverIndex = kNoHighlight),
-          child: SearchDropdownBaseState.sharedDropdownItem(
-            context: context,
+          child: SearchDropdownBaseState.sharedDropdownItem<T>(
+            context: builderContext,
             item: item,
-            isHovered: idx == hoverIndex && keyboardHighlightIndex ==
+            isHovered: itemIndex == hoverIndex && keyboardHighlightIndex ==
                 kNoHighlight,
-            isKeyboardHighlighted: idx == keyboardHighlightIndex,
+            isKeyboardHighlighted: itemIndex == keyboardHighlightIndex,
             isSelected: isSelected,
-            isSingleItem: list.length == 1,
+            isSingleItem: filteredItems.length == 1,
             onTap: () {
               withSquelch(() {
                 controller.text = item.label;
@@ -669,7 +755,7 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
               dismissDropdown();
             },
             builder: widget.popupItemBuilder ??
-                SearchDropdownBaseState.defaultDropdownPopupItemBuilder,
+                SearchDropdownBaseState.defaultDropdownPopupItemBuilder<T>,
           ),
         );
       },
