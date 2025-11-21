@@ -427,11 +427,6 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
     final offset = inputBox.localToGlobal(Offset.zero);
     final size = inputBox.size;
 
-    debugPrint('[MULTI-SELECT] Input box size: ${size.width} x ${size.height}');
-    debugPrint('[MULTI-SELECT] Widget width: ${widget.width}');
-    debugPrint('[MULTI-SELECT] Setting dropdown constraints: minWidth=${size
-        .width}, maxWidth=${size.width}');
-
     const dropdownMargin = 4.0;
     final availableBelow = screenHeight - bottomInset -
         (offset.dy + size.height + dropdownMargin);
@@ -474,41 +469,34 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
     final isHovered = index == _hoverIndex;
     final isKeyboardHighlighted = index == _keyboardHighlightIndex;
 
-    return SizedBox(
-      width: widget.width,
-      child: MouseRegion(
-        onEnter: (_) => setState(() => _hoverIndex = index),
-        onExit: (_) => setState(() => _hoverIndex = -1),
-        child: InkWell(
-          onTap: () => _toggleItem(item),
-          child: Container(
-            width: widget.width,
-            color: (isHovered || isKeyboardHighlighted)
-                ? Theme
-                .of(context)
-                .hoverColor
-                : null,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Checkbox(
-                  value: isSelected,
-                  onChanged: widget.enabled
-                      ? (value) => _toggleItem(item)
-                      : null,
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hoverIndex = index),
+      onExit: (_) => setState(() => _hoverIndex = -1),
+      child: InkWell(
+        onTap: () => _toggleItem(item),
+        child: Container(
+          color: (isHovered || isKeyboardHighlighted)
+              ? Theme
+              .of(context)
+              .hoverColor
+              : null,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            children: [
+              Checkbox(
+                value: isSelected,
+                onChanged: widget.enabled ? (value) => _toggleItem(item) : null,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  item.label,
+                  style: TextStyle(
+                      fontSize: widget.textSize, color: Colors.black),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    item.label,
-                    style: TextStyle(
-                        fontSize: widget.textSize, color: Colors.black),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
