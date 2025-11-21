@@ -121,6 +121,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   }
 
   void _updateSelection(void Function() selectionUpdate) {
+    debugPrint("_updateSelection");
     setState(() {
       selectionUpdate();
       final List<DropDownItem<T>> remainingFilteredItems = _filtered;
@@ -137,6 +138,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   }
 
   void _toggleItem(DropDownItem<T> item) {
+    debugPrint("_toggleItem");
     _updateSelection(() {
       if (!_isSelected(item)) {
         _selected.add(item);
@@ -418,7 +420,10 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
             isKeyboardHighlighted: itemIndex == _keyboardHighlightIndex,
             isSelected: isSelected,
             isSingleItem: filteredItems.length == 1,
-            onTap: () => _toggleItem(item),
+            onTap: () {
+              debugPrint("multi buildDropdownItem onTap called!");
+              _toggleItem(item);
+            },
             builder: itemBuilder,
           ),
         );

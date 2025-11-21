@@ -262,10 +262,6 @@ class DropdownRenderUtils {
     final RenderBox? inputBox = context.findRenderObject() as RenderBox?;
     if (inputBox == null) return const SizedBox.shrink();
 
-    // Debug: print the actual RenderBox size
-    debugPrint('[DROPDOWN OVERLAY] RenderBox size: ${inputBox
-        .size}, passed width: $width');
-
     final MediaQueryData mediaQuery = MediaQuery.of(context);
     final double screenHeight = mediaQuery.size.height;
     final EdgeInsets viewInsets = mediaQuery.viewInsets;
@@ -304,10 +300,9 @@ class DropdownRenderUtils {
               ),
               child: DefaultTextStyle(
                 style: Theme
-                    .of(context)
-                    .textTheme
-                    .bodyMedium!
-                    .copyWith(fontSize: DropdownConstants.kDropdownFontSize),
+                    .of(context).textTheme.bodyMedium!.copyWith(
+                  fontSize: DropdownConstants.kDropdownFontSize,
+                ),
                 child: Scrollbar(
                   controller: scrollController,
                   thumbVisibility: true,
@@ -317,16 +312,7 @@ class DropdownRenderUtils {
                     itemCount: items.length,
                     itemExtent: DropdownConstants.kDropdownItemHeight,
                     itemBuilder: (c, i) =>
-                        buildDropdownItem(
-                          context: context,
-                          item: items[i],
-                          isHovered: i == hoverIndex,
-                          isKeyboardHighlighted: i == keyboardHighlightIndex,
-                          isSelected: isSelected(items[i]),
-                          isSingleItem: items.length == 1,
-                          onTap: () => onItemTap(items[i]),
-                          builder: builder,
-                        ),
+                        builder(context, items[i], isSelected(items[i]),
                   ),
                 ),
               ),
@@ -334,6 +320,7 @@ class DropdownRenderUtils {
           ),
         ),
       ),
+      )
     );
   }
 }

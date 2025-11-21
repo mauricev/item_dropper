@@ -355,10 +355,6 @@ class _SearchDropdownState<T> extends State<SearchDropdown<T>> {
 
     void tryScroll() {
       if (!mounted || retryCount >= DropdownConstants.kMaxScrollRetries) {
-        if (retryCount >= DropdownConstants.kMaxScrollRetries) {
-          debugPrint(
-              '[SCROLL] Max retries reached, aborting scroll to selected');
-        }
         return;
       }
 
@@ -382,8 +378,6 @@ class _SearchDropdownState<T> extends State<SearchDropdown<T>> {
           .clamp(0.0, _scrollController.position.maxScrollExtent);
 
       _scrollController.jumpTo(centeredOffset);
-      debugPrint(
-          '[SCROLL] Scrolled to selected item at index $selectedIndex, offset: $centeredOffset');
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -487,6 +481,7 @@ class _SearchDropdownState<T> extends State<SearchDropdown<T>> {
             isSelected: isSelected,
             isSingleItem: filteredItems.length == 1,
             onTap: () {
+              debugPrint("buildDropdownOverlay");
               _withSquelch(() {
                 _controller.text = item.label;
                 _controller.selection =
