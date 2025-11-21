@@ -253,8 +253,11 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   }
 
   Widget _buildInputField() {
-    return Container(
-      decoration: BoxDecoration(
+    return SizedBox(
+        width: widget.width,
+        child: Container(
+          key: widget.inputKey ?? _fieldKey,
+          decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [Colors.white, Colors.grey.shade200],
           begin: Alignment.topCenter,
@@ -262,13 +265,10 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
         ),
         borderRadius: BorderRadius.circular(_containerBorderRadius),
       ),
-      child: SizedBox(
-        width: widget.width,
-        child: Stack(
-          children: [
-            TextField(
-              key: widget.inputKey ?? _fieldKey,
-              controller: _searchController,
+      child: Stack(
+        children: [
+          TextField(
+            controller: _searchController,
               focusNode: _focusNode,
               style: TextStyle(fontSize: widget.textSize),
               onChanged: (value) {
@@ -385,9 +385,9 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
                 ),
               ),
             ),
-          ],
-        ),
+        ],
       ),
+    ),
     );
   }
 
@@ -427,6 +427,11 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
     final offset = inputBox.localToGlobal(Offset.zero);
     final size = inputBox.size;
 
+    debugPrint('[MULTI-SELECT] Input box size: ${size.width} x ${size.height}');
+    debugPrint('[MULTI-SELECT] Widget width: ${widget.width}');
+    debugPrint('[MULTI-SELECT] Setting dropdown constraints: minWidth=${size
+        .width}, maxWidth=${size.width}');
+
     const dropdownMargin = 4.0;
     final availableBelow = screenHeight - bottomInset -
         (offset.dy + size.height + dropdownMargin);
@@ -441,19 +446,22 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
       offset: showBelow
           ? Offset(0.0, size.height + dropdownMargin)
           : Offset(0.0, -maxHeight - dropdownMargin),
-      child: Material(
-        elevation: widget.elevation,
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxHeight: maxHeight,
-            minWidth: size.width,
-            maxWidth: size.width,
-          ),
-          child: ListView.builder(
-            controller: _scrollController,
-            padding: EdgeInsets.zero,
-            itemCount: list.length,
-            itemBuilder: (context, index) => _buildDropdownItem(list, index),
+      child: Align(
+        alignment: Alignment.topLeft,
+        child: Material(
+          elevation: widget.elevation,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: maxHeight,
+              minWidth: size.width,
+              maxWidth: size.width,
+            ),
+            child: ListView.builder(
+              controller: _scrollController,
+              padding: EdgeInsets.zero,
+              itemCount: list.length,
+              itemBuilder: (context, index) => _buildDropdownItem(list, index),
+            ),
           ),
         ),
       ),
@@ -466,34 +474,41 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
     final isHovered = index == _hoverIndex;
     final isKeyboardHighlighted = index == _keyboardHighlightIndex;
 
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hoverIndex = index),
-      onExit: (_) => setState(() => _hoverIndex = -1),
-      child: InkWell(
-        onTap: () => _toggleItem(item),
-        child: Container(
-          color: (isHovered || isKeyboardHighlighted)
-              ? Theme
-              .of(context)
-              .hoverColor
-              : null,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Row(
-            children: [
-              Checkbox(
-                value: isSelected,
-                onChanged: widget.enabled ? (value) => _toggleItem(item) : null,
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  item.label,
-                  style: TextStyle(
-                      fontSize: widget.textSize, color: Colors.black),
+    return SizedBox(
+      width: widget.width,
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _hoverIndex = index),
+        onExit: (_) => setState(() => _hoverIndex = -1),
+        child: InkWell(
+          onTap: () => _toggleItem(item),
+          child: Container(
+            width: widget.width,
+            color: (isHovered || isKeyboardHighlighted)
+                ? Theme
+                .of(context)
+                .hoverColor
+                : null,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Checkbox(
+                  value: isSelected,
+                  onChanged: widget.enabled
+                      ? (value) => _toggleItem(item)
+                      : null,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
-              ),
-            ],
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    item.label,
+                    style: TextStyle(
+                        fontSize: widget.textSize, color: Colors.black),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

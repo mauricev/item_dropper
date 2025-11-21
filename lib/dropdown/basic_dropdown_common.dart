@@ -464,6 +464,10 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
     final Offset offset = inputBox?.localToGlobal(Offset.zero) ?? Offset.zero;
     final Size size = inputBox?.size ?? Size(widget.width, 40.0);
 
+    debugPrint(
+        '[SINGLE-SELECT] Input box size: ${size.width} x ${size.height}');
+    debugPrint('[SINGLE-SELECT] Widget width: ${widget.width}');
+
     // Calculate available space above and below (#13 - clear variable names)
     final double availableBelow = screenHeight - bottomInset -
         (offset.dy + size.height + _dropdownMargin);
