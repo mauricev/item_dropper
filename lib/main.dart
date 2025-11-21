@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 import 'dropdown/basic_dropdown_common.dart';
 import 'dropdown/basic_dropdown_caller.dart';
+import 'dropdown/basic_dropdown_multi_caller.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -51,11 +52,14 @@ class DropdownTestPage extends StatefulWidget {
 }
 
 class _DropdownTestPageState extends State<DropdownTestPage> {
-  // Selected values for each dropdown
+  // Selected values for single-select dropdowns
   DropDownItem<String>? selectedFruit;
   DropDownItem<int>? selectedNumber;
   DropDownItem<String>? selectedCountry;
   DropDownItem<int>? selectedLargeItem;
+
+  // Selected values for multi-select dropdown
+  List<DropDownItem<String>> selectedFruits = [];
 
   // Generate dummy data
   late final List<DropDownItem<String>> fruits;
@@ -247,6 +251,27 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
                   ),
                 ),
 
+                const SizedBox(height: 32),
+
+                // Dropdown 5: Multi-Select Fruits
+                _buildMultiDropdownSection(
+                  title: '5. Multi-Select Fruits (8 items)',
+                  description: 'Select multiple fruits with chip-based display',
+                  selectedValues: selectedFruits.map((e) => e.label).join(', '),
+                  dropdown: multiDropDown<String>(
+                    width: 500,
+                    listItems: fruits,
+                    initiallySelected: selectedFruits,
+                    onChanged: (items) {
+                      setState(() {
+                        selectedFruits = items;
+                      });
+                    },
+                    hintText: 'Select fruits...',
+                    maxDropdownHeight: 250,
+                  ),
+                ),
+
                 const SizedBox(height: 48),
 
                 // Display selected values
@@ -267,13 +292,17 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
                       ),
                       const SizedBox(height: 12),
                       _buildSelectionRow(
-                          'Fruit:', selectedFruit?.label ?? 'None'),
+                          'Single Fruit:', selectedFruit?.label ?? 'None'),
                       _buildSelectionRow(
                           'Number:', selectedNumber?.label ?? 'None'),
                       _buildSelectionRow(
                           'Country:', selectedCountry?.label ?? 'None'),
                       _buildSelectionRow(
                           'Large Item:', selectedLargeItem?.label ?? 'None'),
+                      _buildSelectionRow(
+                          'Multi Fruits:', selectedFruits.isEmpty
+                          ? 'None'
+                          : selectedFruits.map((e) => e.label).join(', ')),
                     ],
                   ),
                 ),
@@ -331,6 +360,60 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
               child: Text(
                 'Selected: $selectedValue',
                 style: TextStyle(fontSize: 12, color: Colors.green.shade800),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMultiDropdownSection({
+    required String title,
+    required String description,
+    required String selectedValues,
+    required Widget dropdown,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade300),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.shade200,
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            description,
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+          ),
+          const SizedBox(height: 16),
+          dropdown,
+          if (selectedValues.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: Colors.blue.shade200),
+              ),
+              child: Text(
+                'Selected: $selectedValues',
+                style: TextStyle(fontSize: 12, color: Colors.blue.shade800),
               ),
             ),
           ],
