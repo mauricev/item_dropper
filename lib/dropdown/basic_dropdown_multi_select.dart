@@ -63,16 +63,11 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   final OverlayPortalController _overlayController = OverlayPortalController();
 
   List<DropDownItem<T>> _selected = [];
-  int _keyboardHighlightIndex = SearchDropdownBaseState.kNoHighlight;
-  int _hoverIndex = SearchDropdownBaseState.kNoHighlight;
-  double? _measuredItemHeight;
+  int _keyboardHighlightIndex = DropdownConstants.kNoHighlight;
+  int _hoverIndex = DropdownConstants.kNoHighlight;
 
-  // Filtering
-  late List<({String label, DropDownItem<T> item})> _normalizedItems;
-  List<DropDownItem<T>>? _cachedFilteredItems;
-  String _lastFilterInput = '';
-
-  double get _itemExtent => widget.itemHeight ?? _measuredItemHeight ?? 40.0;
+  // Use shared filter utils
+  final DropdownFilterUtils<T> _filterUtils = DropdownFilterUtils<T>();
 
   @override
   void initState() {
@@ -84,38 +79,20 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
       ..addListener(_handleFocusChange);
 
     _selected = List.from(widget.selectedItems);
-    _initializeNormalizedItems();
+    _filterUtils.initializeItems(widget.items);
 
     _focusNode.onKeyEvent = _handleKeyEvent;
   }
 
-  void _initializeNormalizedItems() {
-    _normalizedItems = widget.items
-        .map((item) => (label: item.label.trim().toLowerCase(), item: item))
-        .toList(growable: false);
-  }
-
   List<DropDownItem<T>> get _filtered {
-    final String input = _searchController.text.trim().toLowerCase();
     // Filter out already selected items
-    final Set removed = _selected.map((item) => item.value).toSet();
-    if (input.isEmpty) {
-      return widget.items
-          .where((item) => !removed.contains(item.value))
-          .toList();
-    }
-    if (_lastFilterInput == input && _cachedFilteredItems != null) {
-      return _cachedFilteredItems!;
-    }
-    final List<DropDownItem<T>> filteredResult = _normalizedItems
-        .where((entry) =>
-    entry.label.contains(input) &&
-        !removed.contains(entry.item.value))
-        .map((entry) => entry.item)
-        .toList(growable: false);
-    _lastFilterInput = input;
-    _cachedFilteredItems = filteredResult;
-    return filteredResult;
+    final Set<T> excludeValues = _selected.map((item) => item.value).toSet();
+    return _filterUtils.getFiltered(
+      widget.items,
+      _searchController.text,
+      isUserEditing: true, // always filter in multi-select
+      excludeValues: excludeValues,
+    );
   }
 
   bool _isSelected(DropDownItem<T> item) {
@@ -123,8 +100,8 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   }
 
   void _clearHighlights() {
-    _keyboardHighlightIndex = SearchDropdownBaseState.kNoHighlight;
-    _hoverIndex = SearchDropdownBaseState.kNoHighlight;
+    _keyboardHighlightIndex = DropdownConstants.kNoHighlight;
+    _hoverIndex = DropdownConstants.kNoHighlight;
   }
 
   void _handleFocusChange() {
@@ -149,7 +126,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
       final List<DropDownItem<T>> remainingFilteredItems = _filtered;
       if (remainingFilteredItems.isNotEmpty) {
         _keyboardHighlightIndex = 0;
-        _hoverIndex = SearchDropdownBaseState.kNoHighlight;
+        _hoverIndex = DropdownConstants.kNoHighlight;
       } else {
         _clearHighlights();
         _overlayController.hide();
@@ -200,39 +177,35 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   }
 
   void _handleArrowDown() {
-    final List<DropDownItem<T>> filteredItems = _filtered;
-    if (filteredItems.isEmpty) return;
-    // If no keyboard highlight but hover index exists, start from there
-    if (_keyboardHighlightIndex == SearchDropdownBaseState.kNoHighlight &&
-        _hoverIndex != SearchDropdownBaseState.kNoHighlight) {
-      _keyboardHighlightIndex = _hoverIndex;
-    }
+    _keyboardHighlightIndex = DropdownKeyboardNavigation.handleArrowDown(
+      _keyboardHighlightIndex,
+      _hoverIndex,
+      _filtered.length,
+    );
     setState(() {
-      if (_keyboardHighlightIndex < filteredItems.length - 1) {
-        _keyboardHighlightIndex++;
-      } else {
-        _keyboardHighlightIndex = 0;
-      }
+      _hoverIndex = DropdownConstants.kNoHighlight;
     });
-    _scrollToKeyboardHighlight();
+    DropdownKeyboardNavigation.scrollToHighlight(
+      highlightIndex: _keyboardHighlightIndex,
+      scrollController: _scrollController,
+      mounted: mounted,
+    );
   }
 
   void _handleArrowUp() {
-    final List<DropDownItem<T>> filteredItems = _filtered;
-    if (filteredItems.isEmpty) return;
-    // If no keyboard highlight but hover index exists, start from there
-    if (_keyboardHighlightIndex == SearchDropdownBaseState.kNoHighlight &&
-        _hoverIndex != SearchDropdownBaseState.kNoHighlight) {
-      _keyboardHighlightIndex = _hoverIndex;
-    }
+    _keyboardHighlightIndex = DropdownKeyboardNavigation.handleArrowUp(
+      _keyboardHighlightIndex,
+      _hoverIndex,
+      _filtered.length,
+    );
     setState(() {
-      if (_keyboardHighlightIndex > 0) {
-        _keyboardHighlightIndex--;
-      } else {
-        _keyboardHighlightIndex = filteredItems.length - 1;
-      }
+      _hoverIndex = DropdownConstants.kNoHighlight;
     });
-    _scrollToKeyboardHighlight();
+    DropdownKeyboardNavigation.scrollToHighlight(
+      highlightIndex: _keyboardHighlightIndex,
+      scrollController: _scrollController,
+      mounted: mounted,
+    );
   }
 
   void _handleEnter() {
@@ -242,40 +215,6 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
       _toggleItem(filteredItems[_keyboardHighlightIndex]);
       // highlight will be set in _toggleItem
     }
-  }
-
-  void _scrollToKeyboardHighlight() {
-    if (_keyboardHighlightIndex < 0) return;
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-
-      try {
-        if (_scrollController.hasClients &&
-            _scrollController.position.hasContentDimensions) {
-          final double itemTop = _keyboardHighlightIndex * _itemExtent;
-          final double itemBottom = itemTop + _itemExtent;
-          final double viewportStart = _scrollController.offset;
-          final double viewportEnd = viewportStart +
-              _scrollController.position.viewportDimension;
-          if (itemTop < viewportStart) {
-            _scrollController.animateTo(
-              itemTop,
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeInOut,
-            );
-          } else if (itemBottom > viewportEnd) {
-            _scrollController.animateTo(
-              itemBottom - _scrollController.position.viewportDimension,
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeInOut,
-            );
-          }
-        }
-      } catch (e) {
-        debugPrint('[MULTI][KEYBOARD NAV] Scroll failed: $e');
-      }
-    });
   }
 
   @override
@@ -300,111 +239,110 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
 
   @override
   Widget build(BuildContext context) {
-    return CompositedTransformTarget(
-      link: _layerLink,
-      child: OverlayPortal(
-        controller: _overlayController,
-        overlayChildBuilder: (_) => _buildOverlay(),
-        child: _buildInputField(),
-      ),
+    return DropdownWithOverlay(
+      layerLink: _layerLink,
+      overlayController: _overlayController,
+      fieldKey: widget.inputKey ?? _fieldKey,
+      onDismiss: () {
+        _focusNode.unfocus();
+        if (_overlayController.isShowing) {
+          _overlayController.hide();
+        }
+      },
+      overlay: _buildOverlay(),
+      inputField: _buildInputField(),
     );
   }
 
   Widget _buildInputField() {
     return Container(
-      key: widget.inputKey ?? _fieldKey,
-      width: widget.width,
       decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Colors.white, Colors.grey.shade200],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-            ),
-            borderRadius: BorderRadius.circular(_containerBorderRadius),
-          ),
-          child: Stack(
-            children: [
-              TextField(
-                controller: _searchController,
-                focusNode: _focusNode,
-                style: TextStyle(fontSize: widget.textSize),
-                onChanged: (value) {
-                  setState(() {
-                    _cachedFilteredItems = null;
-                    _clearHighlights();
-                  });
+        gradient: LinearGradient(
+          colors: [Colors.white, Colors.grey.shade200],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+        borderRadius: BorderRadius.circular(_containerBorderRadius),
+      ),
+      child: SizedBox(
+        width: widget.width,
+        child: TextField(
+          key: widget.inputKey ?? _fieldKey,
+          controller: _searchController,
+          focusNode: _focusNode,
+          style: TextStyle(fontSize: widget.textSize),
+          onChanged: (value) {
+            setState(() {
+              _filterUtils.clearCache();
+              _clearHighlights();
+            });
 
-                  if (_filtered.isNotEmpty &&
-                      !_overlayController.isShowing) {
-                    _overlayController.show();
-                  } else if (_filtered.isEmpty &&
-                      _overlayController.isShowing) {
-                    _overlayController.hide();
-                  }
-                },
-                decoration: InputDecoration(
-                  hintText: widget.decoration.hintText ?? 'Search...',
-                  hintStyle: widget.decoration.hintStyle,
-                  filled: false,
-                  enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(
-                        color: widget.enabled ? Colors.black45 : Colors.grey
-                            .shade400),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderSide: BorderSide(
-                        color: widget.enabled ? Colors.blue : Colors.grey
-                            .shade400),
-                  ),
-                  isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(
-                    vertical: _textFieldVerticalPadding,
-                    horizontal: _textFieldHorizontalPadding,
-                  ),
-                  // Show chips as a prefix instead
-                  prefix: _selected.isEmpty ? null : Padding(
-                    padding: const EdgeInsets.only(right: 4),
-                    child: Wrap(
-                      spacing: _chipSpacing,
-                      runSpacing: _chipSpacing,
-                      children: _selected
-                          .map((item) => _buildChip(item))
-                          .toList(),
-                    ),
-                  ),
-                  suffixIconConstraints: const BoxConstraints.tightFor(
-                    width: _suffixIconWidth,
-                    height: kMinInteractiveDimension,
-                  ),
-                  suffixIcon: DropdownSuffixIcons(
-                    isDropdownShowing: _overlayController.isShowing,
-                    enabled: widget.enabled,
-                    onClearPressed: () {
-                      setState(() {
-                        _searchController.clear();
-                        _selected.clear();
-                        _cachedFilteredItems = null;
-                        _lastFilterInput = '';
-                        widget.onChanged([]);
-                      });
-                    },
-                    onArrowPressed: () {
-                      if (_overlayController.isShowing) {
-                        _focusNode.unfocus();
-                      } else {
-                        _focusNode.requestFocus();
-                      }
-                    },
-                    iconSize: _iconSize,
-                    suffixIconWidth: _suffixIconWidth,
-                    iconButtonSize: _iconButtonSize,
-                    clearButtonRightPosition: _clearButtonRightPosition,
-                    arrowButtonRightPosition: _arrowButtonRightPosition,
-                  ),
-                ),
+            if (_filtered.isNotEmpty && !_overlayController.isShowing) {
+              _overlayController.show();
+            } else if (_filtered.isEmpty && _overlayController.isShowing) {
+              _overlayController.hide();
+            }
+          },
+          decoration: InputDecoration(
+            hintText: widget.decoration.hintText ?? 'Search...',
+            hintStyle: widget.decoration.hintStyle,
+            filled: false,
+            enabledBorder: OutlineInputBorder(
+              borderSide: BorderSide(
+                  color: widget.enabled ? Colors.black45 : Colors.grey
+                      .shade400),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderSide: BorderSide(
+                  color: widget.enabled ? Colors.blue : Colors.grey.shade400),
+            ),
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(
+              vertical: _textFieldVerticalPadding,
+              horizontal: _textFieldHorizontalPadding,
+            ),
+            // Show chips as a prefix instead
+            prefix: _selected.isEmpty
+                ? null
+                : Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: Wrap(
+                spacing: _chipSpacing,
+                runSpacing: _chipSpacing,
+                children: _selected.map((item) => _buildChip(item)).toList(),
               ),
-            ],
+            ),
+            suffixIconConstraints: const BoxConstraints.tightFor(
+              width: _suffixIconWidth,
+              height: kMinInteractiveDimension,
+            ),
+            suffixIcon: DropdownSuffixIcons(
+              isDropdownShowing: _overlayController.isShowing,
+              enabled: widget.enabled,
+              onClearPressed: () {
+                setState(() {
+                  _searchController.clear();
+                  _selected.clear();
+                  _filterUtils.clearCache();
+                  widget.onChanged([]);
+                });
+              },
+              onArrowPressed: () {
+                if (_overlayController.isShowing) {
+                  _focusNode.unfocus();
+                } else {
+                  _focusNode.requestFocus();
+                }
+              },
+              iconSize: _iconSize,
+              suffixIconWidth: _suffixIconWidth,
+              iconButtonSize: _iconButtonSize,
+              clearButtonRightPosition: _clearButtonRightPosition,
+              arrowButtonRightPosition: _arrowButtonRightPosition,
+            ),
           ),
+        ),
+      ),
     );
   }
 
@@ -432,10 +370,15 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
     final List<DropDownItem<T>> filteredItems = _filtered;
     final Widget Function(BuildContext, DropDownItem<T>, bool) itemBuilder =
         widget.popupItemBuilder ??
-            SearchDropdownBaseState.defaultDropdownPopupItemBuilder;
+            DropdownRenderUtils.defaultDropdownPopupItemBuilder;
 
-    return SearchDropdownBaseState.sharedDropdownOverlay(
-      context: this.context,
+    // Get the input field's context for proper positioning
+    final BuildContext? inputContext = (widget.inputKey ?? _fieldKey)
+        .currentContext;
+    if (inputContext == null) return const SizedBox.shrink();
+
+    return DropdownRenderUtils.buildDropdownOverlay(
+      context: inputContext,
       items: filteredItems,
       maxDropdownHeight: widget.maxDropdownHeight,
       width: widget.width,
@@ -455,7 +398,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
         return MouseRegion(
           onEnter: (_) {
             if (_keyboardHighlightIndex !=
-                SearchDropdownBaseState.kNoHighlight) {
+                DropdownConstants.kNoHighlight) {
               setState(() {
                 _clearHighlights();
                 _hoverIndex = itemIndex;
@@ -466,12 +409,12 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
           },
           onExit: (_) =>
               setState(() =>
-              _hoverIndex = SearchDropdownBaseState.kNoHighlight),
-          child: SearchDropdownBaseState.sharedDropdownItem<T>(
+              _hoverIndex = DropdownConstants.kNoHighlight),
+          child: DropdownRenderUtils.buildDropdownItem<T>(
             context: builderContext,
             item: item,
             isHovered: itemIndex == _hoverIndex &&
-                _keyboardHighlightIndex == SearchDropdownBaseState.kNoHighlight,
+                _keyboardHighlightIndex == DropdownConstants.kNoHighlight,
             isKeyboardHighlighted: itemIndex == _keyboardHighlightIndex,
             isSelected: isSelected,
             isSingleItem: filteredItems.length == 1,

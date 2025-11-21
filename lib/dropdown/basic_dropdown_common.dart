@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 
 /// Widget that measures its child's size and reports it via [onChange].
@@ -111,466 +110,86 @@ class DropdownSuffixIcons extends StatelessWidget {
   }
 }
 
-abstract class SearchDropdownBase<T> extends StatefulWidget {
-  final GlobalKey? inputKey;
-  final List<DropDownItem<T>> items;
-  final DropDownItem<T>? selectedItem;
-  final DropDownItemCallback<T> onChanged;
-  final Widget Function(BuildContext, DropDownItem<T>, bool)? popupItemBuilder;
-  final InputDecoration decoration;
-  final double width;
-  final double maxDropdownHeight;
-  final double elevation;
-  final bool showKeyboard;
-  final double textSize;
-  final double? itemHeight;
-  final bool enabled;
-
-  const SearchDropdownBase({
-    super.key,
-    this.inputKey,
-    required this.items,
-    this.selectedItem,
-    required this.onChanged,
-    this.popupItemBuilder,
-    required this.decoration,
-    required this.width,
-    this.maxDropdownHeight = 200.0,
-    this.elevation = 4.0,
-    this.showKeyboard = false,
-    this.textSize = 12.0,
-    this.itemHeight,
-    this.enabled = true,
-  });
-}
-
-/// Dropdown interaction state
-enum DropdownInteractionState {
-  /// User is not actively editing the text field
-  idle,
-
-  /// User is actively typing/editing to search
-  editing,
-}
-
-abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
-    extends State<W> {
-  // Constants for UI measurements (#6)
-  static const double _defaultFallbackItemPadding = 16.0;
-  static const double _fallbackItemTextMultiplier = 1.2;
-  static const int _maxScrollRetries = 10;
-  static const Duration _scrollAnimationDuration = Duration(milliseconds: 200);
-  static const Duration _scrollDebounceDelay = Duration(milliseconds: 150);
+/// Shared UI constants for dropdown components
+class DropdownConstants {
+  // Layout constants
   static const double kDropdownItemHeight = 40.0;
-  static const double kCenteringDivisor = 2.0;
   static const double kDropdownMargin = 4.0;
   static const double kDropdownElevation = 4.0;
   static const double kDropdownFontSize = 12.0;
   static const double kDropdownMaxHeightDivisor = 2.0;
   static const double kSelectedItemBackgroundAlpha = 0.12;
-
-  // Shared highlight index constants
   static const int kNoHighlight = -1;
 
-  final GlobalKey internalFieldKey = GlobalKey();
-  late final TextEditingController controller;
-  late final ScrollController scrollController;
-  late final FocusNode focusNode;
-  double? measuredItemHeight;
-  int hoverIndex = kNoHighlight;
-  int keyboardHighlightIndex = kNoHighlight; // Track keyboard navigation highlight
-  final LayerLink layerLink = LayerLink();
-  final OverlayPortalController overlayPortalController = OverlayPortalController();
+  // Scroll constants
+  static const double kDefaultFallbackItemPadding = 16.0;
+  static const double kFallbackItemTextMultiplier = 1.2;
+  static const int kMaxScrollRetries = 10;
+  static const Duration kScrollAnimationDuration = Duration(milliseconds: 200);
+  static const Duration kScrollDebounceDelay = Duration(milliseconds: 150);
+  static const double kCenteringDivisor = 2.0;
+}
 
-  double get fallbackItemExtent =>
-      widget.textSize * _fallbackItemTextMultiplier +
-          _defaultFallbackItemPadding;
+/// Shared widget that wraps dropdown input fields with overlay functionality
+class DropdownWithOverlay extends StatelessWidget {
+  final LayerLink layerLink;
+  final OverlayPortalController overlayController;
+  final GlobalKey fieldKey;
+  final Widget inputField;
+  final Widget overlay;
+  final VoidCallback onDismiss;
 
-  double get itemExtent =>
-      widget.itemHeight ?? measuredItemHeight ?? fallbackItemExtent;
-
-  // State management (#15 - simplified with enum)
-  DropdownInteractionState _interactionState = DropdownInteractionState.idle;
-
-  bool get isUserEditing =>
-      _interactionState == DropdownInteractionState.editing;
-
-  set isUserEditing(bool value) {
-    _interactionState = value
-        ? DropdownInteractionState.editing
-        : DropdownInteractionState.idle;
-  }
-
-  // Internal selection state (source of truth)
-  DropDownItem<T>? _selected;
-  bool _squelchOnChanged = false;
-
-  // Expose controlled access for subclasses in other files
-  DropDownItem<T>? get internalSelected => _selected;
-
-  void setInternalSelection(DropDownItem<T>? item) => _selected = item;
-
-  void withSquelch(void Function() action) {
-    _squelchOnChanged = true;
-    try {
-      action();
-    } finally {
-      _squelchOnChanged = false;
-    }
-  }
-
-  bool get squelching => _squelchOnChanged;
-
-  String get selectedLabelText => _selected?.label ?? '';
-
-  // Optimized filtering (#8)
-  late List<({String label, DropDownItem<T> item})> _normalizedItems;
-  List<DropDownItem<T>>? _lastItemsRef;
-  List<DropDownItem<T>>? _cachedFilteredItems;
-  String _lastFilterInput = '';
-
-  List<DropDownItem<T>> get filtered {
-    final String input = controller.text.trim().toLowerCase();
-
-    if (!identical(_lastItemsRef, widget.items)) {
-      _initializeNormalizedItems();
-      _cachedFilteredItems = null;
-      _lastFilterInput = '';
-    }
-
-    if (!isUserEditing || input.isEmpty) {
-      return widget.items;
-    }
-
-    // Return cached result if input hasn't changed (#8)
-    if (_lastFilterInput == input && _cachedFilteredItems != null) {
-      return _cachedFilteredItems!;
-    }
-
-    // Compute and cache filtered list
-    final List<DropDownItem<T>> filteredResult = _normalizedItems
-        .where((entry) => entry.label.contains(input))
-        .map((entry) => entry.item)
-        .toList(growable: false);
-
-    _lastFilterInput = input;
-    _cachedFilteredItems = filteredResult;
-    return filteredResult;
-  }
-
-  void _initializeNormalizedItems() {
-    _lastItemsRef = widget.items;
-    _normalizedItems = widget.items
-        .map((item) => (label: item.label.trim().toLowerCase(), item: item))
-        .toList(growable: false);
-  }
-
-  // Scroll debouncing (#9)
-  Timer? _scrollDebounceTimer;
+  const DropdownWithOverlay({
+    super.key,
+    required this.layerLink,
+    required this.overlayController,
+    required this.fieldKey,
+    required this.inputField,
+    required this.overlay,
+    required this.onDismiss,
+  });
 
   @override
-  void initState() {
-    super.initState();
-
-    controller = TextEditingController(text: widget.selectedItem?.label ?? '');
-    scrollController = ScrollController();
-    focusNode = FocusNode()
-      ..addListener(handleFocus);
-
-    _selected = widget.selectedItem;
-    _initializeNormalizedItems();
-
-    controller.addListener(() {
-      if (focusNode.hasFocus) {
-        if (!isUserEditing) isUserEditing = true;
-        handleSearch();
-      }
-    });
+  Widget build(BuildContext context) {
+    return CompositedTransformTarget(
+      link: layerLink,
+      child: OverlayPortal(
+        controller: overlayController,
+        overlayChildBuilder: (context) =>
+            Stack(
+              children: [
+                // Dismiss dropdown when clicking outside the text field
+                Positioned.fill(
+                  child: Listener(
+                    behavior: HitTestBehavior.translucent,
+                    onPointerDown: (event) {
+                      final RenderBox? renderBox =
+                      fieldKey.currentContext?.findRenderObject() as RenderBox?;
+                      if (renderBox != null) {
+                        final Offset offset = renderBox.localToGlobal(
+                            Offset.zero);
+                        final Size size = renderBox.size;
+                        final Rect fieldRect = offset & size;
+                        if (!fieldRect.contains(event.position)) {
+                          onDismiss();
+                        }
+                      }
+                    },
+                  ),
+                ),
+                overlay,
+              ],
+            ),
+        child: inputField,
+      ),
+    );
   }
+}
 
-  void _setSelected(DropDownItem<T>? newVal) {
-    if (_selected?.value != newVal?.value) {
-      _selected = newVal;
-      widget.onChanged(newVal);
-    }
-  }
-
-  void attemptSelectByInput(String input) {
-    final String trimmedInput = input.trim().toLowerCase();
-
-    // Find exact match
-    DropDownItem<T>? match;
-    for (final item in widget.items) {
-      if (item.label.trim().toLowerCase() == trimmedInput) {
-        match = item;
-        break;
-      }
-    }
-
-    final String currentSelected = _selected?.label.trim().toLowerCase() ?? '';
-
-    // Case 1: Exact match → select
-    if (match != null) {
-      if (_selected?.value != match.value) {
-        _setSelected(match);
-      }
-      if (isUserEditing) {
-        isUserEditing = false;
-        _safeSetState(() {}); // #12
-      }
-      return;
-    }
-
-    // Case 2: Empty input → clear selection
-    if (trimmedInput.isEmpty) {
-      _setSelected(null);
-      return;
-    }
-
-    // Case 3: Partial backspace of selected value (prefix-aware)
-    if (_selected != null &&
-        currentSelected.isNotEmpty &&
-        trimmedInput.length < currentSelected.length &&
-        currentSelected.startsWith(trimmedInput)) {
-      controller.clear();
-      _setSelected(null);
-      return;
-    }
-
-    // Case 4: Invalid input while a selection exists → clear selection
-    if (_selected != null && trimmedInput.isNotEmpty) {
-      _setSelected(null);
-      return;
-    }
-
-    // Case 5: No match, no selection → clear stray text only if not editing
-    if (_selected == null && trimmedInput.isNotEmpty && !isUserEditing) {
-      controller.clear();
-    }
-  }
-
-  void clearInvalid() {
-    attemptSelectByInput(controller.text.trim());
-  }
-
-  void handleFocus() {
-    if (focusNode.hasFocus) {
-      if (!overlayPortalController.isShowing) {
-        showOverlay();
-      }
-    } else {
-      isUserEditing = false;
-      clearInvalid();
-    }
-  }
-
-  void handleSearch() {
-    if (!focusNode.hasFocus) return;
-
-    // Auto-hide if list becomes empty while typing
-    if (filtered.isEmpty) {
-      if (overlayPortalController.isShowing) removeOverlay();
-      _safeSetState(() {});
-      return;
-    }
-
-    if (!overlayPortalController.isShowing) {
-      showOverlay();
-      return;
-    }
-
-    // Reset keyboard highlight when search results change
-    keyboardHighlightIndex = kNoHighlight;
-    _safeSetState(() {});
-
-    // Debounced scroll animation (#9)
-    _scrollDebounceTimer?.cancel();
-    _scrollDebounceTimer = Timer(_scrollDebounceDelay, () {
-      _performScrollToMatch();
-    });
-  }
-
-  void _performScrollToMatch() {
-    if (!mounted) return;
-
-    try {
-      if (scrollController.hasClients &&
-          scrollController.position.hasContentDimensions) {
-        final String input = controller.text.trim().toLowerCase();
-        final int idx = filtered.indexWhere((item) =>
-            item.label.toLowerCase().contains(input));
-        if (idx >= 0) {
-          scrollController.animateTo(
-            idx * kDropdownItemHeight,
-            duration: _scrollAnimationDuration,
-            curve: Curves.easeInOut,
-          );
-        }
-      }
-    } catch (e) {
-      debugPrint('[SEARCH] Scroll failed: $e');
-    }
-  }
-
-  void showOverlay() {
-    if (overlayPortalController.isShowing) return;
-    if (filtered.isEmpty) return;
-    waitThenScrollToSelected();
-    _safeSetState(() {
-      hoverIndex = kNoHighlight;
-      keyboardHighlightIndex = kNoHighlight;
-    });
-    overlayPortalController.show();
-  }
-
-  void dismissDropdown() {
-    focusNode.unfocus();
-    removeOverlay();
-    _safeSetState(() {
-      hoverIndex = kNoHighlight;
-      keyboardHighlightIndex = kNoHighlight;
-    });
-  }
-
-  void removeOverlay() {
-    if (overlayPortalController.isShowing) {
-      overlayPortalController.hide();
-    }
-    hoverIndex = kNoHighlight;
-    keyboardHighlightIndex = kNoHighlight;
-  }
-
-  void handleArrowDown() {
-    final List<DropDownItem<T>> filteredItems = filtered;
-    if (filteredItems.isEmpty) return;
-    if (keyboardHighlightIndex == kNoHighlight && hoverIndex != kNoHighlight) {
-      keyboardHighlightIndex = hoverIndex;
-    }
-    _safeSetState(() {
-      hoverIndex = kNoHighlight;
-      // Only move down if not at bottom
-      if (keyboardHighlightIndex < filteredItems.length - 1) {
-        keyboardHighlightIndex++;
-      }
-      // else do nothing (stop at bottom)
-    });
-    _scrollToKeyboardHighlight();
-  }
-
-  void handleArrowUp() {
-    final List<DropDownItem<T>> filteredItems = filtered;
-    if (filteredItems.isEmpty) return;
-    if (keyboardHighlightIndex == kNoHighlight && hoverIndex != kNoHighlight) {
-      keyboardHighlightIndex = hoverIndex;
-    }
-    _safeSetState(() {
-      hoverIndex = kNoHighlight;
-      // Only move up if not at top
-      if (keyboardHighlightIndex > 0) {
-        keyboardHighlightIndex--;
-      }
-      // else do nothing (stop at top)
-    });
-    _scrollToKeyboardHighlight();
-  }
-
-  void _scrollToKeyboardHighlight() {
-    if (keyboardHighlightIndex == kNoHighlight) return;
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-
-      try {
-        if (scrollController.hasClients &&
-            scrollController.position.hasContentDimensions) {
-          final double itemTop = keyboardHighlightIndex * kDropdownItemHeight;
-          final double itemBottom = itemTop + kDropdownItemHeight;
-          final double viewportStart = scrollController.offset;
-          final double viewportEnd = viewportStart +
-              scrollController.position.viewportDimension;
-
-          if (itemTop < viewportStart) {
-            scrollController.animateTo(
-              itemTop,
-              duration: _scrollAnimationDuration,
-              curve: Curves.easeInOut,
-            );
-          } else if (itemBottom > viewportEnd) {
-            scrollController.animateTo(
-              itemBottom - scrollController.position.viewportDimension,
-              duration: _scrollAnimationDuration,
-              curve: Curves.easeInOut,
-            );
-          }
-        }
-      } catch (e) {
-        debugPrint('[KEYBOARD NAV] Scroll failed: $e');
-      }
-    });
-  }
-
-  void selectKeyboardHighlightedItem() {
-    final List<DropDownItem<T>> filteredItems = filtered;
-    if (keyboardHighlightIndex >= 0 &&
-        keyboardHighlightIndex < filteredItems.length) {
-      final DropDownItem<
-          T> selectedItem = filteredItems[keyboardHighlightIndex];
-      withSquelch(() {
-        controller.text = selectedItem.label;
-        controller.selection = const TextSelection.collapsed(offset: 0);
-      });
-      attemptSelectByInput(selectedItem.label);
-      dismissDropdown();
-    }
-  }
-
-  void waitThenScrollToSelected() {
-    if (_selected == null) return;
-
-    final int selectedIndex = filtered.indexWhere((it) =>
-    it.value == _selected?.value);
-    if (selectedIndex < 0) return;
-
-    int retryCount = 0;
-
-    void tryScroll() {
-      if (!mounted || retryCount >= _maxScrollRetries) {
-        if (retryCount >= _maxScrollRetries) {
-          debugPrint(
-              '[SCROLL] Max retries reached, aborting scroll to selected');
-        }
-        return;
-      }
-
-      retryCount++;
-
-      // Always use kDropdownItemHeight since it's a constant
-      if (!scrollController.hasClients ||
-          !scrollController.position.hasContentDimensions) {
-        WidgetsBinding.instance.addPostFrameCallback((_) => tryScroll());
-        return;
-      }
-
-      // Center the selected item in the viewport if possible
-      final double itemTop = selectedIndex * kDropdownItemHeight;
-      final double viewportHeight = scrollController.position.viewportDimension;
-      final double centeredOffset = (itemTop - (viewportHeight /
-          kCenteringDivisor) +
-          (kDropdownItemHeight / kCenteringDivisor))
-          .clamp(0.0, scrollController.position.maxScrollExtent);
-
-      scrollController.jumpTo(centeredOffset);
-      debugPrint(
-          '[SCROLL] Scrolled to selected item at index $selectedIndex, offset: $centeredOffset');
-    }
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      tryScroll();
-    });
-  }
-
-  static Widget sharedDropdownItem<T>({
+/// Shared dropdown rendering utilities
+class DropdownRenderUtils {
+  /// Renders a dropdown item with hover/selection/keyboard highlight states
+  static Widget buildDropdownItem<T>({
     required BuildContext context,
     required DropDownItem<T> item,
     required bool isHovered,
@@ -591,7 +210,7 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
           .of(context)
           .colorScheme
           .secondary
-          .withValues(alpha: kSelectedItemBackgroundAlpha);
+          .withValues(alpha: DropdownConstants.kSelectedItemBackgroundAlpha);
     } else {
       background = null;
     }
@@ -599,15 +218,14 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
       hoverColor: Colors.transparent,
       onTap: onTap,
       child: Container(
-        height: kDropdownItemHeight,
+        height: DropdownConstants.kDropdownItemHeight,
         color: background,
         child: w,
       ),
     );
   }
 
-  /// Shared default popup row builder for dropdown items
-  /// This is always used for both single and multi when a builder is not passed.
+  /// Default popup row builder for dropdown items
   static Widget defaultDropdownPopupItemBuilder<T>(BuildContext context,
       DropDownItem<T> item,
       bool isSelected,) {
@@ -621,7 +239,8 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
     );
   }
 
-  static Widget sharedDropdownOverlay<T>({
+  /// Builds a dropdown overlay that follows the input field
+  static Widget buildDropdownOverlay<T>({
     required BuildContext context,
     required List<DropDownItem<T>> items,
     required double maxDropdownHeight,
@@ -643,63 +262,72 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
     final RenderBox? inputBox = context.findRenderObject() as RenderBox?;
     if (inputBox == null) return const SizedBox.shrink();
 
+    // Debug: print the actual RenderBox size
+    debugPrint('[DROPDOWN OVERLAY] RenderBox size: ${inputBox
+        .size}, passed width: $width');
+
     final MediaQueryData mediaQuery = MediaQuery.of(context);
     final double screenHeight = mediaQuery.size.height;
     final EdgeInsets viewInsets = mediaQuery.viewInsets;
     final Offset inputFieldOffset = inputBox.localToGlobal(Offset.zero);
     final double inputFieldHeight = inputBox.size.height;
 
-    final double availableSpaceBelow = screenHeight - viewInsets.bottom -
-        (inputFieldOffset.dy + inputFieldHeight + kDropdownMargin);
-    final double availableSpaceAbove = inputFieldOffset.dy - kDropdownMargin;
+    final double availableSpaceBelow = screenHeight -
+        viewInsets.bottom -
+        (inputFieldOffset.dy + inputFieldHeight +
+            DropdownConstants.kDropdownMargin);
+    final double availableSpaceAbove =
+        inputFieldOffset.dy - DropdownConstants.kDropdownMargin;
     final bool shouldShowBelow = availableSpaceBelow >
-        maxDropdownHeight / kDropdownMaxHeightDivisor;
+        maxDropdownHeight / DropdownConstants.kDropdownMaxHeightDivisor;
     final double constrainedMaxHeight = (shouldShowBelow
         ? availableSpaceBelow
-        : availableSpaceAbove).clamp(
-        0.0, maxDropdownHeight);
+        : availableSpaceAbove)
+        .clamp(0.0, maxDropdownHeight);
 
     return CompositedTransformFollower(
       link: layerLink,
       showWhenUnlinked: false,
       offset: shouldShowBelow
-          ? Offset(0.0, inputFieldHeight + kDropdownMargin)
-          : Offset(0.0, -constrainedMaxHeight - kDropdownMargin),
-      child: FocusScope(
-        canRequestFocus: false,
-        child: Material(
-          elevation: kDropdownElevation,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxHeight: constrainedMaxHeight,
-              minWidth: width,
-              maxWidth: width,
-            ),
-            child: DefaultTextStyle(
-              style: Theme
-                  .of(context)
-                  .textTheme
-                  .bodyMedium!
-                  .copyWith(fontSize: kDropdownFontSize),
-              child: Scrollbar(
-                controller: scrollController,
-                thumbVisibility: true,
-                child: ListView.builder(
+          ? Offset(0.0, inputFieldHeight + DropdownConstants.kDropdownMargin)
+          : Offset(
+          0.0, -constrainedMaxHeight - DropdownConstants.kDropdownMargin),
+      child: SizedBox(
+        width: width,
+        child: FocusScope(
+          canRequestFocus: false,
+          child: Material(
+            elevation: DropdownConstants.kDropdownElevation,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: constrainedMaxHeight,
+              ),
+              child: DefaultTextStyle(
+                style: Theme
+                    .of(context)
+                    .textTheme
+                    .bodyMedium!
+                    .copyWith(fontSize: DropdownConstants.kDropdownFontSize),
+                child: Scrollbar(
                   controller: scrollController,
-                  padding: EdgeInsets.zero,
-                  itemCount: items.length,
-                  itemExtent: kDropdownItemHeight,
-                  itemBuilder: (c, i) =>
-                      sharedDropdownItem(
-                        context: context,
-                        item: items[i],
-                        isHovered: i == hoverIndex,
-                        isKeyboardHighlighted: i == keyboardHighlightIndex,
-                        isSelected: isSelected(items[i]),
-                        isSingleItem: items.length == 1,
-                        onTap: () => onItemTap(items[i]),
-                        builder: builder,
-                      ),
+                  thumbVisibility: true,
+                  child: ListView.builder(
+                    controller: scrollController,
+                    padding: EdgeInsets.zero,
+                    itemCount: items.length,
+                    itemExtent: DropdownConstants.kDropdownItemHeight,
+                    itemBuilder: (c, i) =>
+                        buildDropdownItem(
+                          context: context,
+                          item: items[i],
+                          isHovered: i == hoverIndex,
+                          isKeyboardHighlighted: i == keyboardHighlightIndex,
+                          isSelected: isSelected(items[i]),
+                          isSingleItem: items.length == 1,
+                          onTap: () => onItemTap(items[i]),
+                          builder: builder,
+                        ),
+                  ),
                 ),
               ),
             ),
@@ -708,79 +336,162 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
       ),
     );
   }
+}
 
-  Widget buildDropdownOverlay() {
-    final List<DropDownItem<T>> filteredItems = filtered;
-    return SearchDropdownBaseState.sharedDropdownOverlay(
-      context: context,
-      items: filteredItems,
-      maxDropdownHeight: widget.maxDropdownHeight,
-      width: widget.width,
-      controller: overlayPortalController,
-      scrollController: scrollController,
-      layerLink: layerLink,
-      hoverIndex: hoverIndex,
-      keyboardHighlightIndex: keyboardHighlightIndex,
-      onHover: (int itemIndex) => _safeSetState(() => hoverIndex = itemIndex),
-      onItemTap: (DropDownItem<T> item) {
-        withSquelch(() {
-          controller.text = item.label;
-          controller.selection = const TextSelection.collapsed(offset: 0);
-        });
-        attemptSelectByInput(item.label);
-        dismissDropdown();
-      },
-      isSelected: (DropDownItem<T> item) => item.value == _selected?.value,
-      builder: (BuildContext builderContext, DropDownItem<T> item,
-          bool isSelected) {
-        final int itemIndex = filteredItems.indexWhere((x) =>
-        x.value == item.value);
-        return MouseRegion(
-          onEnter: (_) {
-            if (keyboardHighlightIndex == kNoHighlight) {
-              _safeSetState(() => hoverIndex = itemIndex);
-            }
-          },
-          onExit: (_) => _safeSetState(() => hoverIndex = kNoHighlight),
-          child: SearchDropdownBaseState.sharedDropdownItem<T>(
-            context: builderContext,
-            item: item,
-            isHovered: itemIndex == hoverIndex && keyboardHighlightIndex ==
-                kNoHighlight,
-            isKeyboardHighlighted: itemIndex == keyboardHighlightIndex,
-            isSelected: isSelected,
-            isSingleItem: filteredItems.length == 1,
-            onTap: () {
-              withSquelch(() {
-                controller.text = item.label;
-                controller.selection = const TextSelection.collapsed(offset: 0);
-              });
-              attemptSelectByInput(item.label);
-              dismissDropdown();
-            },
-            builder: widget.popupItemBuilder ??
-                SearchDropdownBaseState.defaultDropdownPopupItemBuilder<T>,
-          ),
-        );
-      },
-    );
+/// Shared filtering behavior for dropdown items
+class DropdownFilterUtils<T> {
+  List<({String label, DropDownItem<T> item})> _normalizedItems = [];
+  List<DropDownItem<T>>? _lastItemsRef;
+  List<DropDownItem<T>>? _cachedFilteredItems;
+  String _lastFilterInput = '';
+
+  /// Initialize normalized items for fast filtering
+  void initializeItems(List<DropDownItem<T>> items) {
+    _lastItemsRef = items;
+    _normalizedItems = items
+        .map((item) => (label: item.label.trim().toLowerCase(), item: item))
+        .toList(growable: false);
   }
 
-  // Helper method to safely call setState (#12)
-  void _safeSetState(void Function() fn) {
-    if (mounted) {
-      setState(fn);
+  /// Get filtered items based on search text
+  List<DropDownItem<T>> getFiltered(List<DropDownItem<T>> items,
+      String searchText, {
+        bool isUserEditing = false,
+        Set<T>? excludeValues,
+      }) {
+    final String input = searchText.trim().toLowerCase();
+
+    // Reinitialize if items reference changed
+    if (!identical(_lastItemsRef, items)) {
+      initializeItems(items);
+      _cachedFilteredItems = null;
+      _lastFilterInput = '';
     }
+
+    // No filtering if not editing or empty input
+    if (!isUserEditing || input.isEmpty) {
+      if (excludeValues == null || excludeValues.isEmpty) {
+        return items;
+      }
+      return items
+          .where((item) => !excludeValues.contains(item.value))
+          .toList();
+    }
+
+    // Return cached result if input hasn't changed
+    if (_lastFilterInput == input && _cachedFilteredItems != null) {
+      return _cachedFilteredItems!;
+    }
+
+    // Compute and cache filtered list
+    final List<DropDownItem<T>> filteredResult = _normalizedItems
+        .where((entry) =>
+    entry.label.contains(input) &&
+        (excludeValues == null || !excludeValues.contains(entry.item.value)))
+        .map((entry) => entry.item)
+        .toList(growable: false);
+
+    _lastFilterInput = input;
+    _cachedFilteredItems = filteredResult;
+    return filteredResult;
   }
 
-  @override
-  void dispose() {
-    _scrollDebounceTimer?.cancel(); // #9 - Clean up timer
-    removeOverlay();
-    focusNode.removeListener(handleFocus);
-    focusNode.dispose();
-    controller.dispose();
-    scrollController.dispose();
-    super.dispose();
+  /// Clear the filter cache
+  void clearCache() {
+    _cachedFilteredItems = null;
+    _lastFilterInput = '';
+  }
+}
+
+/// Shared keyboard navigation behavior for dropdowns
+class DropdownKeyboardNavigation {
+  /// Handle arrow down navigation
+  static int handleArrowDown(int currentIndex,
+      int hoverIndex,
+      int itemCount,) {
+    if (itemCount == 0) return DropdownConstants.kNoHighlight;
+
+    int nextIndex = currentIndex;
+
+    // If no keyboard highlight but hover index exists, start from there
+    if (nextIndex == DropdownConstants.kNoHighlight &&
+        hoverIndex != DropdownConstants.kNoHighlight) {
+      nextIndex = hoverIndex;
+    }
+
+    // Move down (with wrapping to top)
+    if (nextIndex < itemCount - 1) {
+      nextIndex++;
+    } else {
+      nextIndex = 0;
+    }
+
+    return nextIndex;
+  }
+
+  /// Handle arrow up navigation
+  static int handleArrowUp(int currentIndex,
+      int hoverIndex,
+      int itemCount,) {
+    if (itemCount == 0) return DropdownConstants.kNoHighlight;
+
+    int nextIndex = currentIndex;
+
+    // If no keyboard highlight but hover index exists, start from there
+    if (nextIndex == DropdownConstants.kNoHighlight &&
+        hoverIndex != DropdownConstants.kNoHighlight) {
+      nextIndex = hoverIndex;
+    }
+
+    // Move up (with wrapping to bottom)
+    if (nextIndex > 0) {
+      nextIndex--;
+    } else {
+      nextIndex = itemCount - 1;
+    }
+
+    return nextIndex;
+  }
+
+  /// Scroll to make the highlighted item visible
+  static void scrollToHighlight({
+    required int highlightIndex,
+    required ScrollController scrollController,
+    required bool mounted,
+  }) {
+    if (highlightIndex < 0) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      try {
+        if (scrollController.hasClients &&
+            scrollController.position.hasContentDimensions) {
+          final double itemTop =
+              highlightIndex * DropdownConstants.kDropdownItemHeight;
+          final double itemBottom =
+              itemTop + DropdownConstants.kDropdownItemHeight;
+          final double viewportStart = scrollController.offset;
+          final double viewportEnd =
+              viewportStart + scrollController.position.viewportDimension;
+
+          if (itemTop < viewportStart) {
+            scrollController.animateTo(
+              itemTop,
+              duration: DropdownConstants.kScrollAnimationDuration,
+              curve: Curves.easeInOut,
+            );
+          } else if (itemBottom > viewportEnd) {
+            scrollController.animateTo(
+              itemBottom - scrollController.position.viewportDimension,
+              duration: DropdownConstants.kScrollAnimationDuration,
+              curve: Curves.easeInOut,
+            );
+          }
+        }
+      } catch (e) {
+        debugPrint('[KEYBOARD NAV] Scroll failed: $e');
+      }
+    });
   }
 }
