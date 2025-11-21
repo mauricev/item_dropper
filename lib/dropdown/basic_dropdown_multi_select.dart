@@ -125,6 +125,10 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   void _handleFocusChange() {
     if (_focusNode.hasFocus) {
       if (!_overlayController.isShowing && _filtered.isNotEmpty) {
+        setState(() {
+          _hoverIndex = -1;
+          _keyboardHighlightIndex = -1;
+        });
         _overlayController.show();
       }
     } else {
@@ -153,17 +157,22 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   }
 
   void _toggleItem(DropDownItem<T> item) {
-    print("_toggleItem");
     _updateSelection(() {
       if (!_isSelected(item)) {
         _selected.add(item);
       }
+      // After selection, clear highlights
+      _keyboardHighlightIndex = -1;
+      _hoverIndex = -1;
     });
   }
 
   void _removeChip(DropDownItem<T> item) {
     _updateSelection(() {
       _selected.removeWhere((selected) => selected.value == item.value);
+      // After removal, clear highlights
+      _keyboardHighlightIndex = -1;
+      _hoverIndex = -1;
     });
   }
 
@@ -240,16 +249,27 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
       try {
         if (_scrollController.hasClients &&
             _scrollController.position.hasContentDimensions) {
-          final double target = (_keyboardHighlightIndex * _itemExtent)
-              .clamp(0.0, _scrollController.position.maxScrollExtent);
-          _scrollController.animateTo(
-            target,
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeInOut,
-          );
+          final double itemTop = _keyboardHighlightIndex * _itemExtent;
+          final double itemBottom = itemTop + _itemExtent;
+          final double viewportStart = _scrollController.offset;
+          final double viewportEnd = viewportStart +
+              _scrollController.position.viewportDimension;
+          if (itemTop < viewportStart) {
+            _scrollController.animateTo(
+              itemTop,
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeInOut,
+            );
+          } else if (itemBottom > viewportEnd) {
+            _scrollController.animateTo(
+              itemBottom - _scrollController.position.viewportDimension,
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeInOut,
+            );
+          }
         }
       } catch (e) {
-        debugPrint('[KEYBOARD NAV] Scroll failed: $e');
+        debugPrint('[MULTI][KEYBOARD NAV] Scroll failed: $e');
       }
     });
   }
@@ -308,6 +328,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
                 onChanged: (value) {
                   setState(() {
                     _cachedFilteredItems = null;
+                    _hoverIndex = -1;
                     _keyboardHighlightIndex = -1;
                   });
 
@@ -449,74 +470,45 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
 
   Widget _buildOverlay() {
     final list = _filtered;
-    if (list.isEmpty) return const SizedBox.shrink();
-
-    final RenderBox? inputBox = (widget.inputKey ?? _fieldKey).currentContext
-        ?.findRenderObject() as RenderBox?;
-    if (inputBox == null) return const SizedBox.shrink();
-
-    final mediaQuery = MediaQuery.of(context);
-    final screenHeight = mediaQuery.size.height;
-    final bottomInset = mediaQuery.viewInsets.bottom;
-    final offset = inputBox.localToGlobal(Offset.zero);
-    final size = inputBox.size;
-
-    const dropdownMargin = 4.0;
-    final availableBelow = screenHeight - bottomInset -
-        (offset.dy + size.height + dropdownMargin);
-    final availableAbove = offset.dy - dropdownMargin;
-    final showBelow = availableBelow > widget.maxDropdownHeight / 2;
-    final maxHeight = (showBelow ? availableBelow : availableAbove).clamp(
-        0.0, widget.maxDropdownHeight);
-
-    return CompositedTransformFollower(
-      link: _layerLink,
-      showWhenUnlinked: false,
-      offset: showBelow
-          ? Offset(0.0, size.height + dropdownMargin)
-          : Offset(0.0, -maxHeight - dropdownMargin),
-      child: Align(
-        alignment: Alignment.topLeft,
-        child: Material(
-          elevation: widget.elevation,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxHeight: maxHeight,
-              minWidth: size.width,
-              maxWidth: size.width,
-            ),
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: EdgeInsets.zero,
-              itemCount: list.length,
-              itemBuilder: (context, index) =>
-                  _buildDropdownItem(list, index),
-            ),
+    return SearchDropdownBaseState.sharedDropdownOverlay(
+      context: context,
+      items: list,
+      maxDropdownHeight: widget.maxDropdownHeight,
+      width: widget.width,
+      controller: _overlayController,
+      scrollController: _scrollController,
+      layerLink: _layerLink,
+      hoverIndex: _hoverIndex,
+      keyboardHighlightIndex: _keyboardHighlightIndex,
+      onHover: (idx) => setState(() => _hoverIndex = idx),
+      onItemTap: _toggleItem,
+      isSelected: (item) => _selected.any((x) => x.value == item.value),
+      builder: (context, item, isSelected) {
+        final idx = list.indexWhere((x) => x.value == item.value);
+        return MouseRegion(
+          onEnter: (_) {
+            if (_keyboardHighlightIndex != -1) {
+              setState(() {
+                _keyboardHighlightIndex = -1;
+                _hoverIndex = idx;
+              });
+            } else {
+              setState(() => _hoverIndex = idx);
+            }
+          },
+          onExit: (_) => setState(() => _hoverIndex = -1),
+          child: SearchDropdownBaseState.sharedDropdownItem(
+            context: context,
+            item: item,
+            isHovered: idx == _hoverIndex && _keyboardHighlightIndex == -1,
+            isKeyboardHighlighted: idx == _keyboardHighlightIndex,
+            isSelected: isSelected,
+            isSingleItem: list.length == 1,
+            onTap: () => _toggleItem(item),
+            builder: widget.popupItemBuilder,
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDropdownItem(List<DropDownItem<T>> list, int index) {
-    final item = list[index];
-    final isHovered = index == _hoverIndex;
-    final isKeyboardHighlighted = index == _keyboardHighlightIndex;
-
-    return InkWell(
-      onTap: () => _toggleItem(item),
-      child: Container(
-        color: (isHovered || isKeyboardHighlighted)
-            ? Theme
-            .of(context)
-            .hoverColor
-            : null,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Text(
-          item.label,
-          style: TextStyle(fontSize: widget.textSize, color: Colors.black),
-        ),
-      ),
+        );
+      },
     );
   }
 }

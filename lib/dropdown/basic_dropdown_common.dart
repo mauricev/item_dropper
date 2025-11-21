@@ -331,12 +331,20 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
     if (overlayPortalController.isShowing) return;
     if (filtered.isEmpty) return;
     waitThenScrollToSelected();
+    _safeSetState(() {
+      hoverIndex = -1;
+      keyboardHighlightIndex = -1;
+    });
     overlayPortalController.show();
   }
 
   void dismissDropdown() {
     focusNode.unfocus();
     removeOverlay();
+    _safeSetState(() {
+      hoverIndex = -1;
+      keyboardHighlightIndex = -1;
+    });
   }
 
   void removeOverlay() {
@@ -347,11 +355,9 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
     keyboardHighlightIndex = -1;
   }
 
-  // Arrow key navigation methods
   void handleArrowDown() {
     final list = filtered;
     if (list.isEmpty) return;
-    // If no keyboard highlight but hover index exists, start from there
     if (keyboardHighlightIndex == -1 && hoverIndex != -1) {
       keyboardHighlightIndex = hoverIndex;
     }
@@ -359,7 +365,7 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
       if (keyboardHighlightIndex < list.length - 1) {
         keyboardHighlightIndex++;
       } else {
-        keyboardHighlightIndex = 0; // Wrap to top
+        keyboardHighlightIndex = 0;
       }
     });
     _scrollToKeyboardHighlight();
@@ -368,7 +374,6 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
   void handleArrowUp() {
     final list = filtered;
     if (list.isEmpty) return;
-    // If no keyboard highlight but hover index exists, start from there
     if (keyboardHighlightIndex == -1 && hoverIndex != -1) {
       keyboardHighlightIndex = hoverIndex;
     }
@@ -376,7 +381,7 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
       if (keyboardHighlightIndex > 0) {
         keyboardHighlightIndex--;
       } else {
-        keyboardHighlightIndex = list.length - 1; // Wrap to bottom
+        keyboardHighlightIndex = list.length - 1;
       }
     });
     _scrollToKeyboardHighlight();
@@ -470,73 +475,116 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
     });
   }
 
-  Widget buildDropdownOverlay() {
-    final List<DropDownItem<T>> list = filtered;
-    if (list.isEmpty) return const SizedBox.shrink();
+  static Widget sharedDropdownItem<T>({
+    required BuildContext context,
+    required DropDownItem<T> item,
+    required bool isHovered,
+    required bool isKeyboardHighlighted,
+    required bool isSelected,
+    required bool isSingleItem,
+    required VoidCallback onTap,
+    required Widget Function(BuildContext, DropDownItem<
+        T>, bool isSelected) builder,
+  }) {
+    Widget w = builder(context, item, isSelected);
+    Color? background;
+    if (isKeyboardHighlighted || isHovered || isSingleItem) {
+      background = Theme
+          .of(context)
+          .hoverColor;
+    } else if (isSelected) {
+      background = Theme
+          .of(context)
+          .colorScheme
+          .secondary
+          .withOpacity(0.12);
+    } else {
+      background = null;
+    }
+    return InkWell(
+      hoverColor: Colors.transparent,
+      onTap: onTap,
+      child: Container(
+        color: background,
+        child: w,
+      ),
+    );
+  }
 
-    final RenderBox? inputBox = (widget.inputKey ?? internalFieldKey)
-        .currentContext?.findRenderObject() as RenderBox?;
-    final MediaQueryData mediaQuery = MediaQuery.of(context);
-    final double screenHeight = mediaQuery.size.height;
-    final double bottomInset = mediaQuery.viewInsets.bottom;
-    final Offset offset = inputBox?.localToGlobal(Offset.zero) ?? Offset.zero;
-    final Size size = inputBox?.size ?? Size(widget.width, 40.0);
+  static Widget sharedDropdownOverlay<T>({
+    required BuildContext context,
+    required List<DropDownItem<T>> items,
+    required double maxDropdownHeight,
+    required double width,
+    required OverlayPortalController controller,
+    required ScrollController scrollController,
+    required LayerLink layerLink,
+    required int hoverIndex,
+    required int keyboardHighlightIndex,
+    required void Function(int idx) onHover,
+    required void Function(DropDownItem<T>) onItemTap,
+    required bool Function(DropDownItem<T>) isSelected,
+    required Widget Function(BuildContext, DropDownItem<T>, bool) builder,
+  }) {
+    if (items.isEmpty) return const SizedBox.shrink();
 
-    // Calculate available space above and below (#13 - clear variable names)
-    final double availableBelow = screenHeight - bottomInset -
-        (offset.dy + size.height + _dropdownMargin);
-    final double availableAbove = offset.dy - _dropdownMargin;
-    final bool showBelow = availableBelow > widget.maxDropdownHeight / 2;
-    final double maxHeight = (showBelow ? availableBelow : availableAbove)
-        .clamp(0.0, widget.maxDropdownHeight);
+    final RenderBox? inputBox = context.findRenderObject() as RenderBox?;
+    if (inputBox == null) return const SizedBox.shrink();
+
+    final mediaQuery = MediaQuery.of(context);
+    final screenHeight = mediaQuery.size.height;
+    final viewInsets = mediaQuery.viewInsets;
+    final offset = inputBox.localToGlobal(Offset.zero);
+    final size = inputBox.size;
+
+    const dropdownMargin = 4.0;
+    final availableBelow = screenHeight - viewInsets.bottom -
+        (offset.dy + size.height + dropdownMargin);
+    final availableAbove = offset.dy - dropdownMargin;
+    final showBelow = availableBelow > maxDropdownHeight / 2;
+    final maxHeight = (showBelow ? availableBelow : availableAbove).clamp(
+        0.0, maxDropdownHeight);
 
     return CompositedTransformFollower(
       link: layerLink,
       showWhenUnlinked: false,
       offset: showBelow
-          ? Offset(0.0, size.height + _dropdownMargin)
-          : Offset(0.0, -maxHeight - _dropdownMargin),
+          ? Offset(0.0, size.height + dropdownMargin)
+          : Offset(0.0, -maxHeight - dropdownMargin),
       child: FocusScope(
         canRequestFocus: false,
-        child: GestureDetector(
-          behavior: HitTestBehavior.translucent,
-          onTap: () {},
-          child: Material(
-            elevation: widget.elevation,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxHeight: maxHeight,
-                minWidth: size.width,
-                maxWidth: size.width,
-              ),
-              child: DefaultTextStyle(
-                style: Theme
-                    .of(context)
-                    .textTheme
-                    .bodyMedium!
-                    .copyWith(fontSize: widget.textSize),
-                child: Scrollbar(
+        child: Material(
+          elevation: 4.0,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: maxHeight,
+              minWidth: size.width,
+              maxWidth: size.width,
+            ),
+            child: DefaultTextStyle(
+              style: Theme
+                  .of(context)
+                  .textTheme
+                  .bodyMedium!
+                  .copyWith(fontSize: 12.0),
+              child: Scrollbar(
+                controller: scrollController,
+                thumbVisibility: true,
+                child: ListView.builder(
                   controller: scrollController,
-                  thumbVisibility: true,
-                  child: measuredItemHeight == null
-                      ? ListView.builder(
-                    controller: scrollController,
-                    prototypeItem: widget.popupItemBuilder(
-                      context,
-                      list.first,
-                      list.first.value == _selected?.value,
-                    ),
-                    padding: EdgeInsets.zero,
-                    itemCount: list.length,
-                    itemBuilder: (BuildContext c, int i) => buildItem(list, i),
-                  )
-                      : ListView.builder(
-                    controller: scrollController,
-                    itemExtent: itemExtent,
-                    padding: EdgeInsets.zero,
-                    itemCount: list.length,
-                    itemBuilder: (BuildContext c, int i) => buildItem(list, i),
-                  ),
+                  padding: EdgeInsets.zero,
+                  itemCount: items.length,
+                  itemBuilder: (c, i) =>
+                      sharedDropdownItem(
+                        context: context,
+                        item: items[i],
+                        isHovered: i == hoverIndex,
+                        isKeyboardHighlighted: i == keyboardHighlightIndex,
+                        isSelected: isSelected(items[i]),
+                        isSingleItem: items.length == 1,
+                        onTap: () => onItemTap(items[i]),
+                        builder: builder,
+                      ),
                 ),
               ),
             ),
@@ -546,72 +594,52 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
     );
   }
 
-  Widget buildItem(List<DropDownItem<T>> list, int idx) {
-    final DropDownItem<T> item = list[idx];
-    // Only allow hover if keyboard navigation is not active
-    final bool hover = (keyboardHighlightIndex == -1) && (idx == hoverIndex);
-    final bool sel = item.value == _selected?.value;
-    final bool isSingleItem = list.length == 1;
-    final bool keyboardHighlighted = idx == keyboardHighlightIndex;
-
-    Widget w = widget.popupItemBuilder(context, item, sel);
-    if (idx == 0 && measuredItemHeight == null) {
-      w = MeasureSize(
-        child: w,
-        onChange: (Size s) {
-          _safeSetState(() => measuredItemHeight = s.height); // #12
-        },
-      );
-    }
-
-    Color? background;
-    if (keyboardHighlighted || hover || isSingleItem) {
-      background = Theme
-          .of(context)
-          .hoverColor;
-    } else if (sel) {
-      // Use theme's selected tile color if available, else lighter blue
-      background = Theme
-          .of(context)
-          .colorScheme
-          .secondary
-          .withOpacity(0.12);
-    } else {
-      background = null;
-    }
-
-    return MouseRegion(
-      onEnter: (_) {
-        if (keyboardHighlightIndex >= 0) {
-          _safeSetState(() {
-            keyboardHighlightIndex = -1;
-            hoverIndex = idx;
-          });
-        } else {
-          _safeSetState(() => hoverIndex = idx);
-        }
+  Widget buildDropdownOverlay() {
+    final List<DropDownItem<T>> list = filtered;
+    return SearchDropdownBaseState.sharedDropdownOverlay(
+      context: context,
+      items: list,
+      maxDropdownHeight: widget.maxDropdownHeight,
+      width: widget.width,
+      controller: overlayPortalController,
+      scrollController: scrollController,
+      layerLink: layerLink,
+      hoverIndex: hoverIndex,
+      keyboardHighlightIndex: keyboardHighlightIndex,
+      onHover: (idx) => _safeSetState(() => hoverIndex = idx),
+      onItemTap: (item) {
+        withSquelch(() {
+          controller.text = item.label;
+          controller.selection = const TextSelection.collapsed(offset: 0);
+        });
+        attemptSelectByInput(item.label);
+        dismissDropdown();
       },
-      onExit: (_) {
-        if (keyboardHighlightIndex == -1) {
-          _safeSetState(() => hoverIndex = -1);
-        }
+      isSelected: (item) => item.value == _selected?.value,
+      builder: (context, item, isSelected) {
+        final idx = list.indexWhere((x) => x.value == item.value);
+        return MouseRegion(
+          onEnter: (_) => _safeSetState(() => hoverIndex = idx),
+          onExit: (_) => _safeSetState(() => hoverIndex = -1),
+          child: SearchDropdownBaseState.sharedDropdownItem(
+            context: context,
+            item: item,
+            isHovered: idx == hoverIndex && keyboardHighlightIndex == -1,
+            isKeyboardHighlighted: idx == keyboardHighlightIndex,
+            isSelected: isSelected,
+            isSingleItem: list.length == 1,
+            onTap: () {
+              withSquelch(() {
+                controller.text = item.label;
+                controller.selection = const TextSelection.collapsed(offset: 0);
+              });
+              attemptSelectByInput(item.label);
+              dismissDropdown();
+            },
+            builder: widget.popupItemBuilder,
+          ),
+        );
       },
-      child: InkWell(
-        hoverColor: Colors.transparent, // No default splash
-        onTap: () {
-          print("single tap");
-          withSquelch(() {
-            controller.text = item.label;
-            controller.selection = const TextSelection.collapsed(offset: 0);
-          });
-          attemptSelectByInput(item.label);
-          dismissDropdown();
-        },
-        child: Container(
-          color: background,
-          child: w,
-        ),
-      ),
     );
   }
 
