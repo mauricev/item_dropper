@@ -351,7 +351,10 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
   void handleArrowDown() {
     final list = filtered;
     if (list.isEmpty) return;
-
+    // If no keyboard highlight but hover index exists, start from there
+    if (keyboardHighlightIndex == -1 && hoverIndex != -1) {
+      keyboardHighlightIndex = hoverIndex;
+    }
     _safeSetState(() {
       if (keyboardHighlightIndex < list.length - 1) {
         keyboardHighlightIndex++;
@@ -365,7 +368,10 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
   void handleArrowUp() {
     final list = filtered;
     if (list.isEmpty) return;
-
+    // If no keyboard highlight but hover index exists, start from there
+    if (keyboardHighlightIndex == -1 && hoverIndex != -1) {
+      keyboardHighlightIndex = hoverIndex;
+    }
     _safeSetState(() {
       if (keyboardHighlightIndex > 0) {
         keyboardHighlightIndex--;
@@ -385,13 +391,25 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
       try {
         if (scrollController.hasClients &&
             scrollController.position.hasContentDimensions) {
-          final double target = (keyboardHighlightIndex * itemExtent)
-              .clamp(0.0, scrollController.position.maxScrollExtent);
-          scrollController.animateTo(
-            target,
-            duration: _scrollAnimationDuration,
-            curve: Curves.easeInOut,
-          );
+          final double itemTop = keyboardHighlightIndex * itemExtent;
+          final double itemBottom = itemTop + itemExtent;
+          final double viewportStart = scrollController.offset;
+          final double viewportEnd = viewportStart +
+              scrollController.position.viewportDimension;
+
+          if (itemTop < viewportStart) {
+            scrollController.animateTo(
+              itemTop,
+              duration: _scrollAnimationDuration,
+              curve: Curves.easeInOut,
+            );
+          } else if (itemBottom > viewportEnd) {
+            scrollController.animateTo(
+              itemBottom - scrollController.position.viewportDimension,
+              duration: _scrollAnimationDuration,
+              curve: Curves.easeInOut,
+            );
+          }
         }
       } catch (e) {
         debugPrint('[KEYBOARD NAV] Scroll failed: $e');
@@ -530,7 +548,8 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
 
   Widget buildItem(List<DropDownItem<T>> list, int idx) {
     final DropDownItem<T> item = list[idx];
-    final bool hover = idx == hoverIndex;
+    // Only allow hover if keyboard navigation is not active
+    final bool hover = (keyboardHighlightIndex == -1) && (idx == hoverIndex);
     final bool sel = item.value == _selected?.value;
     final bool isSingleItem = list.length == 1;
     final bool keyboardHighlighted = idx == keyboardHighlightIndex;
@@ -545,17 +564,40 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
       );
     }
 
+    Color? background;
+    if (keyboardHighlighted || hover || isSingleItem) {
+      background = Theme
+          .of(context)
+          .hoverColor;
+    } else if (sel) {
+      // Use theme's selected tile color if available, else lighter blue
+      background = Theme
+          .of(context)
+          .colorScheme
+          .secondary
+          .withOpacity(0.12);
+    } else {
+      background = null;
+    }
+
     return MouseRegion(
       onEnter: (_) {
-        _safeSetState(() => hoverIndex = idx); // #12
+        if (keyboardHighlightIndex >= 0) {
+          _safeSetState(() {
+            keyboardHighlightIndex = -1;
+            hoverIndex = idx;
+          });
+        } else {
+          _safeSetState(() => hoverIndex = idx);
+        }
       },
       onExit: (_) {
-        _safeSetState(() => hoverIndex = -1); // #12
+        if (keyboardHighlightIndex == -1) {
+          _safeSetState(() => hoverIndex = -1);
+        }
       },
       child: InkWell(
-        hoverColor: Theme
-            .of(context)
-            .hoverColor,
+        hoverColor: Colors.transparent, // No default splash
         onTap: () {
           withSquelch(() {
             controller.text = item.label;
@@ -565,9 +607,7 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
           dismissDropdown();
         },
         child: Container(
-          color: (hover || sel || isSingleItem || keyboardHighlighted) ? Theme
-              .of(context)
-              .hoverColor : null,
+          color: background,
           child: w,
         ),
       ),

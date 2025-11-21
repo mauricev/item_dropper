@@ -97,20 +97,22 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
 
   List<DropDownItem<T>> get _filtered {
     final String input = _searchController.text.trim().toLowerCase();
-
+    // Filter out already selected items
+    final Set removed = _selected.map((item) => item.value).toSet();
     if (input.isEmpty) {
-      return widget.items;
+      return widget.items
+          .where((item) => !removed.contains(item.value))
+          .toList();
     }
-
     if (_lastFilterInput == input && _cachedFilteredItems != null) {
       return _cachedFilteredItems!;
     }
-
     final result = _normalizedItems
-        .where((entry) => entry.label.contains(input))
+        .where((entry) =>
+    entry.label.contains(input) &&
+        !removed.contains(entry.item.value))
         .map((entry) => entry.item)
         .toList(growable: false);
-
     _lastFilterInput = input;
     _cachedFilteredItems = result;
     return result;
@@ -134,10 +136,9 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   }
 
   void _toggleItem(DropDownItem<T> item) {
+    // Only add (remove from dropdown). Remove logic only via chips.
     setState(() {
-      if (_isSelected(item)) {
-        _selected.removeWhere((selected) => selected.value == item.value);
-      } else {
+      if (!_isSelected(item)) {
         _selected.add(item);
       }
     });
@@ -176,7 +177,10 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   void _handleArrowDown() {
     final list = _filtered;
     if (list.isEmpty) return;
-
+    // If no keyboard highlight but hover index exists, start from there
+    if (_keyboardHighlightIndex == -1 && _hoverIndex != -1) {
+      _keyboardHighlightIndex = _hoverIndex;
+    }
     setState(() {
       if (_keyboardHighlightIndex < list.length - 1) {
         _keyboardHighlightIndex++;
@@ -190,7 +194,10 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   void _handleArrowUp() {
     final list = _filtered;
     if (list.isEmpty) return;
-
+    // If no keyboard highlight but hover index exists, start from there
+    if (_keyboardHighlightIndex == -1 && _hoverIndex != -1) {
+      _keyboardHighlightIndex = _hoverIndex;
+    }
     setState(() {
       if (_keyboardHighlightIndex > 0) {
         _keyboardHighlightIndex--;
@@ -465,7 +472,6 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
 
   Widget _buildDropdownItem(List<DropDownItem<T>> list, int index) {
     final item = list[index];
-    final isSelected = _isSelected(item);
     final isHovered = index == _hoverIndex;
     final isKeyboardHighlighted = index == _keyboardHighlightIndex;
 
@@ -481,22 +487,9 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
               .hoverColor
               : null,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Row(
-            children: [
-              Checkbox(
-                value: isSelected,
-                onChanged: widget.enabled ? (value) => _toggleItem(item) : null,
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  item.label,
-                  style: TextStyle(
-                      fontSize: widget.textSize, color: Colors.black),
-                ),
-              ),
-            ],
+          child: Text(
+            item.label,
+            style: TextStyle(fontSize: widget.textSize, color: Colors.black),
           ),
         ),
       ),
