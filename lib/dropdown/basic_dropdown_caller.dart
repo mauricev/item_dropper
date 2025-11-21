@@ -33,7 +33,7 @@ Widget dropDown<T>({required double width,
     items: listItems,
     selectedItem: initiallySelected,
     onChanged: onChanged,
-    popupItemBuilder: popupItemBuilder<T>,
+    // popupItemBuilder: omitted to use default
     decoration: returnInputDecorationForDropdown(hintText),
     showKeyboard: showKeyboard,
     textSize: 10,

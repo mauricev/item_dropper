@@ -39,8 +39,7 @@ abstract class SearchDropdownBase<T> extends StatefulWidget {
   final List<DropDownItem<T>> items;
   final DropDownItem<T>? selectedItem;
   final DropDownItemCallback<T> onChanged;
-  final Widget Function(BuildContext, DropDownItem<
-      T>, bool isSelected) popupItemBuilder;
+  final Widget Function(BuildContext, DropDownItem<T>, bool)? popupItemBuilder;
   final InputDecoration decoration;
   final double width;
   final double maxDropdownHeight;
@@ -56,7 +55,7 @@ abstract class SearchDropdownBase<T> extends StatefulWidget {
     required this.items,
     this.selectedItem,
     required this.onChanged,
-    required this.popupItemBuilder,
+    this.popupItemBuilder,
     required this.decoration,
     required this.width,
     this.maxDropdownHeight = 200.0,
@@ -86,6 +85,7 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
   static const int _maxScrollRetries = 10;
   static const Duration _scrollAnimationDuration = Duration(milliseconds: 200);
   static const Duration _scrollDebounceDelay = Duration(milliseconds: 150);
+  static const double kDropdownItemHeight = 40.0;
 
   final GlobalKey internalFieldKey = GlobalKey();
   late final TextEditingController controller;
@@ -316,7 +316,7 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
             item.label.toLowerCase().contains(input));
         if (idx >= 0) {
           scrollController.animateTo(
-            idx * itemExtent,
+            idx * kDropdownItemHeight,
             duration: _scrollAnimationDuration,
             curve: Curves.easeInOut,
           );
@@ -362,11 +362,12 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
       keyboardHighlightIndex = hoverIndex;
     }
     _safeSetState(() {
+      hoverIndex = -1;
+      // Only move down if not at bottom
       if (keyboardHighlightIndex < list.length - 1) {
         keyboardHighlightIndex++;
-      } else {
-        keyboardHighlightIndex = 0;
       }
+      // else do nothing (stop at bottom)
     });
     _scrollToKeyboardHighlight();
   }
@@ -378,11 +379,12 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
       keyboardHighlightIndex = hoverIndex;
     }
     _safeSetState(() {
+      hoverIndex = -1;
+      // Only move up if not at top
       if (keyboardHighlightIndex > 0) {
         keyboardHighlightIndex--;
-      } else {
-        keyboardHighlightIndex = list.length - 1;
       }
+      // else do nothing (stop at top)
     });
     _scrollToKeyboardHighlight();
   }
@@ -396,8 +398,8 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
       try {
         if (scrollController.hasClients &&
             scrollController.position.hasContentDimensions) {
-          final double itemTop = keyboardHighlightIndex * itemExtent;
-          final double itemBottom = itemTop + itemExtent;
+          final double itemTop = keyboardHighlightIndex * kDropdownItemHeight;
+          final double itemBottom = itemTop + kDropdownItemHeight;
           final double viewportStart = scrollController.offset;
           final double viewportEnd = viewportStart +
               scrollController.position.viewportDimension;
@@ -464,7 +466,7 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
         return;
       }
 
-      final double target = (selectedIndex * itemExtent)
+      final double target = (selectedIndex * kDropdownItemHeight)
           .clamp(0.0, scrollController.position.maxScrollExtent);
       scrollController.jumpTo(target);
     }
@@ -483,8 +485,7 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
     required bool isSelected,
     required bool isSingleItem,
     required VoidCallback onTap,
-    required Widget Function(BuildContext, DropDownItem<
-        T>, bool isSelected) builder,
+    required Widget Function(BuildContext, DropDownItem<T>, bool) builder,
   }) {
     Widget w = builder(context, item, isSelected);
     Color? background;
@@ -505,9 +506,22 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
       hoverColor: Colors.transparent,
       onTap: onTap,
       child: Container(
+        height: kDropdownItemHeight,
         color: background,
         child: w,
       ),
+    );
+  }
+
+  /// Shared default popup row builder for dropdown items
+  /// This is always used for both single and multi when a builder is not passed.
+  static Widget defaultDropdownPopupItemBuilder<T>(BuildContext context,
+      DropDownItem<T> item,
+      bool isSelected,) {
+    return Container(
+      color: isSelected ? Colors.grey.shade200 : null,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Text(item.label),
     );
   }
 
@@ -574,6 +588,7 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
                   controller: scrollController,
                   padding: EdgeInsets.zero,
                   itemCount: items.length,
+                  itemExtent: kDropdownItemHeight,
                   itemBuilder: (c, i) =>
                       sharedDropdownItem(
                         context: context,
@@ -619,7 +634,11 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
       builder: (context, item, isSelected) {
         final idx = list.indexWhere((x) => x.value == item.value);
         return MouseRegion(
-          onEnter: (_) => _safeSetState(() => hoverIndex = idx),
+          onEnter: (_) {
+            if (keyboardHighlightIndex == -1) {
+              _safeSetState(() => hoverIndex = idx);
+            }
+          },
           onExit: (_) => _safeSetState(() => hoverIndex = -1),
           child: SearchDropdownBaseState.sharedDropdownItem(
             context: context,
@@ -636,7 +655,8 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
               attemptSelectByInput(item.label);
               dismissDropdown();
             },
-            builder: widget.popupItemBuilder,
+            builder: widget.popupItemBuilder ??
+                SearchDropdownBaseState.defaultDropdownPopupItemBuilder,
           ),
         );
       },

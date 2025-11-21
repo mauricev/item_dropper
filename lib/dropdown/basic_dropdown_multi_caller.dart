@@ -30,7 +30,7 @@ Widget multiDropDown<T>({
     items: listItems,
     selectedItems: initiallySelected ?? [],
     onChanged: onChanged,
-    popupItemBuilder: popupItemBuilderMulti<T>,
+    // popupItemBuilder: omitted to use default
     decoration: returnInputDecorationForMultiDropdown(hintText),
     textSize: 10,
     maxDropdownHeight: maxDropdownHeight ?? 200,

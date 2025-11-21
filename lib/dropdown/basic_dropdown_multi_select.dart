@@ -10,7 +10,7 @@ class MultiSearchDropdown<T> extends StatefulWidget {
   final List<DropDownItem<T>> selectedItems;
   final void Function(List<DropDownItem<T>>) onChanged;
   final Widget Function(BuildContext, DropDownItem<
-      T>, bool isSelected) popupItemBuilder;
+      T>, bool isSelected)? popupItemBuilder;
   final InputDecoration decoration;
   final double width;
   final double maxDropdownHeight;
@@ -25,7 +25,7 @@ class MultiSearchDropdown<T> extends StatefulWidget {
     required this.items,
     this.selectedItems = const [],
     required this.onChanged,
-    required this.popupItemBuilder,
+    this.popupItemBuilder,
     required this.decoration,
     required this.width,
     this.maxDropdownHeight = 200.0,
@@ -470,6 +470,8 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
 
   Widget _buildOverlay() {
     final list = _filtered;
+    final builderToUse = widget.popupItemBuilder ??
+        SearchDropdownBaseState.defaultDropdownPopupItemBuilder;
     return SearchDropdownBaseState.sharedDropdownOverlay(
       context: context,
       items: list,
@@ -505,7 +507,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
             isSelected: isSelected,
             isSingleItem: list.length == 1,
             onTap: () => _toggleItem(item),
-            builder: widget.popupItemBuilder,
+            builder: builderToUse,
           ),
         );
       },

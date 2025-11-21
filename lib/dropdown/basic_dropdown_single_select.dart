@@ -9,7 +9,7 @@ class SearchDropdown<T> extends SearchDropdownBase<T> {
     required super.items,
     super.selectedItem,
     required super.onChanged,
-    required super.popupItemBuilder,
+    super.popupItemBuilder,
     required super.decoration,
     required super.width,
     super.maxDropdownHeight,
