@@ -107,17 +107,15 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   void _handleFocusChange() {
     if (_focusNode.hasFocus) {
       if (!_overlayController.isShowing && _filtered.isNotEmpty) {
-        setState(() {
+        _safeSetState(() {
           _clearHighlights();
         });
         _overlayController.show();
       }
     } else {
-      if (_overlayController.isShowing) {
-        _overlayController.hide();
-      }
+      // Don't hide overlay here - let explicit dismiss handle it
+      // This prevents the overlay from closing when clicking on items
     }
-    setState(() {});
   }
 
   void _updateSelection(void Function() selectionUpdate) {
@@ -184,7 +182,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
       _hoverIndex,
       _filtered.length,
     );
-    setState(() {
+    _safeSetState(() {
       _hoverIndex = DropdownConstants.kNoHighlight;
     });
     DropdownKeyboardNavigation.scrollToHighlight(
@@ -200,7 +198,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
       _hoverIndex,
       _filtered.length,
     );
-    setState(() {
+    _safeSetState(() {
       _hoverIndex = DropdownConstants.kNoHighlight;
     });
     DropdownKeyboardNavigation.scrollToHighlight(
