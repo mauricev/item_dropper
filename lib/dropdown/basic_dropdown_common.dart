@@ -79,21 +79,24 @@ enum DropdownInteractionState {
 abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
     extends State<W> {
   // Constants for UI measurements (#6)
-  static const double _dropdownMargin = 4.0;
   static const double _defaultFallbackItemPadding = 16.0;
   static const double _fallbackItemTextMultiplier = 1.2;
   static const int _maxScrollRetries = 10;
   static const Duration _scrollAnimationDuration = Duration(milliseconds: 200);
   static const Duration _scrollDebounceDelay = Duration(milliseconds: 150);
   static const double kDropdownItemHeight = 40.0;
+  static const double kCenteringDivisor = 2.0;
+
+  // Highlight index constants
+  static const int kNoHighlight = -1;
 
   final GlobalKey internalFieldKey = GlobalKey();
   late final TextEditingController controller;
   late final ScrollController scrollController;
   late final FocusNode focusNode;
   double? measuredItemHeight;
-  int hoverIndex = -1;
-  int keyboardHighlightIndex = -1; // Track keyboard navigation highlight
+  int hoverIndex = kNoHighlight;
+  int keyboardHighlightIndex = kNoHighlight; // Track keyboard navigation highlight
   final LayerLink layerLink = LayerLink();
   final OverlayPortalController overlayPortalController = OverlayPortalController();
 
@@ -295,7 +298,7 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
     }
 
     // Reset keyboard highlight when search results change
-    keyboardHighlightIndex = -1;
+    keyboardHighlightIndex = kNoHighlight;
     _safeSetState(() {});
 
     // Debounced scroll animation (#9)
@@ -332,8 +335,8 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
     if (filtered.isEmpty) return;
     waitThenScrollToSelected();
     _safeSetState(() {
-      hoverIndex = -1;
-      keyboardHighlightIndex = -1;
+      hoverIndex = kNoHighlight;
+      keyboardHighlightIndex = kNoHighlight;
     });
     overlayPortalController.show();
   }
@@ -342,8 +345,8 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
     focusNode.unfocus();
     removeOverlay();
     _safeSetState(() {
-      hoverIndex = -1;
-      keyboardHighlightIndex = -1;
+      hoverIndex = kNoHighlight;
+      keyboardHighlightIndex = kNoHighlight;
     });
   }
 
@@ -351,18 +354,18 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
     if (overlayPortalController.isShowing) {
       overlayPortalController.hide();
     }
-    hoverIndex = -1;
-    keyboardHighlightIndex = -1;
+    hoverIndex = kNoHighlight;
+    keyboardHighlightIndex = kNoHighlight;
   }
 
   void handleArrowDown() {
     final list = filtered;
     if (list.isEmpty) return;
-    if (keyboardHighlightIndex == -1 && hoverIndex != -1) {
+    if (keyboardHighlightIndex == kNoHighlight && hoverIndex != kNoHighlight) {
       keyboardHighlightIndex = hoverIndex;
     }
     _safeSetState(() {
-      hoverIndex = -1;
+      hoverIndex = kNoHighlight;
       // Only move down if not at bottom
       if (keyboardHighlightIndex < list.length - 1) {
         keyboardHighlightIndex++;
@@ -375,11 +378,11 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
   void handleArrowUp() {
     final list = filtered;
     if (list.isEmpty) return;
-    if (keyboardHighlightIndex == -1 && hoverIndex != -1) {
+    if (keyboardHighlightIndex == kNoHighlight && hoverIndex != kNoHighlight) {
       keyboardHighlightIndex = hoverIndex;
     }
     _safeSetState(() {
-      hoverIndex = -1;
+      hoverIndex = kNoHighlight;
       // Only move up if not at top
       if (keyboardHighlightIndex > 0) {
         keyboardHighlightIndex--;
@@ -390,7 +393,7 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
   }
 
   void _scrollToKeyboardHighlight() {
-    if (keyboardHighlightIndex < 0) return;
+    if (keyboardHighlightIndex == kNoHighlight) return;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -438,6 +441,8 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
   }
 
   void waitThenScrollToSelected() {
+    if (_selected == null) return;
+
     final int selectedIndex = filtered.indexWhere((it) =>
     it.value == _selected?.value);
     if (selectedIndex < 0) return;
@@ -446,7 +451,6 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
 
     void tryScroll() {
       if (!mounted || retryCount >= _maxScrollRetries) {
-        // #3 - Added retry limit to prevent infinite loop
         if (retryCount >= _maxScrollRetries) {
           debugPrint(
               '[SCROLL] Max retries reached, aborting scroll to selected');
@@ -456,19 +460,24 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
 
       retryCount++;
 
-      if (widget.itemHeight == null && measuredItemHeight == null) {
-        WidgetsBinding.instance.addPostFrameCallback((_) => tryScroll());
-        return;
-      }
+      // Always use kDropdownItemHeight since it's a constant
       if (!scrollController.hasClients ||
           !scrollController.position.hasContentDimensions) {
         WidgetsBinding.instance.addPostFrameCallback((_) => tryScroll());
         return;
       }
 
-      final double target = (selectedIndex * kDropdownItemHeight)
+      // Center the selected item in the viewport if possible
+      final double itemTop = selectedIndex * kDropdownItemHeight;
+      final double viewportHeight = scrollController.position.viewportDimension;
+      final double centeredOffset = (itemTop - (viewportHeight /
+          kCenteringDivisor) +
+          (kDropdownItemHeight / kCenteringDivisor))
           .clamp(0.0, scrollController.position.maxScrollExtent);
-      scrollController.jumpTo(target);
+
+      scrollController.jumpTo(centeredOffset);
+      debugPrint(
+          '[SCROLL] Scrolled to selected item at index $selectedIndex, offset: $centeredOffset');
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -521,7 +530,10 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
     return Container(
       color: isSelected ? Colors.grey.shade200 : null,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      child: Text(item.label),
+      child: Text(
+        item.label,
+        style: const TextStyle(fontSize: 10.0),
+      ),
     );
   }
 
@@ -635,15 +647,16 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
         final idx = list.indexWhere((x) => x.value == item.value);
         return MouseRegion(
           onEnter: (_) {
-            if (keyboardHighlightIndex == -1) {
+            if (keyboardHighlightIndex == kNoHighlight) {
               _safeSetState(() => hoverIndex = idx);
             }
           },
-          onExit: (_) => _safeSetState(() => hoverIndex = -1),
+          onExit: (_) => _safeSetState(() => hoverIndex = kNoHighlight),
           child: SearchDropdownBaseState.sharedDropdownItem(
             context: context,
             item: item,
-            isHovered: idx == hoverIndex && keyboardHighlightIndex == -1,
+            isHovered: idx == hoverIndex && keyboardHighlightIndex ==
+                kNoHighlight,
             isKeyboardHighlighted: idx == keyboardHighlightIndex,
             isSelected: isSelected,
             isSingleItem: list.length == 1,
