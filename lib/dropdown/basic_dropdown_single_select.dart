@@ -448,51 +448,30 @@ class _SearchDropdownState<T> extends State<SearchDropdown<T>> {
       controller: _overlayController,
       scrollController: _scrollController,
       layerLink: _layerLink,
-      hoverIndex: _hoverIndex,
-      keyboardHighlightIndex: _keyboardHighlightIndex,
-      onHover: (int itemIndex) => _safeSetState(() => _hoverIndex = itemIndex),
-      onItemTap: (DropDownItem<T> item) {
-        _withSquelch(() {
-          _controller.text = item.label;
-          _controller.selection = const TextSelection.collapsed(offset: 0);
-        });
-        _attemptSelectByInput(item.label);
-        _dismissDropdown();
-      },
       isSelected: (DropDownItem<T> item) => item.value == _selected?.value,
       builder: (BuildContext builderContext, DropDownItem<T> item,
           bool isSelected) {
-        final int itemIndex = filteredItems.indexWhere((x) =>
-        x.value == item.value);
-        return MouseRegion(
-          onEnter: (_) {
-            if (_keyboardHighlightIndex == DropdownConstants.kNoHighlight) {
-              _safeSetState(() => _hoverIndex = itemIndex);
-            }
+        return DropdownRenderUtils.buildDropdownItemWithHover<T>(
+          context: builderContext,
+          item: item,
+          isSelected: isSelected,
+          filteredItems: filteredItems,
+          hoverIndex: _hoverIndex,
+          keyboardHighlightIndex: _keyboardHighlightIndex,
+          safeSetState: _safeSetState,
+          setHoverIndex: (index) => _hoverIndex = index,
+          onTap: () {
+            debugPrint("single buildDropdownItem onTap called!");
+            _withSquelch(() {
+              _controller.text = item.label;
+              _controller.selection =
+              const TextSelection.collapsed(offset: 0);
+            });
+            _attemptSelectByInput(item.label);
+            _dismissDropdown();
           },
-          onExit: (_) =>
-              _safeSetState(() => _hoverIndex = DropdownConstants.kNoHighlight),
-          child: DropdownRenderUtils.buildDropdownItem<T>(
-            context: builderContext,
-            item: item,
-            isHovered: itemIndex == _hoverIndex &&
-                _keyboardHighlightIndex == DropdownConstants.kNoHighlight,
-            isKeyboardHighlighted: itemIndex == _keyboardHighlightIndex,
-            isSelected: isSelected,
-            isSingleItem: filteredItems.length == 1,
-            onTap: () {
-              debugPrint("buildDropdownOverlay");
-              _withSquelch(() {
-                _controller.text = item.label;
-                _controller.selection =
-                const TextSelection.collapsed(offset: 0);
-              });
-              _attemptSelectByInput(item.label);
-              _dismissDropdown();
-            },
-            builder: widget.popupItemBuilder ??
-                DropdownRenderUtils.defaultDropdownPopupItemBuilder<T>,
-          ),
+          customBuilder: widget.popupItemBuilder ??
+              DropdownRenderUtils.defaultDropdownPopupItemBuilder<T>,
         );
       },
     );

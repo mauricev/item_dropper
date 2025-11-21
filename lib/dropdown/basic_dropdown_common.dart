@@ -188,6 +188,46 @@ class DropdownWithOverlay extends StatelessWidget {
 
 /// Shared dropdown rendering utilities
 class DropdownRenderUtils {
+  /// Builds a complete dropdown item with MouseRegion and hover handling
+  /// This wraps buildDropdownItem with the standard hover behavior
+  static Widget buildDropdownItemWithHover<T>({
+    required BuildContext context,
+    required DropDownItem<T> item,
+    required bool isSelected,
+    required List<DropDownItem<T>> filteredItems,
+    required int hoverIndex,
+    required int keyboardHighlightIndex,
+    required void Function(void Function()) safeSetState,
+    required void Function(int) setHoverIndex,
+    required VoidCallback onTap,
+    required Widget Function(BuildContext, DropDownItem<T>, bool) customBuilder,
+  }) {
+    final int itemIndex = filteredItems.indexWhere(
+          (x) => x.value == item.value,
+    );
+    return MouseRegion(
+      onEnter: (_) {
+        if (keyboardHighlightIndex == DropdownConstants.kNoHighlight) {
+          safeSetState(() => setHoverIndex(itemIndex));
+        }
+      },
+      onExit: (_) =>
+          safeSetState(() => setHoverIndex(DropdownConstants.kNoHighlight)),
+      child: buildDropdownItem<T>(
+        context: context,
+        item: item,
+        isHovered:
+        itemIndex == hoverIndex &&
+            keyboardHighlightIndex == DropdownConstants.kNoHighlight,
+        isKeyboardHighlighted: itemIndex == keyboardHighlightIndex,
+        isSelected: isSelected,
+        isSingleItem: filteredItems.length == 1,
+        onTap: onTap,
+        builder: customBuilder,
+      ),
+    );
+  }
+
   /// Renders a dropdown item with hover/selection/keyboard highlight states
   static Widget buildDropdownItem<T>({
     required BuildContext context,
@@ -240,6 +280,8 @@ class DropdownRenderUtils {
   }
 
   /// Builds a dropdown overlay that follows the input field
+  /// The builder callback receives (context, item, isSelected) and should return
+  /// the complete item widget including MouseRegion and tap handling
   static Widget buildDropdownOverlay<T>({
     required BuildContext context,
     required List<DropDownItem<T>> items,
@@ -248,10 +290,6 @@ class DropdownRenderUtils {
     required OverlayPortalController controller,
     required ScrollController scrollController,
     required LayerLink layerLink,
-    required int hoverIndex,
-    required int keyboardHighlightIndex,
-    required void Function(int idx) onHover,
-    required void Function(DropDownItem<T>) onItemTap,
     required bool Function(DropDownItem<T>) isSelected,
     required Widget Function(BuildContext, DropDownItem<T>, bool) builder,
   }) {
@@ -312,7 +350,11 @@ class DropdownRenderUtils {
                     itemCount: items.length,
                     itemExtent: DropdownConstants.kDropdownItemHeight,
                     itemBuilder: (c, i) =>
-                        builder(context, items[i], isSelected(items[i]),
+                        builder(
+                          context,
+                          items[i],
+                          isSelected(items[i]),
+                        ),
                   ),
                 ),
               ),
@@ -320,7 +362,6 @@ class DropdownRenderUtils {
           ),
         ),
       ),
-      )
     );
   }
 }

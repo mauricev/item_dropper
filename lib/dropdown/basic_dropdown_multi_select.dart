@@ -219,6 +219,13 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
     }
   }
 
+  // Helper method to safely call setState
+  void _safeSetState(void Function() fn) {
+    if (mounted) {
+      setState(fn);
+    }
+  }
+
   @override
   void dispose() {
     _focusNode.removeListener(_handleFocusChange);
@@ -387,45 +394,24 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
       controller: _overlayController,
       scrollController: _scrollController,
       layerLink: _layerLink,
-      hoverIndex: _hoverIndex,
-      keyboardHighlightIndex: _keyboardHighlightIndex,
-      onHover: (int itemIndex) => setState(() => _hoverIndex = itemIndex),
-      onItemTap: _toggleItem,
       isSelected: (DropDownItem<T> item) =>
           _selected.any((x) => x.value == item.value),
       builder: (BuildContext builderContext, DropDownItem<T> item,
           bool isSelected) {
-        final int itemIndex = filteredItems.indexWhere((x) =>
-        x.value == item.value);
-        return MouseRegion(
-          onEnter: (_) {
-            if (_keyboardHighlightIndex !=
-                DropdownConstants.kNoHighlight) {
-              setState(() {
-                _clearHighlights();
-                _hoverIndex = itemIndex;
-              });
-            } else {
-              setState(() => _hoverIndex = itemIndex);
-            }
-          },
-          onExit: (_) =>
-              setState(() =>
-              _hoverIndex = DropdownConstants.kNoHighlight),
-          child: DropdownRenderUtils.buildDropdownItem<T>(
-            context: builderContext,
-            item: item,
-            isHovered: itemIndex == _hoverIndex &&
-                _keyboardHighlightIndex == DropdownConstants.kNoHighlight,
-            isKeyboardHighlighted: itemIndex == _keyboardHighlightIndex,
-            isSelected: isSelected,
-            isSingleItem: filteredItems.length == 1,
-            onTap: () {
-              debugPrint("multi buildDropdownItem onTap called!");
-              _toggleItem(item);
-            },
-            builder: itemBuilder,
-          ),
+        return DropdownRenderUtils.buildDropdownItemWithHover<T>(
+              context: builderContext,
+              item: item,
+              isSelected: isSelected,
+              filteredItems: filteredItems,
+              hoverIndex: _hoverIndex,
+              keyboardHighlightIndex: _keyboardHighlightIndex,
+              safeSetState: _safeSetState,
+              setHoverIndex: (index) => _hoverIndex = index,
+              onTap: () {
+                debugPrint("multi buildDropdownItem onTap called!");
+                _toggleItem(item);
+              },
+              customBuilder: itemBuilder,
         );
       },
     );
