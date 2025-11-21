@@ -135,21 +135,36 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
     setState(() {});
   }
 
-  void _toggleItem(DropDownItem<T> item) {
-    // Only add (remove from dropdown). Remove logic only via chips.
+  void _updateSelection(void Function() selectionUpdate) {
     setState(() {
+      selectionUpdate();
+      final filtered = _filtered;
+      if (filtered.isNotEmpty) {
+        _keyboardHighlightIndex = 0;
+        _hoverIndex = -1;
+      } else {
+        _keyboardHighlightIndex = -1;
+        _hoverIndex = -1;
+        _overlayController.hide();
+      }
+    });
+    widget.onChanged(List.from(_selected));
+    _focusNode.requestFocus();
+  }
+
+  void _toggleItem(DropDownItem<T> item) {
+    print("_toggleItem");
+    _updateSelection(() {
       if (!_isSelected(item)) {
         _selected.add(item);
       }
     });
-    widget.onChanged(List.from(_selected));
   }
 
   void _removeChip(DropDownItem<T> item) {
-    setState(() {
+    _updateSelection(() {
       _selected.removeWhere((selected) => selected.value == item.value);
     });
-    widget.onChanged(List.from(_selected));
   }
 
   KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
@@ -212,6 +227,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
     final list = _filtered;
     if (_keyboardHighlightIndex >= 0 && _keyboardHighlightIndex < list.length) {
       _toggleItem(list[_keyboardHighlightIndex]);
+      // highlight will be set in _toggleItem
     }
   }
 
@@ -248,6 +264,17 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   }
 
   @override
+  void didUpdateWidget(covariant MultiSearchDropdown<T> oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Sync _selected if the parent (user) updates selectedItems externally
+    if (widget.selectedItems != oldWidget.selectedItems) {
+      setState(() {
+        _selected = List.from(widget.selectedItems);
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return CompositedTransformTarget(
       link: _layerLink,
@@ -265,136 +292,138 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
         child: Container(
           key: widget.inputKey ?? _fieldKey,
           decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.white, Colors.grey.shade200],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
-        borderRadius: BorderRadius.circular(_containerBorderRadius),
-      ),
-      child: Stack(
-        children: [
-          TextField(
-            controller: _searchController,
-              focusNode: _focusNode,
-              style: TextStyle(fontSize: widget.textSize),
-              onChanged: (value) {
-                setState(() {
-                  _cachedFilteredItems = null;
-                  _keyboardHighlightIndex = -1;
-                });
+            gradient: LinearGradient(
+              colors: [Colors.white, Colors.grey.shade200],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+            borderRadius: BorderRadius.circular(_containerBorderRadius),
+          ),
+          child: Stack(
+            children: [
+              TextField(
+                controller: _searchController,
+                focusNode: _focusNode,
+                style: TextStyle(fontSize: widget.textSize),
+                onChanged: (value) {
+                  setState(() {
+                    _cachedFilteredItems = null;
+                    _keyboardHighlightIndex = -1;
+                  });
 
-                if (_filtered.isNotEmpty &&
-                    !_overlayController.isShowing) {
-                  _overlayController.show();
-                } else if (_filtered.isEmpty &&
-                    _overlayController.isShowing) {
-                  _overlayController.hide();
-                }
-              },
-              decoration: InputDecoration(
-                hintText: widget.decoration.hintText ?? 'Search...',
-                hintStyle: widget.decoration.hintStyle,
-                filled: false,
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(
-                      color: widget.enabled ? Colors.black45 : Colors.grey
-                          .shade400),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(
-                      color: widget.enabled ? Colors.blue : Colors.grey
-                          .shade400),
-                ),
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(
-                  vertical: _textFieldVerticalPadding,
-                  horizontal: _textFieldHorizontalPadding,
-                ),
-                // Show chips as a prefix instead
-                prefix: _selected.isEmpty ? null : Padding(
-                  padding: const EdgeInsets.only(right: 4),
-                  child: Wrap(
-                    spacing: _chipSpacing,
-                    runSpacing: _chipSpacing,
-                    children: _selected
-                        .map((item) => _buildChip(item))
-                        .toList(),
+                  if (_filtered.isNotEmpty &&
+                      !_overlayController.isShowing) {
+                    _overlayController.show();
+                  } else if (_filtered.isEmpty &&
+                      _overlayController.isShowing) {
+                    _overlayController.hide();
+                  }
+                },
+                decoration: InputDecoration(
+                  hintText: widget.decoration.hintText ?? 'Search...',
+                  hintStyle: widget.decoration.hintStyle,
+                  filled: false,
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(
+                        color: widget.enabled ? Colors.black45 : Colors.grey
+                            .shade400),
                   ),
-                ),
-                suffixIconConstraints: const BoxConstraints.tightFor(
-                  width: _suffixIconWidth,
-                  height: kMinInteractiveDimension,
-                ),
-                suffixIcon: SizedBox(
-                  width: _suffixIconWidth,
-                  height: kMinInteractiveDimension,
-                  child: Stack(
-                    alignment: Alignment.centerRight,
-                    clipBehavior: Clip.none,
-                    children: [
-                      Positioned(
-                        right: _clearButtonRightPosition,
-                        child: IconButton(
-                          icon: Icon(
-                            Icons.clear,
-                            size: _iconSize,
-                            color: widget.enabled ? Colors.black : Colors.grey,
-                          ),
-                          iconSize: _iconSize,
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints.tightFor(
-                            width: _iconButtonSize,
-                            height: _iconButtonSize,
-                          ),
-                          onPressed: widget.enabled
-                              ? () {
-                            setState(() {
-                              _searchController.clear();
-                              _selected.clear();
-                              _cachedFilteredItems = null;
-                              _lastFilterInput = '';
-                              widget.onChanged([]);
-                            });
-                          }
-                              : null,
-                        ),
-                      ),
-                      Positioned(
-                        right: _arrowButtonRightPosition,
-                        child: IconButton(
-                          icon: Icon(
-                            _overlayController.isShowing
-                                ? Icons.arrow_drop_up
-                                : Icons.arrow_drop_down,
-                            size: _iconSize,
-                            color: widget.enabled ? Colors.black : Colors.grey,
-                          ),
-                          iconSize: _iconSize,
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints.tightFor(
-                            width: _iconButtonSize,
-                            height: _iconButtonSize,
-                          ),
-                          onPressed: widget.enabled
-                              ? () {
-                            if (_overlayController.isShowing) {
-                              _focusNode.unfocus();
-                            } else {
-                              _focusNode.requestFocus();
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(
+                        color: widget.enabled ? Colors.blue : Colors.grey
+                            .shade400),
+                  ),
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: _textFieldVerticalPadding,
+                    horizontal: _textFieldHorizontalPadding,
+                  ),
+                  // Show chips as a prefix instead
+                  prefix: _selected.isEmpty ? null : Padding(
+                    padding: const EdgeInsets.only(right: 4),
+                    child: Wrap(
+                      spacing: _chipSpacing,
+                      runSpacing: _chipSpacing,
+                      children: _selected
+                          .map((item) => _buildChip(item))
+                          .toList(),
+                    ),
+                  ),
+                  suffixIconConstraints: const BoxConstraints.tightFor(
+                    width: _suffixIconWidth,
+                    height: kMinInteractiveDimension,
+                  ),
+                  suffixIcon: SizedBox(
+                    width: _suffixIconWidth,
+                    height: kMinInteractiveDimension,
+                    child: Stack(
+                      alignment: Alignment.centerRight,
+                      clipBehavior: Clip.none,
+                      children: [
+                        Positioned(
+                          right: _clearButtonRightPosition,
+                          child: IconButton(
+                            icon: Icon(
+                              Icons.clear,
+                              size: _iconSize,
+                              color: widget.enabled ? Colors.black : Colors
+                                  .grey,
+                            ),
+                            iconSize: _iconSize,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints.tightFor(
+                              width: _iconButtonSize,
+                              height: _iconButtonSize,
+                            ),
+                            onPressed: widget.enabled
+                                ? () {
+                              setState(() {
+                                _searchController.clear();
+                                _selected.clear();
+                                _cachedFilteredItems = null;
+                                _lastFilterInput = '';
+                                widget.onChanged([]);
+                              });
                             }
-                          }
-                              : null,
+                                : null,
+                          ),
                         ),
-                      ),
-                    ],
+                        Positioned(
+                          right: _arrowButtonRightPosition,
+                          child: IconButton(
+                            icon: Icon(
+                              _overlayController.isShowing
+                                  ? Icons.arrow_drop_up
+                                  : Icons.arrow_drop_down,
+                              size: _iconSize,
+                              color: widget.enabled ? Colors.black : Colors
+                                  .grey,
+                            ),
+                            iconSize: _iconSize,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints.tightFor(
+                              width: _iconButtonSize,
+                              height: _iconButtonSize,
+                            ),
+                            onPressed: widget.enabled
+                                ? () {
+                              if (_overlayController.isShowing) {
+                                _focusNode.unfocus();
+                              } else {
+                                _focusNode.requestFocus();
+                              }
+                            }
+                                : null,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-        ],
-      ),
-    ),
+            ],
+          ),
+        ),
     );
   }
 
@@ -417,8 +446,6 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
       backgroundColor: Colors.blue.shade100,
     );
   }
-
-
 
   Widget _buildOverlay() {
     final list = _filtered;
@@ -462,7 +489,8 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
               controller: _scrollController,
               padding: EdgeInsets.zero,
               itemCount: list.length,
-              itemBuilder: (context, index) => _buildDropdownItem(list, index),
+              itemBuilder: (context, index) =>
+                  _buildDropdownItem(list, index),
             ),
           ),
         ),
@@ -475,22 +503,18 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
     final isHovered = index == _hoverIndex;
     final isKeyboardHighlighted = index == _keyboardHighlightIndex;
 
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hoverIndex = index),
-      onExit: (_) => setState(() => _hoverIndex = -1),
-      child: InkWell(
-        onTap: () => _toggleItem(item),
-        child: Container(
-          color: (isHovered || isKeyboardHighlighted)
-              ? Theme
-              .of(context)
-              .hoverColor
-              : null,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Text(
-            item.label,
-            style: TextStyle(fontSize: widget.textSize, color: Colors.black),
-          ),
+    return InkWell(
+      onTap: () => _toggleItem(item),
+      child: Container(
+        color: (isHovered || isKeyboardHighlighted)
+            ? Theme
+            .of(context)
+            .hoverColor
+            : null,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Text(
+          item.label,
+          style: TextStyle(fontSize: widget.textSize, color: Colors.black),
         ),
       ),
     );

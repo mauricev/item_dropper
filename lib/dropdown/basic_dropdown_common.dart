@@ -599,6 +599,7 @@ abstract class SearchDropdownBaseState<T, W extends SearchDropdownBase<T>>
       child: InkWell(
         hoverColor: Colors.transparent, // No default splash
         onTap: () {
+          print("single tap");
           withSquelch(() {
             controller.text = item.label;
             controller.selection = const TextSelection.collapsed(offset: 0);
