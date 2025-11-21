@@ -291,7 +291,9 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
             }
           },
           decoration: InputDecoration(
-            hintText: widget.decoration.hintText ?? 'Search...',
+            hintText: _selected.isEmpty
+                ? (widget.decoration.hintText ?? 'Search...')
+                : null,
             hintStyle: widget.decoration.hintStyle,
             filled: false,
             enabledBorder: OutlineInputBorder(
