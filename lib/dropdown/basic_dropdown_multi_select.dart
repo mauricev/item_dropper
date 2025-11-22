@@ -273,61 +273,23 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
     );
   }
 
-  Widget _buildInputField() {
-    final InputBorder? border = _focusNode.hasFocus
-        ? widget.decoration.focusedBorder
-        : widget.decoration.enabledBorder;
-    Color borderColor = Colors.black45;
-    double borderWidth = 1.0;
-    BorderRadius borderRadius = BorderRadius.circular(_containerBorderRadius);
-    if (border is OutlineInputBorder) {
-      borderColor = border.borderSide.color;
-      borderWidth = border.borderSide.width;
-      borderRadius = border.borderRadius;
-    }
-    return Container(
+  Widget _buildInputField({InputDecoration? previewDecoration}) {
+    final InputDecoration deco = previewDecoration ?? widget.decoration;
+    debugPrint('MULTI: _buildInputField deco: '
+        'border=${deco.border}, '
+        'enabledBorder=${deco.enabledBorder}, '
+        'focusedBorder=${deco.focusedBorder}, '
+        'filled=${deco.filled}, '
+        'isDense=${deco.isDense}, '
+        'contentPadding=${deco.contentPadding}');
+    return SizedBox(
       width: widget.width,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: borderColor, width: borderWidth),
-        borderRadius: borderRadius,
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Flexible(
-            child: TextField(
-              key: widget.inputKey ?? _fieldKey,
-              controller: _searchController,
-              focusNode: _focusNode,
-              style: TextStyle(fontSize: widget.textSize),
-              onChanged: (value) {
-                setState(() {
-                  _filterUtils.clearCache();
-                  _clearHighlights();
-                });
-                if (_filtered.isNotEmpty && !_overlayController.isShowing) {
-                  _overlayController.show();
-                } else if (_filtered.isEmpty && _overlayController.isShowing) {
-                  _overlayController.hide();
-                }
-              },
-              decoration: InputDecoration(
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                disabledBorder: InputBorder.none,
-                errorBorder: InputBorder.none,
-                focusedErrorBorder: InputBorder.none,
-                isDense: true,
-                contentPadding: EdgeInsets.symmetric(
-                  vertical: 14,
-                  horizontal: _textFieldHorizontalPadding,
-                ),
-              ),
-            ),
-          ),
-        ],
+      child: TextField(
+        key: widget.inputKey ?? _fieldKey,
+        controller: _searchController,
+        focusNode: _focusNode,
+        style: TextStyle(fontSize: widget.textSize),
+        decoration: deco,
       ),
     );
   }
