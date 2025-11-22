@@ -311,10 +311,10 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
               horizontal: _textFieldHorizontalPadding,
             ),
             // Show chips as a prefix instead
-            prefix: _selected.isEmpty
+            prefixIcon: _selected.isEmpty
                 ? null
                 : Padding(
-              padding: const EdgeInsets.only(right: 4),
+              padding: const EdgeInsets.only(left: 8, right: 4),
               child: Wrap(
                 spacing: _chipSpacing,
                 runSpacing: _chipSpacing,
