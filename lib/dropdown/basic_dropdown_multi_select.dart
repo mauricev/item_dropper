@@ -19,6 +19,9 @@ class MultiSearchDropdown<T> extends StatefulWidget {
   final double? itemHeight;
   final bool enabled;
 
+  /// Optional maximum number of selected items. If set, must be >=2. Null means unlimited.
+  final int? maxSelected;
+
   const MultiSearchDropdown({
     super.key,
     this.inputKey,
@@ -33,7 +36,9 @@ class MultiSearchDropdown<T> extends StatefulWidget {
     this.textSize = 12.0,
     this.itemHeight,
     this.enabled = true,
-  });
+    this.maxSelected,
+  }) : assert(maxSelected == null ||
+      maxSelected >= 2, 'maxSelected must be null or >= 2');
 
   @override
   State<MultiSearchDropdown<T>> createState() => _MultiSearchDropdownState<T>();
@@ -137,6 +142,10 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
 
   void _toggleItem(DropDownItem<T> item) {
     debugPrint("_toggleItem");
+    // If maxSelected is set and already reached, ignore further additions.
+    if (widget.maxSelected != null && _selected.length >= widget.maxSelected!) {
+      return;
+    }
     _updateSelection(() {
       if (!_isSelected(item)) {
         _selected.add(item);
