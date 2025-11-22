@@ -163,6 +163,7 @@ class DropdownWithOverlay extends StatelessWidget {
                   child: Listener(
                     behavior: HitTestBehavior.translucent,
                     onPointerDown: (event) {
+                      // Use the field's render box for dismissal detection
                       final RenderBox? renderBox =
                       fieldKey.currentContext?.findRenderObject() as RenderBox?;
                       if (renderBox != null) {
@@ -177,7 +178,12 @@ class DropdownWithOverlay extends StatelessWidget {
                     },
                   ),
                 ),
-                overlay,
+                CompositedTransformFollower(
+                  link: layerLink,
+                  showWhenUnlinked: false,
+                  offset: const Offset(0.0, 0.0), // Position relative to target
+                  child: overlay,
+                ),
               ],
             ),
         child: inputField,
@@ -322,6 +328,7 @@ class DropdownRenderUtils {
         .clamp(0.0, maxDropdownHeight);
 
     return CompositedTransformFollower(
+      key: ValueKey<String>('follower_${inputFieldHeight}_${width}'),
       link: layerLink,
       showWhenUnlinked: false,
       offset: shouldShowBelow

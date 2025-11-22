@@ -127,7 +127,6 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   }
 
   void _updateSelection(void Function() selectionUpdate) {
-    debugPrint("_updateSelection");
     setState(() {
       selectionUpdate();
       final List<DropDownItem<T>> remainingFilteredItems = _filtered;
@@ -144,7 +143,6 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   }
 
   void _toggleItem(DropDownItem<T> item) {
-    debugPrint("_toggleItem");
     // If maxSelected is set and already reached, ignore further additions.
     if (widget.maxSelected != null && _selected.length >= widget.maxSelected!) {
       return;
@@ -159,11 +157,13 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   }
 
   void _removeChip(DropDownItem<T> item) {
-    _updateSelection(() {
+    setState(() {
       _selected.removeWhere((selected) => selected.value == item.value);
       // After removal, clear highlights
       _clearHighlights();
     });
+    widget.onChanged(List.from(_selected));
+    // Don't request focus when removing chips - this prevents dropdown from showing
   }
 
   KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
@@ -276,11 +276,16 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   Widget _buildInputField({InputDecoration? previewDecoration}) {
     final bool hasChips = _selected.isNotEmpty;
 
+    // Always calculate chip area height for consistent debugging
+    final double chipAreaHeight = _calculateChipAreaHeight();
+
+    debugPrint(
+        'MULTI: _buildInputField - hasChips: $hasChips, chipAreaHeight: $chipAreaHeight');
+
     return Container(
+      key: widget.inputKey ?? _fieldKey,
       width: widget.width,
-      constraints: BoxConstraints(
-        minHeight: hasChips ? 80.0 : 48.0, // Minimum height based on content
-      ),
+      // Let content determine height naturally
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [Colors.white, Colors.grey.shade200],
@@ -297,22 +302,19 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Chips area with better padding and scrolling
-          if (hasChips)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12.0, 8.0, 12.0, 4.0),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: 32.0),
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: _selected
-                        .map((item) => _buildChip(item))
-                        .toList(),
-                  ),
-                ),
-              ),
-            ),
+          // Chips area with vertical wrapping (always present for consistent height)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12.0, 8.0, 12.0, 4.0),
+            child: hasChips
+                ? Wrap(
+              spacing: _chipSpacing,
+              runSpacing: _chipSpacing,
+              alignment: WrapAlignment.start,
+              children: _selected.map((item) => _buildChip(item)).toList(),
+            )
+                : SizedBox(
+                height: _calculateChipAreaHeight()), // Reserve space when empty
+          ),
 
           // Subtle separator when chips are present
           if (hasChips)
@@ -328,13 +330,17 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
           Padding(
             padding: const EdgeInsets.fromLTRB(12.0, 4.0, 12.0, 8.0),
             child: TextField(
-              key: widget.inputKey ?? _fieldKey,
               controller: _searchController,
               focusNode: _focusNode,
               style: TextStyle(fontSize: widget.textSize),
               decoration: previewDecoration ?? widget.decoration.copyWith(
                 hintText: hasChips ? null : widget.decoration.hintText,
-                contentPadding: EdgeInsets.zero,
+                contentPadding: const EdgeInsets.only(
+                  left: 15.0,
+                  right: 12.0,
+                  top: 8.0,
+                  bottom: 8.0,
+                ),
                 isDense: true,
                 suffixIconConstraints: const BoxConstraints.tightFor(
                   width: _suffixIconWidth,
@@ -371,6 +377,60 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
         ],
       ),
     );
+  }
+
+  // Calculate minimum height based on content
+  double _calculateMinHeight() {
+    if (_selected.isEmpty) {
+      return 56.0; // Standard TextField height when no chips
+    }
+
+    // Use the chip area height plus other components
+    final double chipAreaHeight = _calculateChipAreaHeight();
+    final double separatorHeight = 1.0;
+    final double textFieldHeight = 40.0;
+    final double topPadding = 8.0;
+    final double bottomPadding = 8.0;
+
+    final double totalHeight = topPadding + chipAreaHeight + separatorHeight +
+        textFieldHeight + bottomPadding;
+
+    final double result = totalHeight.clamp(56.0, 200.0); // Min 56, max 200
+
+    return result;
+  }
+
+  // Calculate height needed for chip area only
+  double _calculateChipAreaHeight() {
+    // Always calculate, even with no chips, for consistent debugging
+    final double fontSize = widget.textSize;
+    final double textHeight = fontSize * 1.2; // Rough line height estimate
+    final double verticalPadding = _chipVerticalPadding *
+        2; // Top + bottom padding
+    final double topMargin = 3.0; // Top margin from chip
+    final double chipHeight = textHeight + verticalPadding + topMargin;
+
+    final double availableWidth = widget.width -
+        24.0; // Account for left/right padding
+    final double estimatedChipWidth = 80.0; // Rough estimate per chip
+    final int chipsPerRow = (availableWidth / estimatedChipWidth).floor();
+
+    final int rows = _selected.isEmpty
+        ? 1
+        : ((_selected.length + chipsPerRow - 1) / chipsPerRow).floor();
+    final double runSpacing = _chipSpacing; // Vertical spacing between rows
+    final double totalHeight = rows == 0 ? 0 : (rows * chipHeight) +
+        ((rows - 1) * runSpacing);
+
+    debugPrint(
+        'MULTI: _calculateChipAreaHeight - fontSize: $fontSize, textHeight: $textHeight, verticalPadding: $verticalPadding, topMargin: $topMargin');
+    debugPrint(
+        'MULTI: _calculateChipAreaHeight - chipHeight: $chipHeight, availableWidth: $availableWidth, estimatedChipWidth: $estimatedChipWidth');
+    debugPrint(
+        'MULTI: _calculateChipAreaHeight - chipsPerRow: $chipsPerRow, selectedCount: ${_selected
+            .length}, rows: $rows, runSpacing: $runSpacing, totalHeight: $totalHeight');
+
+    return totalHeight;
   }
 
   Widget _buildChip(DropDownItem<T> item) {
@@ -415,7 +475,6 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
     );
   }
 
-
   Widget _buildOverlay() {
     final List<DropDownItem<T>> filteredItems = _filtered;
     final Widget Function(BuildContext, DropDownItem<T>, bool) itemBuilder =
@@ -427,34 +486,41 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
         .currentContext;
     if (inputContext == null) return const SizedBox.shrink();
 
-    return DropdownRenderUtils.buildDropdownOverlay(
-      context: inputContext,
-      items: filteredItems,
-      maxDropdownHeight: widget.maxDropdownHeight,
-      width: widget.width,
-      controller: _overlayController,
-      scrollController: _scrollController,
-      layerLink: _layerLink,
-      isSelected: (DropDownItem<T> item) =>
-          _selected.any((x) => x.value == item.value),
-      builder: (BuildContext builderContext, DropDownItem<T> item,
-          bool isSelected) {
-        return DropdownRenderUtils.buildDropdownItemWithHover<T>(
-              context: builderContext,
-              item: item,
-              isSelected: isSelected,
-              filteredItems: filteredItems,
-              hoverIndex: _hoverIndex,
-              keyboardHighlightIndex: _keyboardHighlightIndex,
-              safeSetState: _safeSetState,
-              setHoverIndex: (index) => _hoverIndex = index,
-              onTap: () {
-                debugPrint("multi buildDropdownItem onTap called!");
-                _toggleItem(item);
-              },
-              customBuilder: itemBuilder,
-        );
-      },
+    // Get current input field size for dynamic positioning
+    final RenderBox? inputBox = inputContext.findRenderObject() as RenderBox?;
+    final Size inputSize = inputBox?.size ?? Size.zero;
+
+    return Container(
+      key: ValueKey<String>(
+          'overlay_${_selected.length}_${inputSize.height}_${inputSize.width}'),
+      child: DropdownRenderUtils.buildDropdownOverlay(
+        context: inputContext,
+        items: filteredItems,
+        maxDropdownHeight: widget.maxDropdownHeight,
+        width: widget.width,
+        controller: _overlayController,
+        scrollController: _scrollController,
+        layerLink: _layerLink,
+        isSelected: (DropDownItem<T> item) =>
+            _selected.any((x) => x.value == item.value),
+        builder: (BuildContext builderContext, DropDownItem<T> item,
+            bool isSelected) {
+          return DropdownRenderUtils.buildDropdownItemWithHover<T>(
+            context: builderContext,
+            item: item,
+            isSelected: isSelected,
+            filteredItems: filteredItems,
+            hoverIndex: _hoverIndex,
+            keyboardHighlightIndex: _keyboardHighlightIndex,
+            safeSetState: _safeSetState,
+            setHoverIndex: (index) => _hoverIndex = index,
+            onTap: () {
+              _toggleItem(item);
+            },
+            customBuilder: itemBuilder,
+          );
+        },
+      ),
     );
   }
 }
