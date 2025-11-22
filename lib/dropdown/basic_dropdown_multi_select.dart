@@ -274,94 +274,64 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   }
 
   Widget _buildInputField() {
+    final InputBorder? border = _focusNode.hasFocus
+        ? widget.decoration.focusedBorder
+        : widget.decoration.enabledBorder;
+    Color borderColor = Colors.black45;
+    double borderWidth = 1.0;
+    BorderRadius borderRadius = BorderRadius.circular(_containerBorderRadius);
+    if (border is OutlineInputBorder) {
+      borderColor = border.borderSide.color;
+      borderWidth = border.borderSide.width;
+      borderRadius = border.borderRadius;
+    }
     return Container(
+      constraints: const BoxConstraints(minHeight: 46),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.white, Colors.grey.shade200],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
-        borderRadius: BorderRadius.circular(_containerBorderRadius),
+        color: Colors.white,
+        border: Border.all(color: borderColor, width: borderWidth),
+        borderRadius: borderRadius,
       ),
+      padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
       child: SizedBox(
         width: widget.width,
-        child: TextField(
-          key: widget.inputKey ?? _fieldKey,
-          controller: _searchController,
-          focusNode: _focusNode,
-          style: TextStyle(fontSize: widget.textSize),
-          onChanged: (value) {
-            setState(() {
-              _filterUtils.clearCache();
-              _clearHighlights();
-            });
-
-            if (_filtered.isNotEmpty && !_overlayController.isShowing) {
-              _overlayController.show();
-            } else if (_filtered.isEmpty && _overlayController.isShowing) {
-              _overlayController.hide();
-            }
-          },
-          decoration: InputDecoration(
-            hintText: _selected.isEmpty
-                ? (widget.decoration.hintText ?? 'Search...')
-                : null,
-            hintStyle: widget.decoration.hintStyle,
-            filled: false,
-            enabledBorder: OutlineInputBorder(
-              borderSide: BorderSide(
-                  color: widget.enabled ? Colors.black45 : Colors.grey
-                      .shade400),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderSide: BorderSide(
-                  color: widget.enabled ? Colors.blue : Colors.grey.shade400),
-            ),
-            isDense: true,
-            contentPadding: const EdgeInsets.symmetric(
-              vertical: _textFieldVerticalPadding,
-              horizontal: _textFieldHorizontalPadding,
-            ),
-            // Show chips as a prefix instead
-            prefixIcon: _selected.isEmpty
-                ? null
-                : Padding(
-              padding: const EdgeInsets.only(left: 8, right: 4),
-              child: Wrap(
-                spacing: _chipSpacing,
-                runSpacing: _chipSpacing,
-                children: _selected.map((item) => _buildChip(item)).toList(),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Flexible(
+              child: TextField(
+                key: widget.inputKey ?? _fieldKey,
+                controller: _searchController,
+                focusNode: _focusNode,
+                style: TextStyle(fontSize: widget.textSize),
+                onChanged: (value) {
+                  setState(() {
+                    _filterUtils.clearCache();
+                    _clearHighlights();
+                  });
+                  if (_filtered.isNotEmpty && !_overlayController.isShowing) {
+                    _overlayController.show();
+                  } else
+                  if (_filtered.isEmpty && _overlayController.isShowing) {
+                    _overlayController.hide();
+                  }
+                },
+                decoration: InputDecoration(
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  disabledBorder: InputBorder.none,
+                  errorBorder: InputBorder.none,
+                  focusedErrorBorder: InputBorder.none,
+                  isDense: true,
+                  contentPadding: EdgeInsets.symmetric(
+                    vertical: 0,
+                    horizontal: _textFieldHorizontalPadding,
+                  ),
+                ),
               ),
             ),
-            suffixIconConstraints: const BoxConstraints.tightFor(
-              width: _suffixIconWidth,
-              height: kMinInteractiveDimension,
-            ),
-            suffixIcon: DropdownSuffixIcons(
-              isDropdownShowing: _overlayController.isShowing,
-              enabled: widget.enabled,
-              onClearPressed: () {
-                setState(() {
-                  _searchController.clear();
-                  _selected.clear();
-                  _filterUtils.clearCache();
-                  widget.onChanged([]);
-                });
-              },
-              onArrowPressed: () {
-                if (_overlayController.isShowing) {
-                  _focusNode.unfocus();
-                } else {
-                  _focusNode.requestFocus();
-                }
-              },
-              iconSize: _iconSize,
-              suffixIconWidth: _suffixIconWidth,
-              iconButtonSize: _iconButtonSize,
-              clearButtonRightPosition: _clearButtonRightPosition,
-              arrowButtonRightPosition: _arrowButtonRightPosition,
-            ),
-          ),
+          ],
         ),
       ),
     );
