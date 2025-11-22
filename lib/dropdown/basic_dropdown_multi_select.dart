@@ -52,6 +52,9 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   static const double _chipSpacing = 4.0;
   static const double _iconSize = 16.0;
   static const double _chipDeleteIconSize = 14.0;
+  static const double _chipBorderRadius = 6.0;
+  static const double _chipMarginRight = 4.0;
+  static const double _chipDeleteIconLeftPadding = 4.0;
   static const double _textFieldVerticalPadding = 2.0;
   static const double _textFieldHorizontalPadding = 12.0;
   static const double _suffixIconWidth = 60.0;
@@ -365,24 +368,46 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   }
 
   Widget _buildChip(DropDownItem<T> item) {
-    return Chip(
-      label: Text(
-        item.label,
-        style: TextStyle(fontSize: widget.textSize),
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Colors.blue.shade100,
+            Colors.blue.shade200,
+          ],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+        borderRadius: BorderRadius.circular(_chipBorderRadius),
       ),
-      deleteIcon: Icon(
-        Icons.close,
-        size: _chipDeleteIconSize,
-      ),
-      onDeleted: widget.enabled ? () => _removeChip(item) : null,
       padding: const EdgeInsets.symmetric(
         horizontal: _chipHorizontalPadding,
         vertical: _chipVerticalPadding,
       ),
-      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      backgroundColor: Colors.blue.shade100,
+      margin: const EdgeInsets.only(right: _chipMarginRight),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            item.label,
+            style: TextStyle(fontSize: widget.textSize,
+                color: widget.enabled ? Colors.black : Colors.grey.shade500),
+          ),
+          if (widget.enabled)
+            GestureDetector(
+              onTap: () => _removeChip(item),
+              child: Padding(
+                padding: const EdgeInsets.only(
+                    left: _chipDeleteIconLeftPadding),
+                child: Icon(Icons.close, size: _chipDeleteIconSize,
+                    color: Colors.grey.shade700),
+              ),
+            ),
+        ],
+      ),
     );
   }
+
 
   Widget _buildOverlay() {
     final List<DropDownItem<T>> filteredItems = _filtered;
