@@ -274,22 +274,101 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   }
 
   Widget _buildInputField({InputDecoration? previewDecoration}) {
-    final InputDecoration deco = previewDecoration ?? widget.decoration;
-    debugPrint('MULTI: _buildInputField deco: '
-        'border=${deco.border}, '
-        'enabledBorder=${deco.enabledBorder}, '
-        'focusedBorder=${deco.focusedBorder}, '
-        'filled=${deco.filled}, '
-        'isDense=${deco.isDense}, '
-        'contentPadding=${deco.contentPadding}');
-    return SizedBox(
+    final bool hasChips = _selected.isNotEmpty;
+
+    return Container(
       width: widget.width,
-      child: TextField(
-        key: widget.inputKey ?? _fieldKey,
-        controller: _searchController,
-        focusNode: _focusNode,
-        style: TextStyle(fontSize: widget.textSize),
-        decoration: deco,
+      constraints: BoxConstraints(
+        minHeight: hasChips ? 80.0 : 48.0, // Minimum height based on content
+      ),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.white, Colors.grey.shade200],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+        border: Border.all(
+          color: _focusNode.hasFocus ? Colors.blue : Colors.grey.shade400,
+          width: 1.0,
+        ),
+        borderRadius: BorderRadius.circular(_containerBorderRadius),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Chips area with better padding and scrolling
+          if (hasChips)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12.0, 8.0, 12.0, 4.0),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 32.0),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: _selected
+                        .map((item) => _buildChip(item))
+                        .toList(),
+                  ),
+                ),
+              ),
+            ),
+
+          // Subtle separator when chips are present
+          if (hasChips)
+            Container(
+              height: 1.0,
+              margin: const EdgeInsets.symmetric(horizontal: 12.0),
+              color: _focusNode.hasFocus
+                  ? Colors.blue.shade100
+                  : Colors.grey.shade200,
+            ),
+
+          // Text input area
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12.0, 4.0, 12.0, 8.0),
+            child: TextField(
+              key: widget.inputKey ?? _fieldKey,
+              controller: _searchController,
+              focusNode: _focusNode,
+              style: TextStyle(fontSize: widget.textSize),
+              decoration: previewDecoration ?? widget.decoration.copyWith(
+                hintText: hasChips ? null : widget.decoration.hintText,
+                contentPadding: EdgeInsets.zero,
+                isDense: true,
+                suffixIconConstraints: const BoxConstraints.tightFor(
+                  width: _suffixIconWidth,
+                  height: kMinInteractiveDimension,
+                ),
+                suffixIcon: DropdownSuffixIcons(
+                  isDropdownShowing: _overlayController.isShowing,
+                  enabled: widget.enabled,
+                  onClearPressed: () {
+                    setState(() {
+                      _searchController.clear();
+                      _selected.clear();
+                      _filterUtils.clearCache();
+                      widget.onChanged([]);
+                    });
+                  },
+                  onArrowPressed: () {
+                    if (_overlayController.isShowing) {
+                      _focusNode.unfocus();
+                    } else {
+                      _focusNode.requestFocus();
+                    }
+                  },
+                  iconSize: _iconSize,
+                  suffixIconWidth: _suffixIconWidth,
+                  iconButtonSize: _iconButtonSize,
+                  clearButtonRightPosition: _clearButtonRightPosition,
+                  arrowButtonRightPosition: _arrowButtonRightPosition,
+                ),
+              ),
+              enabled: widget.enabled,
+            ),
+          ),
+        ],
       ),
     );
   }
