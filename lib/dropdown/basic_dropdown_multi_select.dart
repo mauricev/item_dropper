@@ -286,53 +286,47 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
       borderRadius = border.borderRadius;
     }
     return Container(
-      constraints: const BoxConstraints(minHeight: 46),
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border.all(color: borderColor, width: borderWidth),
         borderRadius: borderRadius,
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
-      child: SizedBox(
-        width: widget.width,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Flexible(
-              child: TextField(
-                key: widget.inputKey ?? _fieldKey,
-                controller: _searchController,
-                focusNode: _focusNode,
-                style: TextStyle(fontSize: widget.textSize),
-                onChanged: (value) {
-                  setState(() {
-                    _filterUtils.clearCache();
-                    _clearHighlights();
-                  });
-                  if (_filtered.isNotEmpty && !_overlayController.isShowing) {
-                    _overlayController.show();
-                  } else
-                  if (_filtered.isEmpty && _overlayController.isShowing) {
-                    _overlayController.hide();
-                  }
-                },
-                decoration: InputDecoration(
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
-                  disabledBorder: InputBorder.none,
-                  errorBorder: InputBorder.none,
-                  focusedErrorBorder: InputBorder.none,
-                  isDense: true,
-                  contentPadding: EdgeInsets.symmetric(
-                    vertical: 0,
-                    horizontal: _textFieldHorizontalPadding,
-                  ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Flexible(
+            child: TextField(
+              key: widget.inputKey ?? _fieldKey,
+              controller: _searchController,
+              focusNode: _focusNode,
+              style: TextStyle(fontSize: widget.textSize),
+              onChanged: (value) {
+                setState(() {
+                  _filterUtils.clearCache();
+                  _clearHighlights();
+                });
+                if (_filtered.isNotEmpty && !_overlayController.isShowing) {
+                  _overlayController.show();
+                } else if (_filtered.isEmpty && _overlayController.isShowing) {
+                  _overlayController.hide();
+                }
+              },
+              decoration: InputDecoration(
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                disabledBorder: InputBorder.none,
+                errorBorder: InputBorder.none,
+                focusedErrorBorder: InputBorder.none,
+                isDense: true,
+                contentPadding: EdgeInsets.symmetric(
+                  vertical: 14,
+                  horizontal: _textFieldHorizontalPadding,
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
