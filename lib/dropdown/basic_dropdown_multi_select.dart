@@ -286,6 +286,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
       borderRadius = border.borderRadius;
     }
     return Container(
+      width: widget.width,
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border.all(color: borderColor, width: borderWidth),
