@@ -48,7 +48,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   // UI Layout Constants
   static const double _containerBorderRadius = 8.0;
   static const double _chipHorizontalPadding = 8.0;
-  static const double _chipVerticalPadding = 4.0;
+  static const double _chipVerticalPadding = 10.0;
   static const double _chipSpacing = 4.0;
   static const double _iconSize = 16.0;
   static const double _chipDeleteIconSize = 14.0;
@@ -384,9 +384,10 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
         horizontal: _chipHorizontalPadding,
         vertical: _chipVerticalPadding,
       ),
-      margin: const EdgeInsets.only(right: _chipMarginRight),
+      margin: const EdgeInsets.only(right: _chipMarginRight, top: 3),
       child: Row(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Text(
             item.label,
