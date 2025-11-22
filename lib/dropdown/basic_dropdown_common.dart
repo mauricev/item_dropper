@@ -292,6 +292,8 @@ class DropdownRenderUtils {
     required LayerLink layerLink,
     required bool Function(DropDownItem<T>) isSelected,
     required Widget Function(BuildContext, DropDownItem<T>, bool) builder,
+    bool showScrollbar = true,
+    double scrollbarThickness = 6.0,
   }) {
     if (items.isEmpty) return const SizedBox.shrink();
 
@@ -343,7 +345,8 @@ class DropdownRenderUtils {
                 ),
                 child: Scrollbar(
                   controller: scrollController,
-                  thumbVisibility: true,
+                  thumbVisibility: showScrollbar,
+                  thickness: scrollbarThickness,
                   child: ListView.builder(
                     controller: scrollController,
                     padding: EdgeInsets.zero,
