@@ -316,16 +316,6 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
                 height: _calculateChipAreaHeight()), // Reserve space when empty
           ),
 
-          // Subtle separator when chips are present
-          if (hasChips)
-            Container(
-              height: 1.0,
-              margin: const EdgeInsets.symmetric(horizontal: 12.0),
-              color: _focusNode.hasFocus
-                  ? Colors.blue.shade100
-                  : Colors.grey.shade200,
-            ),
-
           // Text input area
           Padding(
             padding: const EdgeInsets.fromLTRB(12.0, 4.0, 12.0, 8.0),
@@ -342,34 +332,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
                   bottom: 8.0,
                 ),
                 isDense: true,
-                suffixIconConstraints: const BoxConstraints.tightFor(
-                  width: _suffixIconWidth,
-                  height: kMinInteractiveDimension,
-                ),
-                suffixIcon: DropdownSuffixIcons(
-                  isDropdownShowing: _overlayController.isShowing,
-                  enabled: widget.enabled,
-                  onClearPressed: () {
-                    setState(() {
-                      _searchController.clear();
-                      _selected.clear();
-                      _filterUtils.clearCache();
-                      widget.onChanged([]);
-                    });
-                  },
-                  onArrowPressed: () {
-                    if (_overlayController.isShowing) {
-                      _focusNode.unfocus();
-                    } else {
-                      _focusNode.requestFocus();
-                    }
-                  },
-                  iconSize: _iconSize,
-                  suffixIconWidth: _suffixIconWidth,
-                  iconButtonSize: _iconButtonSize,
-                  clearButtonRightPosition: _clearButtonRightPosition,
-                  arrowButtonRightPosition: _arrowButtonRightPosition,
-                ),
+                border: InputBorder.none,
               ),
               enabled: widget.enabled,
             ),
