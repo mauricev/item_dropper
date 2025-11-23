@@ -276,11 +276,12 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   }
 
   Widget _buildInputField({InputDecoration? previewDecoration}) {
+    final bool hasChips = _selected.isNotEmpty;
 
     return Container(
       key: widget.inputKey ?? _fieldKey,
       width: widget.width,
-      height: _calculateMinHeight(),
+      height: _calculateWholeFieldHeight(),
       // Constrain to calculated natural height
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -350,44 +351,53 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   }
 
   // Calculate minimum height based on content
-  double _calculateMinHeight() {
+  double _calculateWholeFieldHeight() {
     // Calculate natural height based on chip dimensions
-    final double chipAreaHeight = _calculateChipAreaHeight();
+    final double chipHeight = _calculateTotalWrappedChipsHeight();
     final double topPadding = 8.0; // Consistent padding
     final double bottomPadding = 4.0; // Consistent padding
 
-    final double naturalHeight = topPadding + chipAreaHeight + bottomPadding;
+    final double naturalHeight = topPadding + chipHeight + bottomPadding;
 
     debugPrint(
-        'MULTI: _calculateMinHeight - chipAreaHeight: $chipAreaHeight, topPadding: $topPadding, bottomPadding: $bottomPadding, naturalHeight: $naturalHeight');
+        'MULTI: _calculateFieldHeight chipAreaHeight: $chipHeight, topPadding: $topPadding, bottomPadding: $bottomPadding, naturalHeight: $naturalHeight');
 
     return naturalHeight;
   }
 
-  // Calculate height needed for chip area only
-  double _calculateChipAreaHeight() {
-    // Calculate single chip height dynamically - account for symmetric padding
+  double _calculateChipHeight() {
+    // Calculate single chip height
     final double fontSize = widget.textSize;
     final double textHeight = fontSize * 1.0; // Rough line height estimate
     final double verticalPadding = _chipVerticalPadding *
         2; // Top + bottom symmetric padding
     final double topMargin = 3.0; // Top margin from chip
-    final double chipHeight = textHeight + verticalPadding + topMargin;
+    return textHeight + verticalPadding + topMargin;
+  }
 
-    // For empty state, reserve space for one chip
+  // Calculate height needed for chip area only
+  double _calculateTotalWrappedChipsHeight() {
+    final chipHeight = _calculateChipHeight();
+
+    // For empty state, just the TextField
     if (_selected.isEmpty) {
       return chipHeight;
     }
 
-    // Estimate how many chips fit per row
+    // Simple calculation: account for TextField by adding 1 to selected length
     final double availableWidth = widget.width -
         24.0; // Account for left/right padding
-    const double estimatedChipWidth = 80.0; // Rough estimate per chip
+    const double estimatedChipWidth = 80.0;
     final int chipsPerRow = (availableWidth / estimatedChipWidth).floor();
 
-    final int rows = ((_selected.length + chipsPerRow - 1) / chipsPerRow)
-        .floor();
-    final double runSpacing = _chipSpacing; // Vertical spacing between rows
+    // Add 1 to selected length to account for TextField taking space
+    final int effectiveItems = _selected.length + 1;
+    final int rows = ((effectiveItems + chipsPerRow - 1) / chipsPerRow).floor();
+
+    debugPrint(
+        'MULTI: _calculateChipAreaHeight - availableWidth: $availableWidth, effectiveItems: $effectiveItems, chipsPerRow: $chipsPerRow, rows: $rows');
+
+    final double runSpacing = _chipSpacing;
     final double totalHeight = (rows * chipHeight) + ((rows - 1) * runSpacing);
 
     return totalHeight;
@@ -444,7 +454,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
 
   Widget _buildTextFieldChip() {
     return Container(
-      height: _calculateChipAreaHeight(), // Working height
+      height: _calculateChipHeight(), // Working height
       decoration: BoxDecoration(
         border: Border.all(color: Colors.red, width: 1.0), // Temporary border
       ),
