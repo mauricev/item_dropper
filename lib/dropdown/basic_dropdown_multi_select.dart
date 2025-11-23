@@ -384,18 +384,19 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
       return chipHeight;
     }
 
-    // Simple calculation: account for TextField by adding 1 to selected length
+    // Simple calculation: don't add extra for TextField since it can shrink
     final double availableWidth = widget.width -
         24.0; // Account for left/right padding
     const double estimatedChipWidth = 80.0;
     final int chipsPerRow = (availableWidth / estimatedChipWidth).floor();
 
-    // Add 1 to selected length to account for TextField taking space
-    final int effectiveItems = _selected.length + 1;
-    final int rows = ((effectiveItems + chipsPerRow - 1) / chipsPerRow).floor();
+    // Use selected length directly - TextField can fit in remaining space
+    final int rows = ((_selected.length + chipsPerRow - 1) / chipsPerRow)
+        .floor();
 
     debugPrint(
-        'MULTI: _calculateChipAreaHeight - availableWidth: $availableWidth, effectiveItems: $effectiveItems, chipsPerRow: $chipsPerRow, rows: $rows');
+        'MULTI: _calculateChipAreaHeight - availableWidth: $availableWidth, effectiveItems: ${_selected
+            .length}, chipsPerRow: $chipsPerRow, rows: $rows');
 
     final double runSpacing = _chipSpacing;
     final double totalHeight = (rows * chipHeight) + ((rows - 1) * runSpacing);
