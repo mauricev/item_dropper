@@ -276,10 +276,6 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   }
 
   Widget _buildInputField({InputDecoration? previewDecoration}) {
-    final bool hasChips = _selected.isNotEmpty;
-
-    // Calculate height for the integrated chip area
-    final double chipAreaHeight = _calculateChipAreaHeight();
 
     return Container(
       key: widget.inputKey ?? _fieldKey,
