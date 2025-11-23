@@ -48,7 +48,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   // UI Layout Constants
   static const double _containerBorderRadius = 8.0;
   static const double _chipHorizontalPadding = 8.0;
-  static const double _chipVerticalPadding = 10.0;
+  static const double _chipVerticalPadding = 19.0; // Adjusted for natural 46px height
   static const double _chipSpacing = 4.0;
   static const double _iconSize = 16.0;
   static const double _chipDeleteIconSize = 14.0;
@@ -276,11 +276,8 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   Widget _buildInputField({InputDecoration? previewDecoration}) {
     final bool hasChips = _selected.isNotEmpty;
 
-    // Always calculate chip area height for consistent debugging
+    // Calculate height for the integrated chip area
     final double chipAreaHeight = _calculateChipAreaHeight();
-
-    debugPrint(
-        'MULTI: _buildInputField - hasChips: $hasChips, chipAreaHeight: $chipAreaHeight');
 
     return Container(
       key: widget.inputKey ?? _fieldKey,
@@ -302,39 +299,31 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Chips area with vertical wrapping (always present for consistent height)
+          // Integrated chips and text field area
           Padding(
             padding: const EdgeInsets.fromLTRB(12.0, 8.0, 12.0, 4.0),
-            child: hasChips
-                ? Wrap(
-              spacing: _chipSpacing,
-              runSpacing: _chipSpacing,
-              alignment: WrapAlignment.start,
-              children: _selected.map((item) => _buildChip(item)).toList(),
-            )
-                : SizedBox(
-                height: _calculateChipAreaHeight()), // Reserve space when empty
-          ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final double availableWidth = constraints.maxWidth;
+                final double textFieldWidth = _calculateTextFieldWidth(
+                    availableWidth);
 
-          // Text input area
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12.0, 4.0, 12.0, 8.0),
-            child: TextField(
-              controller: _searchController,
-              focusNode: _focusNode,
-              style: TextStyle(fontSize: widget.textSize),
-              decoration: previewDecoration ?? widget.decoration.copyWith(
-                hintText: hasChips ? null : widget.decoration.hintText,
-                contentPadding: const EdgeInsets.only(
-                  left: 15.0,
-                  right: 12.0,
-                  top: 8.0,
-                  bottom: 8.0,
-                ),
-                isDense: true,
-                border: InputBorder.none,
-              ),
-              enabled: widget.enabled,
+                return Wrap(
+                  spacing: _chipSpacing,
+                  runSpacing: _chipSpacing,
+                  alignment: WrapAlignment.start,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    // Selected chips
+                    ..._selected.map((item) => _buildChip(item)),
+                    // TextField as the last "chip" with calculated width
+                    SizedBox(
+                      width: textFieldWidth,
+                      child: _buildTextFieldChip(),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
         ],
@@ -342,56 +331,60 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
     );
   }
 
-  // Calculate minimum height based on content
-  double _calculateMinHeight() {
+  double _calculateTextFieldWidth(double availableWidth) {
     if (_selected.isEmpty) {
-      return 56.0; // Standard TextField height when no chips
+      // No chips, TextField can take most available space
+      return availableWidth * 0.8; // Leave some space
     }
 
-    // Use the chip area height plus other components
+    // Estimate chip widths more accurately
+    const double estimatedChipWidth = 80.0; // Rough estimate per chip
+    final double totalChipWidth = _selected.length * estimatedChipWidth;
+    final double totalSpacing = (_selected.length - 1) * _chipSpacing;
+    final double usedWidth = totalChipWidth + totalSpacing;
+
+    // TextField gets remaining space, but at least minimum width
+    final double remainingWidth = availableWidth - usedWidth;
+    return remainingWidth.clamp(100.0, double.infinity);
+  }
+
+  // Calculate minimum height based on content
+  double _calculateMinHeight() {
+    // Calculate natural height based on chip dimensions
     final double chipAreaHeight = _calculateChipAreaHeight();
-    final double separatorHeight = 1.0;
-    final double textFieldHeight = 40.0;
-    final double topPadding = 8.0;
-    final double bottomPadding = 8.0;
+    final double topPadding = 8.0; // From Wrap padding
+    final double bottomPadding = 4.0; // From Wrap padding
 
-    final double totalHeight = topPadding + chipAreaHeight + separatorHeight +
-        textFieldHeight + bottomPadding;
+    final double naturalHeight = topPadding + chipAreaHeight + bottomPadding;
 
-    final double result = totalHeight.clamp(56.0, 200.0); // Min 56, max 200
-
-    return result;
+    // The natural height should be 46px based on our chip calculations
+    return naturalHeight;
   }
 
   // Calculate height needed for chip area only
   double _calculateChipAreaHeight() {
-    // Always calculate, even with no chips, for consistent debugging
+    // Calculate single chip height dynamically - adjust for 46px total height
     final double fontSize = widget.textSize;
     final double textHeight = fontSize * 1.2; // Rough line height estimate
-    final double verticalPadding = _chipVerticalPadding *
-        2; // Top + bottom padding
+    final double verticalPadding = _chipVerticalPadding; // Use constant instead of hardcoded
     final double topMargin = 3.0; // Top margin from chip
     final double chipHeight = textHeight + verticalPadding + topMargin;
 
+    // For empty state, reserve space for one chip
+    if (_selected.isEmpty) {
+      return chipHeight;
+    }
+
+    // Estimate how many chips fit per row
     final double availableWidth = widget.width -
         24.0; // Account for left/right padding
-    final double estimatedChipWidth = 80.0; // Rough estimate per chip
+    const double estimatedChipWidth = 80.0; // Rough estimate per chip
     final int chipsPerRow = (availableWidth / estimatedChipWidth).floor();
 
-    final int rows = _selected.isEmpty
-        ? 1
-        : ((_selected.length + chipsPerRow - 1) / chipsPerRow).floor();
+    final int rows = ((_selected.length + chipsPerRow - 1) / chipsPerRow)
+        .floor();
     final double runSpacing = _chipSpacing; // Vertical spacing between rows
-    final double totalHeight = rows == 0 ? 0 : (rows * chipHeight) +
-        ((rows - 1) * runSpacing);
-
-    debugPrint(
-        'MULTI: _calculateChipAreaHeight - fontSize: $fontSize, textHeight: $textHeight, verticalPadding: $verticalPadding, topMargin: $topMargin');
-    debugPrint(
-        'MULTI: _calculateChipAreaHeight - chipHeight: $chipHeight, availableWidth: $availableWidth, estimatedChipWidth: $estimatedChipWidth');
-    debugPrint(
-        'MULTI: _calculateChipAreaHeight - chipsPerRow: $chipsPerRow, selectedCount: ${_selected
-            .length}, rows: $rows, runSpacing: $runSpacing, totalHeight: $totalHeight');
+    final double totalHeight = (rows * chipHeight) + ((rows - 1) * runSpacing);
 
     return totalHeight;
   }
@@ -435,6 +428,26 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
             ),
         ],
       ),
+    );
+  }
+
+  Widget _buildTextFieldChip() {
+    return TextField(
+      controller: _searchController,
+      focusNode: _focusNode,
+      style: TextStyle(fontSize: widget.textSize),
+      decoration: InputDecoration(
+        contentPadding: EdgeInsets.only(
+          left: 15.0,
+          right: 12.0,
+          top: _chipVerticalPadding, // Match chip vertical padding
+          bottom: _chipVerticalPadding, // Match chip vertical padding
+        ),
+        isDense: true,
+        border: InputBorder.none,
+        hintText: 'Search',
+      ),
+      enabled: widget.enabled,
     );
   }
 
