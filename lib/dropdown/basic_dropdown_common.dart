@@ -45,6 +45,7 @@ class DropdownSuffixIcons extends StatelessWidget {
   final double iconButtonSize;
   final double clearButtonRightPosition;
   final double arrowButtonRightPosition;
+  final double textSize;
 
   const DropdownSuffixIcons({
     super.key,
@@ -57,13 +58,14 @@ class DropdownSuffixIcons extends StatelessWidget {
     this.iconButtonSize = 24.0,
     this.clearButtonRightPosition = 40.0,
     this.arrowButtonRightPosition = 10.0,
+    this.textSize = 10.0,
   });
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       width: suffixIconWidth,
-      height: kMinInteractiveDimension,
+      height: textSize * 3.2,
       child: Stack(
         alignment: Alignment.centerRight,
         clipBehavior: Clip.none,

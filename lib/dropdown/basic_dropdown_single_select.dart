@@ -461,6 +461,7 @@ class _SearchDropdownState<T> extends State<SearchDropdown<T>> {
           safeSetState: _safeSetState,
           setHoverIndex: (index) => _hoverIndex = index,
           onTap: () {
+            debugPrint("single buildDropdownItem onTap called!");
             _withSquelch(() {
               _controller.text = item.label;
               _controller.selection =
@@ -618,9 +619,10 @@ class _SearchDropdownState<T> extends State<SearchDropdown<T>> {
                   vertical: _textFieldVerticalPadding,
                   horizontal: _textFieldHorizontalPadding,
                 ),
-                suffixIconConstraints: const BoxConstraints.tightFor(
+                suffixIconConstraints: BoxConstraints.tightFor(
                   width: _suffixIconWidth,
-                  height: kMinInteractiveDimension,
+                  height: widget.textSize *
+                      3.2, // Match calculated suffix icon height
                 ),
                 suffixIcon: DropdownSuffixIcons(
                   isDropdownShowing: _overlayController.isShowing,
@@ -645,6 +647,7 @@ class _SearchDropdownState<T> extends State<SearchDropdown<T>> {
                   iconButtonSize: _iconButtonSize,
                   clearButtonRightPosition: _clearButtonRightPosition,
                   arrowButtonRightPosition: _arrowButtonRightPosition,
+                  textSize: widget.textSize, // Pass font size
                 ),
               ),
             ),

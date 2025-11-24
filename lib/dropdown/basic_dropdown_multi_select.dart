@@ -49,7 +49,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   static const double _chipHorizontalPadding = 8.0;
   static const double _chipVerticalPadding = 6;
   static const double _chipSpacing = 4.0;
-  static const double _chipDeleteIconSize = 14.0;
+  static const double _chipDeleteIconSize = 18.0;
   static const double _chipBorderRadius = 6.0;
   static const double _chipMarginRight = 4.0;
   static const double _chipDeleteIconLeftPadding = 4.0;
@@ -412,11 +412,12 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
                 color: widget.enabled ? Colors.black : Colors.grey.shade500),
           ),
           if (widget.enabled)
-            GestureDetector(
-              onTap: () => _removeChip(item),
-              child: Padding(
-                padding: const EdgeInsets.only(
-                    left: _chipDeleteIconLeftPadding),
+            Container(
+              width: 24.0, // Touch target width
+              height: 24.0, // Touch target height
+              alignment: Alignment.center,
+              child: GestureDetector(
+                onTap: () => _removeChip(item),
                 child: Icon(Icons.close, size: _chipDeleteIconSize,
                     color: Colors.grey.shade700),
               ),
