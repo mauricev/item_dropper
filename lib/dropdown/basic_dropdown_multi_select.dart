@@ -431,19 +431,15 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
     return SizedBox(
       width: width, // Constrain to calculated width
       height: _calculateChipHeight(), // Working height
-      /*decoration: BoxDecoration(
-        border: Border.all(color: Colors.red, width: 1.0), // Temporary border
-      ),*/
       child: TextField(
         controller: _searchController,
         focusNode: _focusNode,
         style: TextStyle(fontSize: widget.textSize),
         decoration: InputDecoration(
           contentPadding: EdgeInsets.only(
-            left: widget.textSize * 1.5, // 10 * 1.5 = 15
             right: widget.textSize * 1.2, // 10 * 1.2 = 12
             top: widget.textSize * 0.75, // 10 * 0.75 = 7.5
-            bottom: widget.textSize * 2, // 10 * 2 = 20
+            bottom: widget.textSize * 1.9, // 10 * 1.9 = 19
           ),
           border: InputBorder.none,
           hintText: 'Search',
