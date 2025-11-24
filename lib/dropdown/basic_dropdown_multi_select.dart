@@ -49,17 +49,10 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   static const double _chipHorizontalPadding = 8.0;
   static const double _chipVerticalPadding = 9.5; // Fine-tuned for exactly 46px total height
   static const double _chipSpacing = 4.0;
-  static const double _iconSize = 16.0;
   static const double _chipDeleteIconSize = 14.0;
   static const double _chipBorderRadius = 6.0;
   static const double _chipMarginRight = 4.0;
   static const double _chipDeleteIconLeftPadding = 4.0;
-  static const double _textFieldVerticalPadding = 2.0;
-  static const double _textFieldHorizontalPadding = 12.0;
-  static const double _suffixIconWidth = 60.0;
-  static const double _iconButtonSize = 24.0;
-  static const double _clearButtonRightPosition = 40.0;
-  static const double _arrowButtonRightPosition = 10.0;
 
   final GlobalKey _fieldKey = GlobalKey();
   late final TextEditingController _searchController;
@@ -124,9 +117,6 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
         });
         _overlayController.show();
       }
-    } else {
-      // Don't hide overlay here - let explicit dismiss handle it
-      // This prevents the overlay from closing when clicking on items
     }
   }
 
@@ -254,7 +244,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
     super.didUpdateWidget(oldWidget);
     // Sync _selected if the parent (user) updates selectedItems externally
     if (widget.selectedItems != oldWidget.selectedItems) {
-      setState(() {
+      _safeSetState(() {
         _selected = List.from(widget.selectedItems);
       });
     }
@@ -278,8 +268,6 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   }
 
   Widget _buildInputField({InputDecoration? previewDecoration}) {
-    final bool hasChips = _selected.isNotEmpty;
-
     return Container(
       key: widget.inputKey ?? _fieldKey,
       width: widget.width,
@@ -366,21 +354,6 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
     return remainingWidth.clamp(100.0, double.infinity);
   }
 
-  // Calculate minimum height based on content
-  double _calculateWholeFieldHeight() {
-    // Calculate natural height based on chip dimensions
-    final double chipHeight = _calculateTotalWrappedChipsHeight();
-    final double topPadding = 8.0; // Consistent padding
-    final double bottomPadding = 4.0; // Consistent padding
-
-    final double naturalHeight = topPadding + chipHeight + bottomPadding;
-
-    debugPrint(
-        'MULTI: _calculateFieldHeight chipAreaHeight: $chipHeight, topPadding: $topPadding, bottomPadding: $bottomPadding, naturalHeight: $naturalHeight');
-
-    return naturalHeight;
-  }
-
   double _calculateChipHeight() {
     // Calculate single chip height
     final double fontSize = widget.textSize;
@@ -389,29 +362,6 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
         2; // Top + bottom symmetric padding
     final double topMargin = 3.0; // Top margin from chip
     return textHeight + verticalPadding + topMargin;
-  }
-
-  // Calculate height needed for chip area only
-  double _calculateTotalWrappedChipsHeight() {
-    final chipHeight = _calculateChipHeight();
-
-    // For empty state, just the TextField
-    if (_selected.isEmpty) {
-      return chipHeight;
-    }
-
-    // Use the measured Wrap height directly
-    debugPrint(
-        'MULTI: _calculateTotalWrappedChipsHeight - measuredWrapHeight: $_measuredWrapHeight');
-
-    return _measuredWrapHeight;
-  }
-
-  static double _calculateTextFieldVerticalPadding() {
-    // Text height + equal padding above and below for centering
-    const double textHeight = 12.0; // Based on fontSize * 1.2
-    const double containerHeight = 34.0; // Match chip height
-    return (containerHeight - textHeight) / 2; // Center the text
   }
 
   Widget _buildChip(DropDownItem<T> item) {
