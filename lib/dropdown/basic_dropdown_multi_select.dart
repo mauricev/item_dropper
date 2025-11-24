@@ -144,6 +144,8 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
     _updateSelection(() {
       if (!_isSelected(item)) {
         _selected.add(item);
+        // Clear search text after selection for continued searching
+        _searchController.clear();
       }
       // After selection, clear highlights
       _clearHighlights();
@@ -170,9 +172,6 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
       return KeyEventResult.handled;
     } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
       _handleArrowUp();
-      return KeyEventResult.handled;
-    } else if (event.logicalKey == LogicalKeyboardKey.enter) {
-      _handleEnter();
       return KeyEventResult.handled;
     } else if (event.logicalKey == LogicalKeyboardKey.escape) {
       _focusNode.unfocus();
@@ -215,11 +214,35 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   }
 
   void _handleEnter() {
+    debugPrint(
+        'MULTI: _handleEnter called, keyboardHighlightIndex: $_keyboardHighlightIndex, filteredCount: ${_filtered
+            .length}');
     final List<DropDownItem<T>> filteredItems = _filtered;
+
     if (_keyboardHighlightIndex >= 0 &&
         _keyboardHighlightIndex < filteredItems.length) {
+      // Keyboard navigation is active, select highlighted item
+      debugPrint(
+          'MULTI: Selecting highlighted item at index $_keyboardHighlightIndex');
       _toggleItem(filteredItems[_keyboardHighlightIndex]);
-      // highlight will be set in _toggleItem
+    } else if (filteredItems.length == 1) {
+      // No keyboard navigation, but exactly 1 item - auto-select it
+      debugPrint('MULTI: Auto-selecting single item');
+      _toggleItem(filteredItems[0]);
+    } else {
+      debugPrint('MULTI: No valid item to select');
+    }
+  }
+
+  void _handleTextChanged(String value) {
+    _safeSetState(() {
+      _filterUtils.clearCache();
+      _clearHighlights();
+    });
+    if (_filtered.isNotEmpty && !_overlayController.isShowing) {
+      _overlayController.show();
+    } else if (_filtered.isEmpty && _overlayController.isShowing) {
+      _overlayController.hide();
     }
   }
 
@@ -306,7 +329,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
                   if (wrapBox != null) {
                     final double wrapHeight = wrapBox.size.height;
                     if (wrapHeight != _measuredWrapHeight) {
-                      setState(() {
+                      _safeSetState(() {
                         _measuredWrapHeight = wrapHeight;
                       });
                     }
@@ -426,6 +449,8 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
           border: InputBorder.none,
           hintText: 'Search',
         ),
+        onChanged: (value) => _handleTextChanged(value),
+        onSubmitted: (value) => _handleEnter(),
         enabled: widget.enabled,
       ),
     );
