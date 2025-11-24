@@ -47,7 +47,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   // UI Layout Constants
   static const double _containerBorderRadius = 8.0;
   static const double _chipHorizontalPadding = 8.0;
-  static const double _chipVerticalPadding = 9.5; // Fine-tuned for exactly 46px total height
+  static const double _chipVerticalPadding = 6;
   static const double _chipSpacing = 4.0;
   static const double _chipDeleteIconSize = 14.0;
   static const double _chipBorderRadius = 6.0;
@@ -310,7 +310,6 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
           // Integrated chips and text field area
           Padding(
             padding: const EdgeInsets.fromLTRB(12.0, 5.0, 12.0, 3.0),
-            // Consistent 12px padding
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final double availableWidth = constraints.maxWidth;
@@ -439,7 +438,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
           contentPadding: EdgeInsets.only(
             right: widget.textSize * 1.2, // 10 * 1.2 = 12
             top: widget.textSize * 0.75, // 10 * 0.75 = 7.5
-            bottom: widget.textSize * 1.9, // 10 * 1.9 = 19
+            bottom: widget.textSize * 1.7,
           ),
           border: InputBorder.none,
           hintText: 'Search',
