@@ -161,7 +161,10 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
       _clearHighlights();
     });
     widget.onChanged(List.from(_selected));
-    // Don't request focus when removing chips - this prevents dropdown from showing
+    // Focus the text field after layout settles, especially important for last chip removal
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _focusNode.requestFocus();
+    });
   }
 
   KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
