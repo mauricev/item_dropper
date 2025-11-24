@@ -461,7 +461,6 @@ class _SearchDropdownState<T> extends State<SearchDropdown<T>> {
           safeSetState: _safeSetState,
           setHoverIndex: (index) => _hoverIndex = index,
           onTap: () {
-            debugPrint("single buildDropdownItem onTap called!");
             _withSquelch(() {
               _controller.text = item.label;
               _controller.selection =

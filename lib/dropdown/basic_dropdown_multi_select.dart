@@ -214,16 +214,11 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   }
 
   void _handleEnter() {
-    debugPrint(
-        'MULTI: _handleEnter called, keyboardHighlightIndex: $_keyboardHighlightIndex, filteredCount: ${_filtered
-            .length}');
     final List<DropDownItem<T>> filteredItems = _filtered;
 
     if (_keyboardHighlightIndex >= 0 &&
         _keyboardHighlightIndex < filteredItems.length) {
       // Keyboard navigation is active, select highlighted item
-      debugPrint(
-          'MULTI: Selecting highlighted item at index $_keyboardHighlightIndex');
       _toggleItem(filteredItems[_keyboardHighlightIndex]);
     } else if (filteredItems.length == 1) {
       // No keyboard navigation, but exactly 1 item - auto-select it
@@ -293,7 +288,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   Widget _buildInputField({InputDecoration? previewDecoration}) {
     return Container(
       key: widget.inputKey ?? _fieldKey,
-      width: widget.width,
+      width: widget.width, // Constrain to 500px
       // Let content determine height naturally to prevent overflow
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -348,7 +343,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
                     // TextField as the last "chip" with calculated width
                     SizedBox(
                       width: textFieldWidth,
-                      child: _buildTextFieldChip(),
+                      child: _buildTextFieldChip(textFieldWidth),
                     ),
                   ],
                 );
@@ -361,9 +356,12 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   }
 
   double _calculateTextFieldWidth(double availableWidth) {
+    // Always cap TextField width to reasonable maximum based on font size
+    final double maxWidth = widget.textSize * 17.5; // ~175px for 10pt font
+
     if (_selected.isEmpty) {
-      // No chips, TextField can take almost full available space
-      return availableWidth * 0.95; // Take 95% of available space
+      // No chips, TextField can take up to maxWidth
+      return availableWidth.clamp(100.0, maxWidth);
     }
 
     // Estimate chip widths more accurately
@@ -372,9 +370,9 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
     final double totalSpacing = (_selected.length - 1) * _chipSpacing;
     final double usedWidth = totalChipWidth + totalSpacing;
 
-    // TextField gets remaining space, but at least minimum width
+    // TextField gets remaining space, but capped at maxWidth
     final double remainingWidth = availableWidth - usedWidth;
-    return remainingWidth.clamp(100.0, double.infinity);
+    return remainingWidth.clamp(100.0, maxWidth);
   }
 
   double _calculateChipHeight() {
@@ -429,8 +427,9 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
     );
   }
 
-  Widget _buildTextFieldChip() {
+  Widget _buildTextFieldChip(double width) {
     return Container(
+      width: width, // Constrain to calculated width
       height: _calculateChipHeight(), // Working height
       decoration: BoxDecoration(
         border: Border.all(color: Colors.red, width: 1.0), // Temporary border
