@@ -9,8 +9,7 @@ class MultiSearchDropdown<T> extends StatefulWidget {
   final List<DropDownItem<T>> items;
   final List<DropDownItem<T>> selectedItems;
   final void Function(List<DropDownItem<T>>) onChanged;
-  final Widget Function(BuildContext, DropDownItem<
-      T>, bool isSelected)? popupItemBuilder;
+  final Widget Function(BuildContext, DropDownItem<T>, bool)? popupItemBuilder;
   final InputDecoration decoration;
   final double width;
   final double maxDropdownHeight;
@@ -71,11 +70,14 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   final OverlayPortalController _overlayController = OverlayPortalController();
 
   List<DropDownItem<T>> _selected = [];
+  double _measuredWrapHeight = 34.0; // Store measured Wrap height
   int _keyboardHighlightIndex = DropdownConstants.kNoHighlight;
   int _hoverIndex = DropdownConstants.kNoHighlight;
 
   // Use shared filter utils
   final DropdownFilterUtils<T> _filterUtils = DropdownFilterUtils<T>();
+
+  final GlobalKey _wrapKey = GlobalKey(); // Key to query Wrap render object
 
   @override
   void initState() {
@@ -281,8 +283,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
     return Container(
       key: widget.inputKey ?? _fieldKey,
       width: widget.width,
-      height: _calculateWholeFieldHeight(),
-      // Constrain to calculated natural height
+      // Let content determine height naturally to prevent overflow
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [Colors.white, Colors.grey.shade200],
@@ -296,7 +297,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
         borderRadius: BorderRadius.circular(_containerBorderRadius),
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.max,
+        mainAxisSize: MainAxisSize.min,
         // Fill available space instead of min
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -310,7 +311,22 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
                 final double textFieldWidth = _calculateTextFieldWidth(
                     availableWidth);
 
+                // Query Wrap for its actual rendered height after layout
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  final RenderBox? wrapBox = _wrapKey.currentContext
+                      ?.findRenderObject() as RenderBox?;
+                  if (wrapBox != null) {
+                    final double wrapHeight = wrapBox.size.height;
+                    if (wrapHeight != _measuredWrapHeight) {
+                      setState(() {
+                        _measuredWrapHeight = wrapHeight;
+                      });
+                    }
+                  }
+                });
+
                 return Wrap(
+                  key: _wrapKey,
                   spacing: _chipSpacing,
                   runSpacing: _chipSpacing,
                   alignment: WrapAlignment.start,
@@ -384,24 +400,11 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
       return chipHeight;
     }
 
-    // Simple calculation: don't add extra for TextField since it can shrink
-    final double availableWidth = widget.width -
-        24.0; // Account for left/right padding
-    const double estimatedChipWidth = 80.0;
-    final int chipsPerRow = (availableWidth / estimatedChipWidth).floor();
-
-    // Use selected length directly - TextField can fit in remaining space
-    final int rows = ((_selected.length + chipsPerRow - 1) / chipsPerRow)
-        .floor();
-
+    // Use the measured Wrap height directly
     debugPrint(
-        'MULTI: _calculateChipAreaHeight - availableWidth: $availableWidth, effectiveItems: ${_selected
-            .length}, chipsPerRow: $chipsPerRow, rows: $rows');
+        'MULTI: _calculateTotalWrappedChipsHeight - measuredWrapHeight: $_measuredWrapHeight');
 
-    final double runSpacing = _chipSpacing;
-    final double totalHeight = (rows * chipHeight) + ((rows - 1) * runSpacing);
-
-    return totalHeight;
+    return _measuredWrapHeight;
   }
 
   static double _calculateTextFieldVerticalPadding() {
