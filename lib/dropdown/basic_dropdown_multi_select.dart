@@ -5,37 +5,39 @@ import 'basic_dropdown_common.dart';
 /// Multi-select dropdown widget
 /// Allows selecting multiple items with chip-based display
 class MultiSearchDropdown<T> extends StatefulWidget {
-  final GlobalKey? inputKey;
+  final GlobalKey<State<StatefulWidget>>? inputKey;
   final List<DropDownItem<T>> items;
   final List<DropDownItem<T>> selectedItems;
   final void Function(List<DropDownItem<T>>) onChanged;
   final Widget Function(BuildContext, DropDownItem<T>, bool)? popupItemBuilder;
   final InputDecoration decoration;
   final double width;
-  final double maxDropdownHeight;
-  final double elevation;
-  final double textSize;
-  final double? itemHeight;
+  final double? itemHeight; // Optional item height parameter
   final bool enabled;
-
-  /// Optional maximum number of selected items. If set, must be >=2. Null means unlimited.
+  final double textSize;
   final int? maxSelected;
+  final double? maxDropdownHeight; // Change back to maxDropdownHeight
+  final bool showScrollbar;
+  final double scrollbarThickness;
+  final double? elevation;
 
   const MultiSearchDropdown({
     super.key,
-    this.inputKey,
     required this.items,
-    this.selectedItems = const [],
+    required this.selectedItems,
     required this.onChanged,
-    this.popupItemBuilder,
-    required this.decoration,
     required this.width,
-    this.maxDropdownHeight = 200.0,
-    this.elevation = 4.0,
-    this.textSize = 12.0,
-    this.itemHeight,
+    this.inputKey,
+    this.decoration = const InputDecoration(),
     this.enabled = true,
+    this.textSize = 16,
+    this.maxDropdownHeight = 300, // Change back to maxDropdownHeight
     this.maxSelected,
+    this.showScrollbar = true,
+    this.scrollbarThickness = 6.0,
+    this.itemHeight, // Optional item height
+    this.popupItemBuilder,
+    this.elevation,
   }) : assert(maxSelected == null ||
       maxSelected >= 2, 'maxSelected must be null or >= 2');
 
@@ -316,12 +318,18 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
                 final double textFieldWidth = _calculateTextFieldWidth(
                     availableWidth);
 
+                debugPrint(
+                    'MULTI: LayoutBuilder - availableWidth: $availableWidth, textFieldWidth: $textFieldWidth, selectedCount: ${_selected
+                        .length}');
+
                 // Query Wrap for its actual rendered height after layout
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   final RenderBox? wrapBox = _wrapKey.currentContext
                       ?.findRenderObject() as RenderBox?;
                   if (wrapBox != null) {
                     final double wrapHeight = wrapBox.size.height;
+                    debugPrint(
+                        'MULTI: Wrap height: $wrapHeight, measured: $_measuredWrapHeight');
                     if (wrapHeight != _measuredWrapHeight) {
                       _safeSetState(() {
                         _measuredWrapHeight = wrapHeight;
@@ -339,11 +347,33 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
                   children: [
                     // Selected chips
                     ..._selected.map((item) => _buildChip(item)),
-                    // TextField as the last "chip" with calculated width
-                    SizedBox(
-                      width: textFieldWidth,
-                      child: _buildTextFieldChip(textFieldWidth),
-                    ),
+                    // TextField with proper width based on available space
+                    if (_selected.isNotEmpty)
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final double available = constraints.maxWidth;
+                          final double estimatedChipSpace = _selected.length *
+                              90.0 +
+                              (_selected.length - 1) * _chipSpacing;
+                          final double remaining = available -
+                              estimatedChipSpace;
+
+                          // If remaining space is sufficient, use it; otherwise wrap to next line
+                          final double textFieldWidth = remaining >= 100.0
+                              ? remaining
+                              : available;
+
+                          return SizedBox(
+                            width: textFieldWidth,
+                            child: _buildTextFieldChip(textFieldWidth),
+                          );
+                        },
+                      )
+                    else
+                      SizedBox(
+                        width: textFieldWidth,
+                        child: _buildTextFieldChip(textFieldWidth),
+                      ),
                   ],
                 );
               },
@@ -355,23 +385,26 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   }
 
   double _calculateTextFieldWidth(double availableWidth) {
-    // Always cap TextField width to reasonable maximum based on font size
-    final double maxWidth = widget.textSize * 17.5; // ~175px for 10pt font
-
     if (_selected.isEmpty) {
-      // No chips, TextField can take up to maxWidth
-      return availableWidth.clamp(100.0, maxWidth);
+      // No chips, TextField takes full available space for maximum click area
+      debugPrint(
+          'MULTI: _calculateTextFieldWidth - no chips, returning: $availableWidth');
+      return availableWidth; // Take 100% of available space
     }
 
     // Estimate chip widths more accurately
-    const double estimatedChipWidth = 80.0; // Rough estimate per chip
+    const double estimatedChipWidth = 90.0; // Better estimate for actual chip width
     final double totalChipWidth = _selected.length * estimatedChipWidth;
     final double totalSpacing = (_selected.length - 1) * _chipSpacing;
     final double usedWidth = totalChipWidth + totalSpacing;
 
-    // TextField gets remaining space, but capped at maxWidth
+    // TextField gets remaining space, minimum 100px (will wrap if less)
     final double remainingWidth = availableWidth - usedWidth;
-    return remainingWidth.clamp(100.0, maxWidth);
+    debugPrint('MULTI: _calculateTextFieldWidth - selected: ${_selected
+        .length}, totalChipWidth: $totalChipWidth, totalSpacing: $totalSpacing, usedWidth: $usedWidth, remainingWidth: $remainingWidth, final: ${remainingWidth
+        .clamp(100.0, double.infinity)}');
+    return remainingWidth.clamp(
+        100.0, double.infinity); // Min 100px, no max cap
   }
 
   double _calculateChipHeight() {
@@ -472,7 +505,8 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
       child: DropdownRenderUtils.buildDropdownOverlay(
         context: inputContext,
         items: filteredItems,
-        maxDropdownHeight: widget.maxDropdownHeight,
+        maxDropdownHeight: widget.maxDropdownHeight ?? 200.0,
+        // Use maxDropdownHeight or default
         width: widget.width,
         controller: _overlayController,
         scrollController: _scrollController,

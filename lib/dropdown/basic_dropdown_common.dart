@@ -115,7 +115,7 @@ class DropdownSuffixIcons extends StatelessWidget {
 /// Shared UI constants for dropdown components
 class DropdownConstants {
   // Layout constants
-  static const double kDropdownItemHeight = 40.0;
+  static const double kDropdownItemHeight = 30.0;
   static const double kDropdownMargin = 4.0;
   static const double kDropdownElevation = 4.0;
   static const double kDropdownFontSize = 12.0;
@@ -209,6 +209,7 @@ class DropdownRenderUtils {
     required void Function(int) setHoverIndex,
     required VoidCallback onTap,
     required Widget Function(BuildContext, DropDownItem<T>, bool) customBuilder,
+    double? itemHeight, // Optional item height parameter
   }) {
     final int itemIndex = filteredItems.indexWhere(
           (x) => x.value == item.value,
@@ -232,6 +233,7 @@ class DropdownRenderUtils {
         isSingleItem: filteredItems.length == 1,
         onTap: onTap,
         builder: customBuilder,
+        itemHeight: itemHeight, // Pass the itemHeight parameter
       ),
     );
   }
@@ -246,6 +248,7 @@ class DropdownRenderUtils {
     required bool isSingleItem,
     required VoidCallback onTap,
     required Widget Function(BuildContext, DropDownItem<T>, bool) builder,
+    double? itemHeight, // Optional item height parameter
   }) {
     Widget w = builder(context, item, isSelected);
     Color? background;
@@ -258,7 +261,8 @@ class DropdownRenderUtils {
           .of(context)
           .colorScheme
           .secondary
-          .withValues(alpha: DropdownConstants.kSelectedItemBackgroundAlpha);
+          .withAlpha(
+          (DropdownConstants.kSelectedItemBackgroundAlpha * 255).toInt());
     } else {
       background = null;
     }
@@ -266,7 +270,7 @@ class DropdownRenderUtils {
       hoverColor: Colors.transparent,
       onTap: onTap,
       child: Container(
-        height: DropdownConstants.kDropdownItemHeight,
+        height: itemHeight ?? DropdownConstants.kDropdownItemHeight,
         color: background,
         child: w,
       ),
@@ -302,6 +306,7 @@ class DropdownRenderUtils {
     required Widget Function(BuildContext, DropDownItem<T>, bool) builder,
     bool showScrollbar = true,
     double scrollbarThickness = 6.0,
+    double? itemHeight, // Optional item height parameter
   }) {
     if (items.isEmpty) return const SizedBox.shrink();
 
@@ -360,7 +365,9 @@ class DropdownRenderUtils {
                     controller: scrollController,
                     padding: EdgeInsets.zero,
                     itemCount: items.length,
-                    itemExtent: DropdownConstants.kDropdownItemHeight,
+                    itemExtent: itemHeight ??
+                        (10.0 * 3.0),
+                    // 10pt → 30px mapping, independent of actual font size
                     itemBuilder: (c, i) =>
                         builder(
                           context,

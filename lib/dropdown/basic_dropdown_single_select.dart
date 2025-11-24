@@ -258,7 +258,8 @@ class _SearchDropdownState<T> extends State<SearchDropdown<T>> {
                 (item) => item.label.toLowerCase().contains(input));
         if (itemIndex >= 0) {
           _scrollController.animateTo(
-            itemIndex * DropdownConstants.kDropdownItemHeight,
+            itemIndex *
+                (widget.itemHeight ?? DropdownConstants.kDropdownItemHeight),
             duration: DropdownConstants.kScrollAnimationDuration,
             curve: Curves.easeInOut,
           );
@@ -368,12 +369,12 @@ class _SearchDropdownState<T> extends State<SearchDropdown<T>> {
 
       // Center the selected item in the viewport if possible
       final double itemTop = selectedIndex *
-          DropdownConstants.kDropdownItemHeight;
+          (widget.itemHeight ?? DropdownConstants.kDropdownItemHeight);
       final double viewportHeight = _scrollController.position
           .viewportDimension;
       final double centeredOffset = (itemTop -
           (viewportHeight / DropdownConstants.kCenteringDivisor) +
-          (DropdownConstants.kDropdownItemHeight /
+          ((widget.itemHeight ?? DropdownConstants.kDropdownItemHeight) /
               DropdownConstants.kCenteringDivisor))
           .clamp(0.0, _scrollController.position.maxScrollExtent);
 
@@ -472,8 +473,10 @@ class _SearchDropdownState<T> extends State<SearchDropdown<T>> {
           },
           customBuilder: widget.popupItemBuilder ??
               DropdownRenderUtils.defaultDropdownPopupItemBuilder<T>,
+          itemHeight: widget.itemHeight,
         );
       },
+      itemHeight: widget.itemHeight,
     );
   }
 
