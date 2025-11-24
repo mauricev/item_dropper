@@ -428,12 +428,12 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   }
 
   Widget _buildTextFieldChip(double width) {
-    return Container(
+    return SizedBox(
       width: width, // Constrain to calculated width
       height: _calculateChipHeight(), // Working height
-      decoration: BoxDecoration(
+      /*decoration: BoxDecoration(
         border: Border.all(color: Colors.red, width: 1.0), // Temporary border
-      ),
+      ),*/
       child: TextField(
         controller: _searchController,
         focusNode: _focusNode,
@@ -443,7 +443,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
             left: widget.textSize * 1.5, // 10 * 1.5 = 15
             right: widget.textSize * 1.2, // 10 * 1.2 = 12
             top: widget.textSize * 0.75, // 10 * 0.75 = 7.5
-            bottom: widget.textSize * 1.75, // 10 * 1.75 = 17.5
+            bottom: widget.textSize * 2, // 10 * 2 = 20
           ),
           border: InputBorder.none,
           hintText: 'Search',
