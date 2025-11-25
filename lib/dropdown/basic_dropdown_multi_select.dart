@@ -66,29 +66,18 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   final OverlayPortalController _overlayController = OverlayPortalController();
 
   List<DropDownItem<T>> _selected = [];
-  double _measuredWrapHeight = 34.0; // Store measured Wrap height
   int _keyboardHighlightIndex = DropdownConstants.kNoHighlight;
   int _hoverIndex = DropdownConstants.kNoHighlight;
-  Widget? _cachedOverlayWidget; // Cache overlay widget to prevent flicker
-  int? _cachedFilteredLength; // Track when to invalidate cache
-  int? _cachedSelectedCount; // Track selected count (affects input field position)
-  int? _cachedHoverIndex; // Track hover index for cache key
-  int? _cachedKeyboardHighlightIndex; // Track keyboard highlight for cache key
   
-  // Measured chip dimensions for alignment
-  double? _measuredChipHeight;
-  double? _measuredChipTextTop;
-  double? _measuredChipTextHeight;
-  double? _measuredChipWidth; // Actual chip width
-  double? _measuredRemainingWidth; // Actual remaining width after chips are laid out
-  final GlobalKey _chipRowKey = GlobalKey(); // Key to measure chip's Row
-  final GlobalKey _lastChipKey = GlobalKey(); // Key to measure last chip position
-  final GlobalKey _textFieldKey = GlobalKey(); // Key to measure TextField position
+  // Overlay cache tracking
+  Widget? _cachedOverlayWidget;
+  _OverlayCacheKey? _overlayCacheKey;
+  
+  // Measurement helper
+  final _ChipMeasurementHelper _measurements = _ChipMeasurementHelper();
 
   // Use shared filter utils
   final DropdownFilterUtils<T> _filterUtils = DropdownFilterUtils<T>();
-
-  final GlobalKey _wrapKey = GlobalKey(); // Key to query Wrap render object
 
   @override
   void initState() {
@@ -174,23 +163,9 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
         _overlayController.hide();
      }
     });
-    // Notify parent of change (deferred to avoid triggering rebuild during our setState)
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        print("_updateSelection - calling widget.onChanged (deferred)");
-        widget.onChanged(List.from(_selected));
-        // After parent rebuilds and layout settles, invalidate cache and rebuild overlay
-        // This ensures overlay repositions after input field has moved (e.g., to 2nd row)
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted && _overlayController.isShowing) {
-            // Invalidate cache so overlay rebuilds with new position
-            _invalidateOverlayCache();
-            // Trigger a rebuild to reposition overlay
-            _safeSetState(() {});
-          }
-        });
-      }
-    });
+    // Notify parent of change and schedule overlay reposition after layout settles
+    print("_updateSelection - calling widget.onChanged (deferred)");
+    _scheduleOverlayReposition();
     print("_updateSelection - calling _focusNode.requestFocus()");
     _focusNode.requestFocus();
     print("_updateSelection - done");
@@ -219,22 +194,8 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
       // After removal, clear highlights
       _clearHighlights();
     });
-    // Notify parent of change (deferred to avoid triggering rebuild during our setState)
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        widget.onChanged(List.from(_selected));
-        // After parent rebuilds and layout settles, invalidate cache and rebuild overlay
-        // This ensures overlay repositions after input field has moved to new position
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted && _overlayController.isShowing) {
-            // Invalidate cache so overlay rebuilds with new position
-            _invalidateOverlayCache();
-            // Trigger a rebuild to reposition overlay
-            _safeSetState(() {});
-          }
-        });
-      }
-    });
+    // Notify parent of change and schedule overlay reposition after layout settles
+    _scheduleOverlayReposition();
     // Focus the text field after layout settles, especially important for last chip removal
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _focusNode.requestFocus();
@@ -333,10 +294,24 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   // Invalidate overlay cache - call this whenever overlay needs to rebuild
   void _invalidateOverlayCache() {
     _cachedOverlayWidget = null;
-    _cachedFilteredLength = null;
-    _cachedSelectedCount = null;
-    _cachedHoverIndex = null;
-    _cachedKeyboardHighlightIndex = null;
+    _overlayCacheKey = null;
+  }
+
+  // Schedule overlay reposition after parent rebuilds and layout settles
+  // This ensures overlay repositions after input field has moved (e.g., when chips wrap/unwrap)
+  void _scheduleOverlayReposition() {
+    // First post-frame: notify parent of change
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      widget.onChanged(List.from(_selected));
+      // Second post-frame: after parent rebuilds and layout settles, reposition overlay
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _overlayController.isShowing) {
+          _invalidateOverlayCache();
+          _safeSetState(() {});
+        }
+      });
+    });
   }
 
   @override
@@ -399,68 +374,18 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
                     availableWidth);
 
                 // Measure Wrap after render to detect wrapping and get actual remaining width
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  final RenderBox? wrapBox = _wrapKey.currentContext
-                      ?.findRenderObject() as RenderBox?;
-                  if (wrapBox != null && _selected.isNotEmpty) {
-                    final double wrapHeight = wrapBox.size.height;
-                    final double wrapWidth = wrapBox.size.width;
-                    
-                    // Update measured height
-                    if (wrapHeight != _measuredWrapHeight) {
-                      _safeSetState(() {
-                        _measuredWrapHeight = wrapHeight;
-                      });
-                    }
-                    
-                    // Measure TextField and last chip positions to detect wrapping
-                    final RenderBox? textFieldBox = _textFieldKey.currentContext
-                        ?.findRenderObject() as RenderBox?;
-                    final RenderBox? lastChipBox = _lastChipKey.currentContext
-                        ?.findRenderObject() as RenderBox?;
-                    
-                    if (textFieldBox != null && lastChipBox != null) {
-                      final Offset? textFieldPos = textFieldBox.localToGlobal(Offset.zero);
-                      final Offset? lastChipPos = lastChipBox.localToGlobal(Offset.zero);
-                      final Offset? wrapPos = wrapBox.localToGlobal(Offset.zero);
-                      
-                      if (textFieldPos != null && lastChipPos != null && wrapPos != null) {
-                        // Check if TextField is on the same line as chips (within 5px tolerance)
-                        final double textFieldY = textFieldPos.dy - wrapPos.dy;
-                        final double lastChipY = lastChipPos.dy - wrapPos.dy;
-                        final bool isOnSameLine = (textFieldY - lastChipY).abs() < 5.0;
-                        
-                        if (isOnSameLine) {
-                          // TextField is on first line - measure actual remaining width
-                          final double lastChipRight = lastChipPos.dx - wrapPos.dx + lastChipBox.size.width;
-                          final double actualRemaining = wrapWidth - lastChipRight - _chipSpacing;
-                          
-                          if (actualRemaining > 0 && (_measuredRemainingWidth == null || 
-                              (_measuredRemainingWidth! - actualRemaining).abs() > 1.0)) {
-                            _safeSetState(() {
-                              _measuredRemainingWidth = actualRemaining.clamp(_minTextFieldWidth, wrapWidth);
-                            });
-                          }
-                        } else {
-                          // TextField wrapped to second line - need to use full width of first line
-                          // Measure where first line ends
-                          final double lastChipRight = lastChipPos.dx - wrapPos.dx + lastChipBox.size.width;
-                          final double firstLineRemaining = wrapWidth - lastChipRight - _chipSpacing;
-                          
-                          // Use a larger width to force it back to first line
-                          if (firstLineRemaining > _minTextFieldWidth) {
-                            _safeSetState(() {
-                              _measuredRemainingWidth = firstLineRemaining;
-                            });
-                          }
-                        }
-                      }
-                    }
-                  }
-                });
+                _measurements.measureWrapAndTextField(
+                  wrapContext: _measurements.wrapKey.currentContext,
+                  textFieldContext: _measurements.textFieldKey.currentContext,
+                  lastChipContext: _measurements.lastChipKey.currentContext,
+                  selectedCount: _selected.length,
+                  chipSpacing: _chipSpacing,
+                  minTextFieldWidth: _minTextFieldWidth,
+                  safeSetState: _safeSetState,
+                );
 
                 return Wrap(
-                  key: _wrapKey,
+                  key: _measurements.wrapKey,
                   spacing: _chipSpacing,
                   runSpacing: _chipSpacing,
                   alignment: WrapAlignment.start,
@@ -471,7 +396,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
                       final int index = entry.key;
                       final DropDownItem<T> item = entry.value;
                       final bool isLastChip = index == _selected.length - 1;
-                      return _buildChip(item, isLastChip ? _lastChipKey : null);
+                      return _buildChip(item, isLastChip ? _measurements.lastChipKey : null);
                     }),
                     // TextField with proper width based on available space
                     if (_selected.isNotEmpty)
@@ -479,7 +404,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
                         builder: (context) {
                           // Use measured remaining width if available (from previous render)
                           // Otherwise use a simple calculation as initial estimate
-                          final double actualRemaining = _measuredRemainingWidth ?? 
+                          final double actualRemaining = _measurements.remainingWidth ?? 
                               (availableWidth * 0.5).clamp(_minTextFieldWidth, availableWidth);
 
                           return _buildTextFieldChip(actualRemaining);
@@ -533,51 +458,19 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   Widget _buildChip(DropDownItem<T> item, [GlobalKey? chipKey]) {
     // Only measure the first chip (index 0) to avoid GlobalKey conflicts
     final bool isFirstChip = _selected.isNotEmpty && _selected.first.value == item.value;
-    final GlobalKey? rowKey = isFirstChip ? _chipRowKey : null;
+    final GlobalKey? rowKey = isFirstChip ? _measurements.chipRowKey : null;
     
     return LayoutBuilder(
       builder: (context, constraints) {
         // Measure chip dimensions after first render (only for first chip)
-        if (isFirstChip) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (!mounted) return;
-            
-            // Measure the chip container
-            final RenderBox? chipBox = context.findRenderObject() as RenderBox?;
-            final RenderBox? rowBox = _chipRowKey.currentContext?.findRenderObject() as RenderBox?;
-            
-            if (chipBox != null && rowBox != null) {
-              final double chipHeight = chipBox.size.height;
-              final double chipWidth = chipBox.size.width;
-              
-              // Row is directly inside Container with padding, so rowTop = chipVerticalPadding
-              final double rowHeight = rowBox.size.height;
-              final double rowTop = _chipVerticalPadding; // Container padding top = 6px
-              
-              // Text is centered in Row (CrossAxisAlignment.center), so text center is at rowTop + rowHeight/2
-              final double textCenter = rowTop + (rowHeight / 2.0);
-              
-              if (_measuredChipHeight != chipHeight || 
-                  _measuredChipTextTop != textCenter ||
-                  _measuredChipTextHeight != rowHeight ||
-                  _measuredChipWidth != chipWidth) {
-                _safeSetState(() {
-                  _measuredChipHeight = chipHeight;
-                  _measuredChipTextTop = textCenter;
-                  _measuredChipTextHeight = rowHeight;
-                  _measuredChipWidth = chipWidth;
-                });
-                
-                debugPrint('CHIP MEASUREMENTS:');
-                debugPrint('  Font size: ${widget.textSize}');
-                debugPrint('  Chip height: $chipHeight');
-                debugPrint('  Chip width: $chipWidth');
-                debugPrint('  Row top: $rowTop');
-                debugPrint('  Row height: $rowHeight');
-                debugPrint('  Text center: $textCenter');
-              }
-            }
-          });
+        if (isFirstChip && rowKey != null) {
+          _measurements.measureChip(
+            context: context,
+            rowKey: rowKey,
+            textSize: widget.textSize,
+            chipVerticalPadding: _chipVerticalPadding,
+            safeSetState: _safeSetState,
+          );
         }
         
         return Container(
@@ -628,16 +521,16 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
 
   Widget _buildTextFieldChip(double width) {
     // Use measured chip dimensions if available, otherwise fall back to calculation
-    final double chipHeight = _measuredChipHeight ?? _calculateTextFieldHeight();
+    final double chipHeight = _measurements.chipHeight ?? _calculateTextFieldHeight();
     final double textLineHeight = widget.textSize * 1.2; // Approximate
     
     double textFieldPaddingTop;
     double textFieldPaddingBottom;
     
-    if (_measuredChipTextTop != null) {
+    if (_measurements.chipTextTop != null) {
       // Use measured chip text center position to align TextField text
-      // _measuredChipTextTop is already the text center (rowTop + rowHeight/2)
-      final double chipTextCenter = _measuredChipTextTop!;
+      // chipTextTop is already the text center (rowTop + rowHeight/2)
+      final double chipTextCenter = _measurements.chipTextTop!;
       // Adjust for TextField's text rendering - needs 6px offset upward
       textFieldPaddingTop = chipTextCenter - (textLineHeight / 2.0) - 6.0;
       textFieldPaddingBottom = chipHeight - textLineHeight - textFieldPaddingTop;
@@ -661,7 +554,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
     
     // Use Container with exact width - Wrap will use this for layout
     return Container(
-      key: _textFieldKey, // Key to measure TextField position
+      key: _measurements.textFieldKey, // Key to measure TextField position
       width: width, // Exact width - Wrap will use this
       height: chipHeight, // Use measured chip height
       child: TextField(
@@ -686,26 +579,23 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
 
   Widget _getOverlay() {
     final List<DropDownItem<T>> filteredItems = _filtered;
-    final int filteredLength = filteredItems.length;
-    final int selectedCount = _selected.length;
+    final _OverlayCacheKey currentKey = _OverlayCacheKey(
+      filteredLength: filteredItems.length,
+      selectedCount: _selected.length,
+      hoverIndex: _hoverIndex,
+      keyboardHighlightIndex: _keyboardHighlightIndex,
+    );
     
     // Include hover and keyboard highlight in cache key so overlay rebuilds when they change
     // This ensures hover state is current, while stable keys prevent flicker
-    if (_cachedOverlayWidget != null && 
-        _cachedFilteredLength == filteredLength &&
-        _cachedSelectedCount == selectedCount &&
-        _cachedHoverIndex == _hoverIndex &&
-        _cachedKeyboardHighlightIndex == _keyboardHighlightIndex) {
-      print("_getOverlay: returning cached overlay, filteredLength=$filteredLength, selectedCount=$selectedCount, hoverIndex=$_hoverIndex");
+    if (_cachedOverlayWidget != null && _overlayCacheKey == currentKey) {
+      print("_getOverlay: returning cached overlay, key=$currentKey");
       return _cachedOverlayWidget!;
     }
     
-    print("_getOverlay: building new overlay, filteredLength=$filteredLength, selectedCount=$selectedCount, hoverIndex=$_hoverIndex, keyboardHighlightIndex=$_keyboardHighlightIndex");
+    print("_getOverlay: building new overlay, key=$currentKey");
     _cachedOverlayWidget = _buildOverlay();
-    _cachedFilteredLength = filteredLength;
-    _cachedSelectedCount = selectedCount;
-    _cachedHoverIndex = _hoverIndex;
-    _cachedKeyboardHighlightIndex = _keyboardHighlightIndex;
+    _overlayCacheKey = currentKey;
     return _cachedOverlayWidget!;
   }
 
@@ -770,4 +660,168 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
       ),
     );
   }
+}
+
+/// Helper class for managing chip and layout measurements
+class _ChipMeasurementHelper {
+  double? chipHeight;
+  double? chipTextTop;
+  double? chipTextHeight;
+  double? chipWidth;
+  double? remainingWidth;
+  double wrapHeight = 34.0;
+  
+  final GlobalKey chipRowKey = GlobalKey();
+  final GlobalKey lastChipKey = GlobalKey();
+  final GlobalKey textFieldKey = GlobalKey();
+  final GlobalKey wrapKey = GlobalKey();
+  
+  bool _isMeasuring = false;
+  
+  void measureChip({
+    required BuildContext context,
+    required GlobalKey rowKey,
+    required double textSize,
+    required double chipVerticalPadding,
+    required void Function(void Function()) safeSetState,
+  }) {
+    if (_isMeasuring) return;
+    _isMeasuring = true;
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _isMeasuring = false;
+      
+      final RenderBox? chipBox = context.findRenderObject() as RenderBox?;
+      final RenderBox? rowBox = rowKey.currentContext?.findRenderObject() as RenderBox?;
+      
+      if (chipBox != null && rowBox != null) {
+        final double newChipHeight = chipBox.size.height;
+        final double newChipWidth = chipBox.size.width;
+        final double rowHeight = rowBox.size.height;
+        final double rowTop = chipVerticalPadding;
+        final double textCenter = rowTop + (rowHeight / 2.0);
+        
+        if (chipHeight != newChipHeight ||
+            chipTextTop != textCenter ||
+            chipTextHeight != rowHeight ||
+            chipWidth != newChipWidth) {
+          safeSetState(() {
+            chipHeight = newChipHeight;
+            chipTextTop = textCenter;
+            chipTextHeight = rowHeight;
+            chipWidth = newChipWidth;
+          });
+          
+          debugPrint('CHIP MEASUREMENTS:');
+          debugPrint('  Font size: $textSize');
+          debugPrint('  Chip height: $newChipHeight');
+          debugPrint('  Chip width: $newChipWidth');
+          debugPrint('  Row top: $rowTop');
+          debugPrint('  Row height: $rowHeight');
+          debugPrint('  Text center: $textCenter');
+        }
+      }
+    });
+  }
+  
+  void measureWrapAndTextField({
+    required BuildContext? wrapContext,
+    required BuildContext? textFieldContext,
+    required BuildContext? lastChipContext,
+    required int selectedCount,
+    required double chipSpacing,
+    required double minTextFieldWidth,
+    required void Function(void Function()) safeSetState,
+  }) {
+    if (_isMeasuring || wrapContext == null || selectedCount == 0) return;
+    _isMeasuring = true;
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _isMeasuring = false;
+      
+      final RenderBox? wrapBox = wrapContext.findRenderObject() as RenderBox?;
+      if (wrapBox == null) return;
+      
+      final double newWrapHeight = wrapBox.size.height;
+      final double wrapWidth = wrapBox.size.width;
+      
+      if (newWrapHeight != wrapHeight) {
+        safeSetState(() {
+          wrapHeight = newWrapHeight;
+        });
+      }
+      
+      final RenderBox? textFieldBox = textFieldContext?.findRenderObject() as RenderBox?;
+      final RenderBox? lastChipBox = lastChipContext?.findRenderObject() as RenderBox?;
+      
+      if (textFieldBox != null && lastChipBox != null) {
+        final Offset? textFieldPos = textFieldBox.localToGlobal(Offset.zero);
+        final Offset? lastChipPos = lastChipBox.localToGlobal(Offset.zero);
+        final Offset? wrapPos = wrapBox.localToGlobal(Offset.zero);
+        
+        if (textFieldPos != null && lastChipPos != null && wrapPos != null) {
+          final double textFieldY = textFieldPos.dy - wrapPos.dy;
+          final double lastChipY = lastChipPos.dy - wrapPos.dy;
+          final bool isOnSameLine = (textFieldY - lastChipY).abs() < 5.0;
+          
+          if (isOnSameLine) {
+            final double lastChipRight = lastChipPos.dx - wrapPos.dx + lastChipBox.size.width;
+            final double actualRemaining = wrapWidth - lastChipRight - chipSpacing;
+            
+            if (actualRemaining > 0 && (remainingWidth == null ||
+                (remainingWidth! - actualRemaining).abs() > 1.0)) {
+              safeSetState(() {
+                remainingWidth = actualRemaining.clamp(minTextFieldWidth, wrapWidth);
+              });
+            }
+          } else {
+            final double lastChipRight = lastChipPos.dx - wrapPos.dx + lastChipBox.size.width;
+            final double firstLineRemaining = wrapWidth - lastChipRight - chipSpacing;
+            
+            if (firstLineRemaining > minTextFieldWidth) {
+              safeSetState(() {
+                remainingWidth = firstLineRemaining;
+              });
+            }
+          }
+        }
+      }
+    });
+  }
+}
+
+/// Cache key for overlay widget to determine when to rebuild
+class _OverlayCacheKey {
+  final int filteredLength;
+  final int selectedCount;
+  final int hoverIndex;
+  final int keyboardHighlightIndex;
+
+  const _OverlayCacheKey({
+    required this.filteredLength,
+    required this.selectedCount,
+    required this.hoverIndex,
+    required this.keyboardHighlightIndex,
+  });
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is _OverlayCacheKey &&
+          runtimeType == other.runtimeType &&
+          filteredLength == other.filteredLength &&
+          selectedCount == other.selectedCount &&
+          hoverIndex == other.hoverIndex &&
+          keyboardHighlightIndex == other.keyboardHighlightIndex;
+
+  @override
+  int get hashCode =>
+      filteredLength.hashCode ^
+      selectedCount.hashCode ^
+      hoverIndex.hashCode ^
+      keyboardHighlightIndex.hashCode;
+
+  @override
+  String toString() =>
+      'OverlayCacheKey(fl=$filteredLength, sc=$selectedCount, hi=$hoverIndex, khi=$keyboardHighlightIndex)';
 }
