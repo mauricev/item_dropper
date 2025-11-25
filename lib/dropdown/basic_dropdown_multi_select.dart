@@ -73,6 +73,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   double? _measuredChipHeight;
   double? _measuredChipTextTop;
   double? _measuredChipTextHeight;
+  double? _measuredChipWidth; // Actual chip width
   final GlobalKey _chipRowKey = GlobalKey(); // Key to measure chip's Row
 
   // Use shared filter utils
@@ -360,17 +361,19 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
                     if (_selected.isNotEmpty)
                       LayoutBuilder(
                         builder: (context, constraints) {
-                          final double available = constraints.maxWidth;
-                          final double estimatedChipSpace = _selected.length *
-                              90.0 +
-                              (_selected.length - 1) * _chipSpacing;
-                          final double remaining = available -
-                              estimatedChipSpace;
+                          // constraints.maxWidth is the actual remaining width after chips are laid out
+                          // This is the real available space for the TextField
+                          final double actualRemaining = constraints.maxWidth;
+                          
+                          // Use at least 100px if there's space, otherwise use all available
+                          final double textFieldWidth = actualRemaining >= 100.0
+                              ? actualRemaining
+                              : actualRemaining;
 
-                          // If remaining space is sufficient, use it; otherwise wrap to next line
-                          final double textFieldWidth = remaining >= 100.0
-                              ? remaining
-                              : available;
+                          debugPrint('TEXTFIELD WIDTH CALC:');
+                          debugPrint('  Outer availableWidth: $availableWidth');
+                          debugPrint('  Constraints.maxWidth (actual remaining): $actualRemaining');
+                          debugPrint('  TextField width: $textFieldWidth');
 
                           return SizedBox(
                             width: textFieldWidth,
@@ -417,14 +420,14 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   }
 
   double _calculateTextFieldHeight() {
-    // Calculate single chip height
+    // Calculate height to match chip: max(textLineHeight, 24px icon) + 12px padding
+    // This matches the chip structure exactly
     final double fontSize = widget.textSize;
-    final double textHeight = fontSize * 1.6; // Rough line height estimate
-    final double verticalPadding = _chipVerticalPadding *
-        2; // Top + bottom symmetric padding
-    final double topMargin = 8.0; // Top margin from chip
-    print("field height, ${textHeight + verticalPadding + topMargin}");
-    return textHeight + verticalPadding + topMargin;
+    final double textLineHeight = fontSize * 1.2;
+    const double iconHeight = 24.0;
+    final double rowContentHeight = textLineHeight > iconHeight ? textLineHeight : iconHeight;
+    final double verticalPadding = _chipVerticalPadding * 2; // 6px top + 6px bottom = 12px
+    return rowContentHeight + verticalPadding;
   }
 
   Widget _buildChip(DropDownItem<T> item) {
@@ -445,6 +448,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
             
             if (chipBox != null && rowBox != null) {
               final double chipHeight = chipBox.size.height;
+              final double chipWidth = chipBox.size.width;
               
               // Row is directly inside Container with padding, so rowTop = chipVerticalPadding
               final double rowHeight = rowBox.size.height;
@@ -455,16 +459,19 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
               
               if (_measuredChipHeight != chipHeight || 
                   _measuredChipTextTop != textCenter ||
-                  _measuredChipTextHeight != rowHeight) {
+                  _measuredChipTextHeight != rowHeight ||
+                  _measuredChipWidth != chipWidth) {
                 _safeSetState(() {
                   _measuredChipHeight = chipHeight;
                   _measuredChipTextTop = textCenter;
                   _measuredChipTextHeight = rowHeight;
+                  _measuredChipWidth = chipWidth;
                 });
                 
                 debugPrint('CHIP MEASUREMENTS:');
                 debugPrint('  Font size: ${widget.textSize}');
                 debugPrint('  Chip height: $chipHeight');
+                debugPrint('  Chip width: $chipWidth');
                 debugPrint('  Row top: $rowTop');
                 debugPrint('  Row height: $rowHeight');
                 debugPrint('  Text center: $textCenter');
@@ -540,9 +547,21 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
       debugPrint('  TextField padding bottom: $textFieldPaddingBottom');
       debugPrint('  TextField total height: ${textFieldPaddingTop + textLineHeight + textFieldPaddingBottom}');
     } else {
-      // Fallback to current calculation until measurements are available
-      textFieldPaddingTop = widget.textSize * 0.75;
-      textFieldPaddingBottom = widget.textSize * 1.7;
+      // Fallback: calculate same as chip structure (matches _calculateTextFieldHeight)
+      // Chip text center = chipVerticalPadding (6px) + rowHeight/2
+      // For fontSize 10: rowHeight = max(12, 24) = 24, so text center = 6 + 12 = 18
+      const double iconHeight = 24.0;
+      final double rowContentHeight = textLineHeight > iconHeight ? textLineHeight : iconHeight;
+      final double chipTextCenter = _chipVerticalPadding + (rowContentHeight / 2.0);
+      
+      // Same adjustment as measured case
+      textFieldPaddingTop = chipTextCenter - (textLineHeight / 2.0) - 6.0;
+      textFieldPaddingBottom = chipHeight - textLineHeight - textFieldPaddingTop;
+      
+      debugPrint('TEXTFIELD ALIGNMENT (fallback):');
+      debugPrint('  Calculated chip text center: $chipTextCenter');
+      debugPrint('  TextField padding top: $textFieldPaddingTop');
+      debugPrint('  TextField padding bottom: $textFieldPaddingBottom');
     }
     
     return SizedBox(
