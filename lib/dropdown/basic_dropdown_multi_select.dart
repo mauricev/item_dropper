@@ -198,10 +198,6 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
 
   void _removeChip(DropDownItem<T> item) {
     print("_removeChip called - calling setState");
-    // Invalidate overlay cache so it repositions when input field moves
-    _cachedOverlayWidget = null;
-    _cachedFilteredLength = null;
-    _cachedSelectedCount = null;
     setState(() {
       _selected.removeWhere((selected) => selected.value == item.value);
       // After removal, clear highlights
@@ -211,6 +207,17 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         widget.onChanged(List.from(_selected));
+        // After parent rebuilds and layout settles, invalidate cache and rebuild overlay
+        // This ensures overlay repositions after input field has moved to new position
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _overlayController.isShowing) {
+            _cachedOverlayWidget = null;
+            _cachedFilteredLength = null;
+            _cachedSelectedCount = null;
+            // Trigger a rebuild to reposition overlay
+            _safeSetState(() {});
+          }
+        });
       }
     });
     // Focus the text field after layout settles, especially important for last chip removal
