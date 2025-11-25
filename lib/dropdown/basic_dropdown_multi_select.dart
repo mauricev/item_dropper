@@ -30,7 +30,7 @@ class MultiSearchDropdown<T> extends StatefulWidget {
     this.inputKey,
     this.decoration = const InputDecoration(),
     this.enabled = true,
-    this.textSize = 16,
+    this.textSize = 10,
     this.maxDropdownHeight = 300, // Change back to maxDropdownHeight
     this.maxSelected,
     this.showScrollbar = true,
@@ -68,6 +68,12 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   double _measuredWrapHeight = 34.0; // Store measured Wrap height
   int _keyboardHighlightIndex = DropdownConstants.kNoHighlight;
   int _hoverIndex = DropdownConstants.kNoHighlight;
+  
+  // Measured chip dimensions for alignment
+  double? _measuredChipHeight;
+  double? _measuredChipTextTop;
+  double? _measuredChipTextHeight;
+  final GlobalKey _chipRowKey = GlobalKey(); // Key to measure chip's Row
 
   // Use shared filter utils
   final DropdownFilterUtils<T> _filterUtils = DropdownFilterUtils<T>();
@@ -410,72 +416,147 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
         100.0, double.infinity); // Min 100px, no max cap
   }
 
-  double _calculateChipHeight() {
+  double _calculateTextFieldHeight() {
     // Calculate single chip height
     final double fontSize = widget.textSize;
-    final double textHeight = fontSize * 1.0; // Rough line height estimate
+    final double textHeight = fontSize * 1.6; // Rough line height estimate
     final double verticalPadding = _chipVerticalPadding *
         2; // Top + bottom symmetric padding
-    final double topMargin = 3.0; // Top margin from chip
+    final double topMargin = 8.0; // Top margin from chip
+    print("field height, ${textHeight + verticalPadding + topMargin}");
     return textHeight + verticalPadding + topMargin;
   }
 
   Widget _buildChip(DropDownItem<T> item) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Colors.blue.shade100,
-            Colors.blue.shade200,
-          ],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
-        borderRadius: BorderRadius.circular(_chipBorderRadius),
-      ),
-      padding: const EdgeInsets.symmetric(
-        horizontal: _chipHorizontalPadding,
-        vertical: _chipVerticalPadding,
-      ),
-      margin: const EdgeInsets.only(right: _chipMarginRight,),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Text(
-            item.label,
-            style: TextStyle(fontSize: widget.textSize,
-                color: widget.enabled ? Colors.black : Colors.grey.shade500),
-          ),
-          if (widget.enabled)
-            Container(
-              width: 24.0, // Touch target width
-              height: 24.0, // Touch target height
-              alignment: Alignment.center,
-              child: GestureDetector(
-                onTap: () => _removeChip(item),
-                child: Icon(Icons.close, size: _chipDeleteIconSize,
-                    color: Colors.grey.shade700),
-              ),
+    // Only measure the first chip (index 0) to avoid GlobalKey conflicts
+    final bool isFirstChip = _selected.isNotEmpty && _selected.first.value == item.value;
+    final GlobalKey? rowKey = isFirstChip ? _chipRowKey : null;
+    
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Measure chip dimensions after first render (only for first chip)
+        if (isFirstChip) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            
+            // Measure the chip container
+            final RenderBox? chipBox = context.findRenderObject() as RenderBox?;
+            final RenderBox? rowBox = _chipRowKey.currentContext?.findRenderObject() as RenderBox?;
+            
+            if (chipBox != null && rowBox != null) {
+              final double chipHeight = chipBox.size.height;
+              
+              // Row is directly inside Container with padding, so rowTop = chipVerticalPadding
+              final double rowHeight = rowBox.size.height;
+              final double rowTop = _chipVerticalPadding; // Container padding top = 6px
+              
+              // Text is centered in Row (CrossAxisAlignment.center), so text center is at rowTop + rowHeight/2
+              final double textCenter = rowTop + (rowHeight / 2.0);
+              
+              if (_measuredChipHeight != chipHeight || 
+                  _measuredChipTextTop != textCenter ||
+                  _measuredChipTextHeight != rowHeight) {
+                _safeSetState(() {
+                  _measuredChipHeight = chipHeight;
+                  _measuredChipTextTop = textCenter;
+                  _measuredChipTextHeight = rowHeight;
+                });
+                
+                debugPrint('CHIP MEASUREMENTS:');
+                debugPrint('  Font size: ${widget.textSize}');
+                debugPrint('  Chip height: $chipHeight');
+                debugPrint('  Row top: $rowTop');
+                debugPrint('  Row height: $rowHeight');
+                debugPrint('  Text center: $textCenter');
+              }
+            }
+          });
+        }
+        
+        return Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Colors.blue.shade100,
+                Colors.blue.shade200,
+              ],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
             ),
-        ],
-      ),
+            borderRadius: BorderRadius.circular(_chipBorderRadius),
+          ),
+          padding: const EdgeInsets.symmetric(
+            horizontal: _chipHorizontalPadding,
+            vertical: _chipVerticalPadding,
+          ),
+          margin: const EdgeInsets.only(right: _chipMarginRight,),
+          child: Row(
+            key: rowKey, // Only first chip gets the key
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                item.label,
+                style: TextStyle(fontSize: widget.textSize,
+                    color: widget.enabled ? Colors.black : Colors.grey.shade500),
+              ),
+              if (widget.enabled)
+                Container(
+                  width: 24.0, // Touch target width
+                  height: 24.0, // Touch target height
+                  alignment: Alignment.center,
+                  child: GestureDetector(
+                    onTap: () => _removeChip(item),
+                    child: Icon(Icons.close, size: _chipDeleteIconSize,
+                        color: Colors.grey.shade700),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 
   Widget _buildTextFieldChip(double width) {
+    // Use measured chip dimensions if available, otherwise fall back to calculation
+    final double chipHeight = _measuredChipHeight ?? _calculateTextFieldHeight();
+    final double textLineHeight = widget.textSize * 1.2; // Approximate
+    
+    double textFieldPaddingTop;
+    double textFieldPaddingBottom;
+    
+    if (_measuredChipTextTop != null) {
+      // Use measured chip text center position to align TextField text
+      // _measuredChipTextTop is already the text center (rowTop + rowHeight/2)
+      final double chipTextCenter = _measuredChipTextTop!;
+      // Adjust for TextField's text rendering - needs 6px offset upward
+      textFieldPaddingTop = chipTextCenter - (textLineHeight / 2.0) - 6.0;
+      textFieldPaddingBottom = chipHeight - textLineHeight - textFieldPaddingTop;
+      
+      debugPrint('TEXTFIELD ALIGNMENT:');
+      debugPrint('  Chip text center: $chipTextCenter');
+      debugPrint('  TextField padding top: $textFieldPaddingTop');
+      debugPrint('  TextField padding bottom: $textFieldPaddingBottom');
+      debugPrint('  TextField total height: ${textFieldPaddingTop + textLineHeight + textFieldPaddingBottom}');
+    } else {
+      // Fallback to current calculation until measurements are available
+      textFieldPaddingTop = widget.textSize * 0.75;
+      textFieldPaddingBottom = widget.textSize * 1.7;
+    }
+    
     return SizedBox(
       width: width, // Constrain to calculated width
-      height: _calculateChipHeight(), // Working height
+      height: chipHeight, // Use measured chip height
       child: TextField(
         controller: _searchController,
         focusNode: _focusNode,
         style: TextStyle(fontSize: widget.textSize),
         decoration: InputDecoration(
           contentPadding: EdgeInsets.only(
-            right: widget.textSize * 1.2, // 10 * 1.2 = 12
-            top: widget.textSize * 0.75, // 10 * 0.75 = 7.5
-            bottom: widget.textSize * 1.7,
+            right: widget.textSize * 1.2,
+            top: textFieldPaddingTop,
+            bottom: textFieldPaddingBottom,
           ),
           border: InputBorder.none,
           hintText: 'Search',
