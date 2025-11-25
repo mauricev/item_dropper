@@ -75,9 +75,10 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   double? _measuredChipTextTop;
   double? _measuredChipTextHeight;
   double? _measuredChipWidth; // Actual chip width
-  double? _measuredRemainingWidth; // Actual remaining width after chips
+  double? _measuredRemainingWidth; // Actual remaining width after chips are laid out
   final GlobalKey _chipRowKey = GlobalKey(); // Key to measure chip's Row
   final GlobalKey _lastChipKey = GlobalKey(); // Key to measure last chip position
+  final GlobalKey _textFieldKey = GlobalKey(); // Key to measure TextField position
 
   // Use shared filter utils
   final DropdownFilterUtils<T> _filterUtils = DropdownFilterUtils<T>();
@@ -335,42 +336,59 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
                     'MULTI: LayoutBuilder - availableWidth: $availableWidth, textFieldWidth: $textFieldWidth, selectedCount: ${_selected
                         .length}');
 
-                // Query Wrap for its actual rendered dimensions after layout
+                // Measure Wrap after render to detect wrapping and get actual remaining width
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   final RenderBox? wrapBox = _wrapKey.currentContext
                       ?.findRenderObject() as RenderBox?;
-                  if (wrapBox != null) {
+                  if (wrapBox != null && _selected.isNotEmpty) {
                     final double wrapHeight = wrapBox.size.height;
-                    debugPrint(
-                        'MULTI: Wrap height: $wrapHeight, measured: $_measuredWrapHeight');
+                    final double wrapWidth = wrapBox.size.width;
+                    
+                    // Update measured height
                     if (wrapHeight != _measuredWrapHeight) {
                       _safeSetState(() {
                         _measuredWrapHeight = wrapHeight;
                       });
                     }
                     
-                    // Measure actual remaining width after chips are laid out
-                    if (_selected.isNotEmpty) {
-                      final RenderBox? lastChipBox = _lastChipKey.currentContext
-                          ?.findRenderObject() as RenderBox?;
-                      if (lastChipBox != null) {
-                        // Get the position of the last chip relative to the Wrap
-                        final Offset? lastChipPosition = lastChipBox.localToGlobal(Offset.zero);
-                        final Offset? wrapPosition = wrapBox.localToGlobal(Offset.zero);
-                        if (lastChipPosition != null && wrapPosition != null) {
-                          // Calculate remaining width on the same line as the last chip
-                          final double lastChipRight = lastChipPosition.dx - wrapPosition.dx + lastChipBox.size.width;
-                          final double wrapWidth = wrapBox.size.width;
-                          // Account for spacing that Wrap will add before the TextField
+                    // Measure TextField and last chip positions to detect wrapping
+                    final RenderBox? textFieldBox = _textFieldKey.currentContext
+                        ?.findRenderObject() as RenderBox?;
+                    final RenderBox? lastChipBox = _lastChipKey.currentContext
+                        ?.findRenderObject() as RenderBox?;
+                    
+                    if (textFieldBox != null && lastChipBox != null) {
+                      final Offset? textFieldPos = textFieldBox.localToGlobal(Offset.zero);
+                      final Offset? lastChipPos = lastChipBox.localToGlobal(Offset.zero);
+                      final Offset? wrapPos = wrapBox.localToGlobal(Offset.zero);
+                      
+                      if (textFieldPos != null && lastChipPos != null && wrapPos != null) {
+                        // Check if TextField is on the same line as chips (within 5px tolerance)
+                        final double textFieldY = textFieldPos.dy - wrapPos.dy;
+                        final double lastChipY = lastChipPos.dy - wrapPos.dy;
+                        final bool isOnSameLine = (textFieldY - lastChipY).abs() < 5.0;
+                        
+                        if (isOnSameLine) {
+                          // TextField is on first line - measure actual remaining width
+                          final double lastChipRight = lastChipPos.dx - wrapPos.dx + lastChipBox.size.width;
                           final double actualRemaining = wrapWidth - lastChipRight - _chipSpacing;
                           
-                          debugPrint('MULTI: Measured remaining width - lastChipRight: $lastChipRight, wrapWidth: $wrapWidth, actualRemaining: $actualRemaining');
-                          
-                          // Only update if we have a valid measurement and it's different
                           if (actualRemaining > 0 && (_measuredRemainingWidth == null || 
                               (_measuredRemainingWidth! - actualRemaining).abs() > 1.0)) {
                             _safeSetState(() {
                               _measuredRemainingWidth = actualRemaining.clamp(_minTextFieldWidth, wrapWidth);
+                            });
+                          }
+                        } else {
+                          // TextField wrapped to second line - need to use full width of first line
+                          // Measure where first line ends
+                          final double lastChipRight = lastChipPos.dx - wrapPos.dx + lastChipBox.size.width;
+                          final double firstLineRemaining = wrapWidth - lastChipRight - _chipSpacing;
+                          
+                          // Use a larger width to force it back to first line
+                          if (firstLineRemaining > _minTextFieldWidth) {
+                            _safeSetState(() {
+                              _measuredRemainingWidth = firstLineRemaining;
                             });
                           }
                         }
@@ -397,38 +415,11 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
                     if (_selected.isNotEmpty)
                       Builder(
                         builder: (context) {
-                          // Prioritize measured remaining width - it's the actual space after chips are laid out
-                          // If not available yet, calculate based on chip measurements
-                          double actualRemaining;
-                          
-                          if (_measuredRemainingWidth != null) {
-                            // Use measured width - this is the actual remaining space after Wrap laid out chips
-                            actualRemaining = _measuredRemainingWidth!;
-                            debugPrint('TEXTFIELD WIDTH: Using measured remaining: $actualRemaining');
-                          } else {
-                            // Fallback calculation while measurement is pending
-                            final double chipWidth = _measuredChipWidth ?? 90.0;
-                            final double chipWithMargin = chipWidth + _chipMarginRight;
-                            final double totalChipWidth = _selected.length * chipWithMargin;
-                            final double totalSpacing = _selected.length * _chipSpacing;
-                            final double usedWidth = totalChipWidth + totalSpacing;
-                            final double calculatedRemaining = availableWidth - usedWidth;
-                            
-                            // Use calculated with buffer
-                            final double bufferedRemaining = calculatedRemaining - 3.0;
-                            actualRemaining = calculatedRemaining < _minTextFieldWidth
-                                ? _minTextFieldWidth
-                                : bufferedRemaining.clamp(_minTextFieldWidth, calculatedRemaining);
-                            
-                            debugPrint('TEXTFIELD WIDTH CALC (fallback):');
-                            debugPrint('  Outer availableWidth: $availableWidth');
-                            debugPrint('  Chip width (measured): $chipWidth');
-                            debugPrint('  Used width: $usedWidth');
-                            debugPrint('  Calculated remaining: $calculatedRemaining');
-                            debugPrint('  Actual remaining (final): $actualRemaining');
-                          }
+                          // Use measured remaining width if available (from previous render)
+                          // Otherwise use a simple calculation as initial estimate
+                          final double actualRemaining = _measuredRemainingWidth ?? 
+                              (availableWidth * 0.5).clamp(_minTextFieldWidth, availableWidth);
 
-                          // Return TextField with exact width - Wrap will use this for layout decisions
                           return _buildTextFieldChip(actualRemaining);
                         },
                       )
@@ -616,13 +607,12 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
       debugPrint('  TextField padding bottom: $textFieldPaddingBottom');
     }
     
-    // Use IntrinsicWidth to force the TextField to report the desired width as its intrinsic width
-    // This ensures Wrap evaluates fit correctly
-    return IntrinsicWidth(
-      child: Container(
-        width: width, // Exact width - Wrap will use this
-        height: chipHeight, // Use measured chip height
-        child: TextField(
+    // Use Container with exact width - Wrap will use this for layout
+    return Container(
+      key: _textFieldKey, // Key to measure TextField position
+      width: width, // Exact width - Wrap will use this
+      height: chipHeight, // Use measured chip height
+      child: TextField(
         controller: _searchController,
         focusNode: _focusNode,
         style: TextStyle(fontSize: widget.textSize),
@@ -638,7 +628,6 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
         onChanged: (value) => _handleTextChanged(value),
         onSubmitted: (value) => _handleEnter(),
         enabled: widget.enabled,
-        ),
       ),
     );
   }
