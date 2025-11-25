@@ -243,12 +243,18 @@ class DropdownRenderUtils {
     return MouseRegion(
       key: ValueKey('mouse_${item.value}_${filteredItems.length}'), // Key changes when list changes, forcing onEnter to fire
       onEnter: (_) {
+        print("MouseRegion onEnter: itemIndex=$itemIndex, keyboardHighlightIndex=$keyboardHighlightIndex");
         if (keyboardHighlightIndex == DropdownConstants.kNoHighlight) {
+          print("MouseRegion onEnter: setting hoverIndex to $itemIndex");
           safeSetState(() => setHoverIndex(itemIndex));
+        } else {
+          print("MouseRegion onEnter: keyboard active, not setting hover");
         }
       },
-      onExit: (_) =>
-          safeSetState(() => setHoverIndex(DropdownConstants.kNoHighlight)),
+      onExit: (_) {
+        print("MouseRegion onExit: clearing hoverIndex");
+        safeSetState(() => setHoverIndex(DropdownConstants.kNoHighlight));
+      },
       child: buildDropdownItem<T>(
         context: context,
         item: item,

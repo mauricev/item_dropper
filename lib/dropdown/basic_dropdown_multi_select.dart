@@ -72,6 +72,8 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   Widget? _cachedOverlayWidget; // Cache overlay widget to prevent flicker
   int? _cachedFilteredLength; // Track when to invalidate cache
   int? _cachedSelectedCount; // Track selected count (affects input field position)
+  int? _cachedHoverIndex; // Track hover index for cache key
+  int? _cachedKeyboardHighlightIndex; // Track keyboard highlight for cache key
   
   // Measured chip dimensions for alignment
   double? _measuredChipHeight;
@@ -142,6 +144,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
     print("_updateSelection1 - before setState, _selected.length=${_selected.length}");
     // Preserve keyboard highlight state - only reset if keyboard navigation was active
     final bool wasKeyboardActive = _keyboardHighlightIndex != DropdownConstants.kNoHighlight;
+    final int previousHoverIndex = _hoverIndex;
     _safeSetState(() {
       selectionUpdate();
       final List<DropDownItem<T>> remainingFilteredItems = _filtered;
@@ -153,15 +156,18 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
         } else {
           // Clear keyboard highlight so mouse hover can work
           _keyboardHighlightIndex = DropdownConstants.kNoHighlight;
-          // Clear hover index - MouseRegion will set it again when overlay rebuilds
-          // The key on MouseRegion includes filteredItems.length, so it will be recreated
-          // and onEnter will fire if mouse is still over an item
-          _hoverIndex = DropdownConstants.kNoHighlight;
+          // Don't clear hover index - preserve it so highlighting continues to work
+          // MouseRegion's onEnter will naturally update it when mouse moves
+          // If hover index becomes invalid (out of bounds), it just won't highlight anything
+          // until mouse moves, which is acceptable
+          if (previousHoverIndex >= 0 && previousHoverIndex < remainingFilteredItems.length) {
+            // Hover index is still valid, keep it
+            _hoverIndex = previousHoverIndex;
+          } else {
+            // Hover index is invalid, clear it
+            _hoverIndex = DropdownConstants.kNoHighlight;
+          }
         }
-        // Invalidate cache to force overlay rebuild
-        _cachedOverlayWidget = null;
-        _cachedFilteredLength = null;
-        _cachedSelectedCount = null;
       } else {
         _clearHighlights();
         print("1");
@@ -173,6 +179,20 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
       if (mounted) {
         print("_updateSelection - calling widget.onChanged (deferred)");
         widget.onChanged(List.from(_selected));
+        // After parent rebuilds and layout settles, invalidate cache and rebuild overlay
+        // This ensures overlay repositions after input field has moved (e.g., to 2nd row)
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _overlayController.isShowing) {
+            // Invalidate cache so overlay rebuilds with new position
+            _cachedOverlayWidget = null;
+            _cachedFilteredLength = null;
+            _cachedSelectedCount = null;
+            _cachedHoverIndex = null;
+            _cachedKeyboardHighlightIndex = null;
+            // Trigger a rebuild to reposition overlay
+            _safeSetState(() {});
+          }
+        });
       }
     });
     print("_updateSelection - calling _focusNode.requestFocus()");
@@ -211,9 +231,12 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
         // This ensures overlay repositions after input field has moved to new position
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted && _overlayController.isShowing) {
+            // Invalidate cache so overlay rebuilds with new position
             _cachedOverlayWidget = null;
             _cachedFilteredLength = null;
             _cachedSelectedCount = null;
+            _cachedHoverIndex = null;
+            _cachedKeyboardHighlightIndex = null;
             // Trigger a rebuild to reposition overlay
             _safeSetState(() {});
           }
@@ -298,6 +321,8 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
     _cachedOverlayWidget = null; // Invalidate cache when search changes
     _cachedFilteredLength = null;
     _cachedSelectedCount = null;
+    _cachedHoverIndex = null;
+    _cachedKeyboardHighlightIndex = null;
     _safeSetState(() {
       _filterUtils.clearCache();
       _clearHighlights();
@@ -667,19 +692,23 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
     final int filteredLength = filteredItems.length;
     final int selectedCount = _selected.length;
     
-    // Return cached overlay if filtered items count AND selected count haven't changed
-    // Selected count affects input field position (chips), so overlay needs to reposition
+    // Include hover and keyboard highlight in cache key so overlay rebuilds when they change
+    // This ensures hover state is current, while stable keys prevent flicker
     if (_cachedOverlayWidget != null && 
         _cachedFilteredLength == filteredLength &&
-        _cachedSelectedCount == selectedCount) {
-      print("_getOverlay: returning cached overlay, filteredLength=$filteredLength, selectedCount=$selectedCount");
+        _cachedSelectedCount == selectedCount &&
+        _cachedHoverIndex == _hoverIndex &&
+        _cachedKeyboardHighlightIndex == _keyboardHighlightIndex) {
+      print("_getOverlay: returning cached overlay, filteredLength=$filteredLength, selectedCount=$selectedCount, hoverIndex=$_hoverIndex");
       return _cachedOverlayWidget!;
     }
     
-    print("_getOverlay: building new overlay, filteredLength=$filteredLength, selectedCount=$selectedCount");
+    print("_getOverlay: building new overlay, filteredLength=$filteredLength, selectedCount=$selectedCount, hoverIndex=$_hoverIndex, keyboardHighlightIndex=$_keyboardHighlightIndex");
     _cachedOverlayWidget = _buildOverlay();
     _cachedFilteredLength = filteredLength;
     _cachedSelectedCount = selectedCount;
+    _cachedHoverIndex = _hoverIndex;
+    _cachedKeyboardHighlightIndex = _keyboardHighlightIndex;
     return _cachedOverlayWidget!;
   }
 
