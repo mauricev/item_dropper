@@ -157,39 +157,65 @@ class DropdownWithOverlay extends StatelessWidget {
       link: layerLink,
       child: OverlayPortal(
         controller: overlayController,
-        overlayChildBuilder: (context) =>
-            Stack(
-              children: [
-                // Dismiss dropdown when clicking outside the text field
-                Positioned.fill(
-                  child: Listener(
-                    behavior: HitTestBehavior.translucent,
-                    onPointerDown: (event) {
-                      // Use the field's render box for dismissal detection
-                      final RenderBox? renderBox =
-                      fieldKey.currentContext?.findRenderObject() as RenderBox?;
-                      if (renderBox != null) {
-                        final Offset offset = renderBox.localToGlobal(
-                            Offset.zero);
-                        final Size size = renderBox.size;
-                        final Rect fieldRect = offset & size;
-                        if (!fieldRect.contains(event.position)) {
-                          onDismiss();
-                        }
-                      }
-                    },
-                  ),
-                ),
-                CompositedTransformFollower(
-                  link: layerLink,
-                  showWhenUnlinked: false,
-                  offset: const Offset(0.0, 0.0), // Position relative to target
-                  child: overlay,
-                ),
-              ],
-            ),
+        overlayChildBuilder: (context) => _OverlayWrapper(
+          key: const ValueKey('overlay_wrapper_stable'),
+          layerLink: layerLink,
+          fieldKey: fieldKey,
+          onDismiss: onDismiss,
+          overlay: overlay,
+        ),
         child: inputField,
       ),
+    );
+  }
+}
+
+/// Stable wrapper for overlay to prevent unnecessary rebuilds
+class _OverlayWrapper extends StatelessWidget {
+  final LayerLink layerLink;
+  final GlobalKey fieldKey;
+  final VoidCallback onDismiss;
+  final Widget overlay;
+
+  const _OverlayWrapper({
+    super.key,
+    required this.layerLink,
+    required this.fieldKey,
+    required this.onDismiss,
+    required this.overlay,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      key: const ValueKey('overlay_stack_stable'),
+      children: [
+        // Dismiss dropdown when clicking outside the text field
+        Positioned.fill(
+          child: Listener(
+            behavior: HitTestBehavior.translucent,
+            onPointerDown: (event) {
+              // Use the field's render box for dismissal detection
+              final RenderBox? renderBox =
+                  fieldKey.currentContext?.findRenderObject() as RenderBox?;
+              if (renderBox != null) {
+                final Offset offset = renderBox.localToGlobal(Offset.zero);
+                final Size size = renderBox.size;
+                final Rect fieldRect = offset & size;
+                if (!fieldRect.contains(event.position)) {
+                  onDismiss();
+                }
+              }
+            },
+          ),
+        ),
+        CompositedTransformFollower(
+          link: layerLink,
+          showWhenUnlinked: true,
+          offset: const Offset(0.0, 0.0),
+          child: overlay,
+        ),
+      ],
     );
   }
 }
@@ -215,6 +241,7 @@ class DropdownRenderUtils {
           (x) => x.value == item.value,
     );
     return MouseRegion(
+      key: ValueKey('mouse_${item.value}_${filteredItems.length}'), // Key changes when list changes, forcing onEnter to fire
       onEnter: (_) {
         if (keyboardHighlightIndex == DropdownConstants.kNoHighlight) {
           safeSetState(() => setHoverIndex(itemIndex));

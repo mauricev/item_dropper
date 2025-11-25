@@ -292,6 +292,7 @@ class _SearchDropdownState<T> extends State<SearchDropdown<T>> {
 
   void _removeOverlay() {
     if (_overlayController.isShowing) {
+      print("4");
       _overlayController.hide();
     }
     _hoverIndex = DropdownConstants.kNoHighlight;

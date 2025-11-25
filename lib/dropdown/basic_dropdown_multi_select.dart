@@ -69,6 +69,9 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   double _measuredWrapHeight = 34.0; // Store measured Wrap height
   int _keyboardHighlightIndex = DropdownConstants.kNoHighlight;
   int _hoverIndex = DropdownConstants.kNoHighlight;
+  Widget? _cachedOverlayWidget; // Cache overlay widget to prevent flicker
+  int? _cachedFilteredLength; // Track when to invalidate cache
+  int? _cachedSelectedCount; // Track selected count (affects input field position)
   
   // Measured chip dimensions for alignment
   double? _measuredChipHeight;
@@ -123,8 +126,10 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   }
 
   void _handleFocusChange() {
+    print("_handleFocusChange called - hasFocus=${_focusNode.hasFocus}, isShowing=${_overlayController.isShowing}");
     if (_focusNode.hasFocus) {
       if (!_overlayController.isShowing && _filtered.isNotEmpty) {
+        print("_handleFocusChange - calling setState to show overlay");
         _safeSetState(() {
           _clearHighlights();
         });
@@ -134,19 +139,45 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   }
 
   void _updateSelection(void Function() selectionUpdate) {
-    setState(() {
+    print("_updateSelection1 - before setState, _selected.length=${_selected.length}");
+    // Preserve keyboard highlight state - only reset if keyboard navigation was active
+    final bool wasKeyboardActive = _keyboardHighlightIndex != DropdownConstants.kNoHighlight;
+    _safeSetState(() {
       selectionUpdate();
       final List<DropDownItem<T>> remainingFilteredItems = _filtered;
       if (remainingFilteredItems.isNotEmpty) {
-        _keyboardHighlightIndex = 0;
-        _hoverIndex = DropdownConstants.kNoHighlight;
+        // Only reset keyboard highlight if keyboard navigation was active
+        if (wasKeyboardActive) {
+          _keyboardHighlightIndex = 0;
+          _hoverIndex = DropdownConstants.kNoHighlight;
+        } else {
+          // Clear keyboard highlight so mouse hover can work
+          _keyboardHighlightIndex = DropdownConstants.kNoHighlight;
+          // Clear hover index - MouseRegion will set it again when overlay rebuilds
+          // The key on MouseRegion includes filteredItems.length, so it will be recreated
+          // and onEnter will fire if mouse is still over an item
+          _hoverIndex = DropdownConstants.kNoHighlight;
+        }
+        // Invalidate cache to force overlay rebuild
+        _cachedOverlayWidget = null;
+        _cachedFilteredLength = null;
+        _cachedSelectedCount = null;
       } else {
         _clearHighlights();
+        print("1");
         _overlayController.hide();
+     }
+    });
+    // Notify parent of change (deferred to avoid triggering rebuild during our setState)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        print("_updateSelection - calling widget.onChanged (deferred)");
+        widget.onChanged(List.from(_selected));
       }
     });
-    widget.onChanged(List.from(_selected));
+    print("_updateSelection - calling _focusNode.requestFocus()");
     _focusNode.requestFocus();
+    print("_updateSelection - done");
   }
 
   void _toggleItem(DropDownItem<T> item) {
@@ -166,12 +197,22 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   }
 
   void _removeChip(DropDownItem<T> item) {
+    print("_removeChip called - calling setState");
+    // Invalidate overlay cache so it repositions when input field moves
+    _cachedOverlayWidget = null;
+    _cachedFilteredLength = null;
+    _cachedSelectedCount = null;
     setState(() {
       _selected.removeWhere((selected) => selected.value == item.value);
       // After removal, clear highlights
       _clearHighlights();
     });
-    widget.onChanged(List.from(_selected));
+    // Notify parent of change (deferred to avoid triggering rebuild during our setState)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        widget.onChanged(List.from(_selected));
+      }
+    });
     // Focus the text field after layout settles, especially important for last chip removal
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _focusNode.requestFocus();
@@ -246,6 +287,10 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   }
 
   void _handleTextChanged(String value) {
+    print("_handleTextChanged called with value='$value'");
+    _cachedOverlayWidget = null; // Invalidate cache when search changes
+    _cachedFilteredLength = null;
+    _cachedSelectedCount = null;
     _safeSetState(() {
       _filterUtils.clearCache();
       _clearHighlights();
@@ -253,6 +298,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
     if (_filtered.isNotEmpty && !_overlayController.isShowing) {
       _overlayController.show();
     } else if (_filtered.isEmpty && _overlayController.isShowing) {
+      print("2");
       _overlayController.hide();
     }
   }
@@ -274,18 +320,8 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   }
 
   @override
-  void didUpdateWidget(covariant MultiSearchDropdown<T> oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    // Sync _selected if the parent (user) updates selectedItems externally
-    if (widget.selectedItems != oldWidget.selectedItems) {
-      _safeSetState(() {
-        _selected = List.from(widget.selectedItems);
-      });
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
+    print("build() called - _selected.length=${_selected.length}");
     return DropdownWithOverlay(
       layerLink: _layerLink,
       overlayController: _overlayController,
@@ -293,10 +329,11 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
       onDismiss: () {
         _focusNode.unfocus();
         if (_overlayController.isShowing) {
+          print("3");
           _overlayController.hide();
         }
       },
-      overlay: _buildOverlay(),
+      overlay: _getOverlay(),
       inputField: _buildInputField(),
     );
   }
@@ -331,10 +368,6 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
                 final double availableWidth = constraints.maxWidth;
                 final double textFieldWidth = _calculateTextFieldWidth(
                     availableWidth);
-
-                debugPrint(
-                    'MULTI: LayoutBuilder - availableWidth: $availableWidth, textFieldWidth: $textFieldWidth, selectedCount: ${_selected
-                        .length}');
 
                 // Measure Wrap after render to detect wrapping and get actual remaining width
                 WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -441,8 +474,6 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   double _calculateTextFieldWidth(double availableWidth) {
     if (_selected.isEmpty) {
       // No chips, TextField takes full available space for maximum click area
-      debugPrint(
-          'MULTI: _calculateTextFieldWidth - no chips, returning: $availableWidth');
       return availableWidth; // Take 100% of available space
     }
 
@@ -454,9 +485,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
 
     // TextField gets remaining space, minimum 100px (will wrap if less)
     final double remainingWidth = availableWidth - usedWidth;
-    debugPrint('MULTI: _calculateTextFieldWidth - selected: ${_selected
-        .length}, totalChipWidth: $totalChipWidth, totalSpacing: $totalSpacing, usedWidth: $usedWidth, remainingWidth: $remainingWidth, final: ${remainingWidth
-        .clamp(100.0, double.infinity)}');
+
     return remainingWidth.clamp(
         100.0, double.infinity); // Min 100px, no max cap
   }
@@ -583,12 +612,6 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
       // Adjust for TextField's text rendering - needs 6px offset upward
       textFieldPaddingTop = chipTextCenter - (textLineHeight / 2.0) - 6.0;
       textFieldPaddingBottom = chipHeight - textLineHeight - textFieldPaddingTop;
-      
-      debugPrint('TEXTFIELD ALIGNMENT:');
-      debugPrint('  Chip text center: $chipTextCenter');
-      debugPrint('  TextField padding top: $textFieldPaddingTop');
-      debugPrint('  TextField padding bottom: $textFieldPaddingBottom');
-      debugPrint('  TextField total height: ${textFieldPaddingTop + textLineHeight + textFieldPaddingBottom}');
     } else {
       // Fallback: calculate same as chip structure (matches _calculateTextFieldHeight)
       // Chip text center = chipVerticalPadding (6px) + rowHeight/2
@@ -632,52 +655,85 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
     );
   }
 
+  Widget _getOverlay() {
+    final List<DropDownItem<T>> filteredItems = _filtered;
+    final int filteredLength = filteredItems.length;
+    final int selectedCount = _selected.length;
+    
+    // Return cached overlay if filtered items count AND selected count haven't changed
+    // Selected count affects input field position (chips), so overlay needs to reposition
+    if (_cachedOverlayWidget != null && 
+        _cachedFilteredLength == filteredLength &&
+        _cachedSelectedCount == selectedCount) {
+      print("_getOverlay: returning cached overlay, filteredLength=$filteredLength, selectedCount=$selectedCount");
+      return _cachedOverlayWidget!;
+    }
+    
+    print("_getOverlay: building new overlay, filteredLength=$filteredLength, selectedCount=$selectedCount");
+    _cachedOverlayWidget = _buildOverlay();
+    _cachedFilteredLength = filteredLength;
+    _cachedSelectedCount = selectedCount;
+    return _cachedOverlayWidget!;
+  }
+
   Widget _buildOverlay() {
     final List<DropDownItem<T>> filteredItems = _filtered;
-    final Widget Function(BuildContext, DropDownItem<T>, bool) itemBuilder =
-        widget.popupItemBuilder ??
-            DropdownRenderUtils.defaultDropdownPopupItemBuilder;
-
+    
     // Get the input field's context for proper positioning
     final BuildContext? inputContext = (widget.inputKey ?? _fieldKey)
         .currentContext;
-    if (inputContext == null) return const SizedBox.shrink();
+    if (inputContext == null) {
+      print("_buildOverlay: inputContext is null, returning cached or SizedBox.shrink");
+      // Return cached overlay if available, otherwise empty
+      return _cachedOverlayWidget ?? const SizedBox.shrink();
+    }
 
     // Get current input field size for dynamic positioning
     final RenderBox? inputBox = inputContext.findRenderObject() as RenderBox?;
     final Size inputSize = inputBox?.size ?? Size.zero;
 
-    return Container(
-      key: ValueKey<String>(
-          'overlay_${_selected.length}_${inputSize.height}_${inputSize.width}'),
-      child: DropdownRenderUtils.buildDropdownOverlay(
-        context: inputContext,
-        items: filteredItems,
-        maxDropdownHeight: widget.maxDropdownHeight ?? 200.0,
-        // Use maxDropdownHeight or default
-        width: widget.width,
-        controller: _overlayController,
-        scrollController: _scrollController,
-        layerLink: _layerLink,
-        isSelected: (DropDownItem<T> item) =>
-            _selected.any((x) => x.value == item.value),
-        builder: (BuildContext builderContext, DropDownItem<T> item,
-            bool isSelected) {
-          return DropdownRenderUtils.buildDropdownItemWithHover<T>(
-            context: builderContext,
-            item: item,
-            isSelected: isSelected,
-            filteredItems: filteredItems,
-            hoverIndex: _hoverIndex,
-            keyboardHighlightIndex: _keyboardHighlightIndex,
-            safeSetState: _safeSetState,
-            setHoverIndex: (index) => _hoverIndex = index,
-            onTap: () {
-              _toggleItem(item);
-            },
-            customBuilder: itemBuilder,
-          );
-        },
+    if (filteredItems.isEmpty) {
+      print("_buildOverlay: filteredItems is EMPTY - returning SizedBox.shrink");
+      return const SizedBox.shrink();
+    }
+
+    final Widget Function(BuildContext, DropDownItem<T>, bool) itemBuilder =
+        widget.popupItemBuilder ??
+            DropdownRenderUtils.defaultDropdownPopupItemBuilder;
+
+    // Use RepaintBoundary with stable key to prevent unnecessary rebuilds
+    // The overlay content will update via the items list, but the widget tree structure stays stable
+    return RepaintBoundary(
+      key: const ValueKey<String>('overlay_stable'),
+      child: Container(
+        child: DropdownRenderUtils.buildDropdownOverlay(
+          context: inputContext,
+          items: filteredItems,
+          maxDropdownHeight: widget.maxDropdownHeight ?? 200.0,
+          width: widget.width,
+          controller: _overlayController,
+          scrollController: _scrollController,
+          layerLink: _layerLink,
+          isSelected: (DropDownItem<T> item) =>
+              _selected.any((x) => x.value == item.value),
+          builder: (BuildContext builderContext, DropDownItem<T> item,
+              bool isSelected) {
+            return DropdownRenderUtils.buildDropdownItemWithHover<T>(
+              context: builderContext,
+              item: item,
+              isSelected: isSelected,
+              filteredItems: filteredItems,
+              hoverIndex: _hoverIndex,
+              keyboardHighlightIndex: _keyboardHighlightIndex,
+              safeSetState: _safeSetState,
+              setHoverIndex: (index) => _hoverIndex = index,
+              onTap: () {
+                _toggleItem(item);
+              },
+              customBuilder: itemBuilder,
+            );
+          },
+        ),
       ),
     );
   }
