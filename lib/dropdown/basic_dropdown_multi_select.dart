@@ -184,11 +184,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted && _overlayController.isShowing) {
             // Invalidate cache so overlay rebuilds with new position
-            _cachedOverlayWidget = null;
-            _cachedFilteredLength = null;
-            _cachedSelectedCount = null;
-            _cachedHoverIndex = null;
-            _cachedKeyboardHighlightIndex = null;
+            _invalidateOverlayCache();
             // Trigger a rebuild to reposition overlay
             _safeSetState(() {});
           }
@@ -232,11 +228,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted && _overlayController.isShowing) {
             // Invalidate cache so overlay rebuilds with new position
-            _cachedOverlayWidget = null;
-            _cachedFilteredLength = null;
-            _cachedSelectedCount = null;
-            _cachedHoverIndex = null;
-            _cachedKeyboardHighlightIndex = null;
+            _invalidateOverlayCache();
             // Trigger a rebuild to reposition overlay
             _safeSetState(() {});
           }
@@ -318,11 +310,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
 
   void _handleTextChanged(String value) {
     print("_handleTextChanged called with value='$value'");
-    _cachedOverlayWidget = null; // Invalidate cache when search changes
-    _cachedFilteredLength = null;
-    _cachedSelectedCount = null;
-    _cachedHoverIndex = null;
-    _cachedKeyboardHighlightIndex = null;
+    _invalidateOverlayCache(); // Invalidate cache when search changes
     _safeSetState(() {
       _filterUtils.clearCache();
       _clearHighlights();
@@ -340,6 +328,15 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
     if (mounted) {
       setState(fn);
     }
+  }
+
+  // Invalidate overlay cache - call this whenever overlay needs to rebuild
+  void _invalidateOverlayCache() {
+    _cachedOverlayWidget = null;
+    _cachedFilteredLength = null;
+    _cachedSelectedCount = null;
+    _cachedHoverIndex = null;
+    _cachedKeyboardHighlightIndex = null;
   }
 
   @override
