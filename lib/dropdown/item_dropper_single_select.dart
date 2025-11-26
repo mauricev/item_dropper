@@ -3,7 +3,29 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'item_dropper_common.dart';
 
+/// Single-select dropdown widget
+/// Allows selecting a single item from a searchable list
 class SingleItemDropper<T> extends StatefulWidget {
+  /// Optional GlobalKey for the input field.
+  /// 
+  /// If provided, allows external access to the input field for:
+  /// - Programmatic focus control
+  /// - Integration with form libraries
+  /// - Testing and widget finding
+  /// - Layout measurement and positioning
+  /// 
+  /// If not provided, an internal key is used automatically.
+  /// 
+  /// Example usage:
+  /// ```dart
+  /// final key = GlobalKey();
+  /// SingleItemDropper(
+  ///   inputKey: key,
+  ///   // ... other parameters
+  /// );
+  /// // Later, access the input field:
+  /// final context = key.currentContext;
+  /// ```
   final GlobalKey? inputKey;
   final List<ItemDropperItem<T>> items;
   final ItemDropperItem<T>? selectedItem;
@@ -20,7 +42,7 @@ class SingleItemDropper<T> extends StatefulWidget {
 
   const SingleItemDropper({
     super.key,
-    this.inputKey,
+    this.inputKey, // Optional: provide a GlobalKey for external access to the input field
     required this.items,
     this.selectedItem,
     required this.onChanged,

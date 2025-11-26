@@ -5,6 +5,26 @@ import 'item_dropper_common.dart';
 /// Multi-select dropdown widget
 /// Allows selecting multiple items with chip-based display
 class MultiItemDropper<T> extends StatefulWidget {
+  /// Optional GlobalKey for the input field container.
+  /// 
+  /// If provided, allows external access to the input field for:
+  /// - Programmatic focus control
+  /// - Integration with form libraries
+  /// - Testing and widget finding
+  /// - Layout measurement and positioning
+  /// 
+  /// If not provided, an internal key is used automatically.
+  /// 
+  /// Example usage:
+  /// ```dart
+  /// final key = GlobalKey();
+  /// MultiItemDropper(
+  ///   inputKey: key,
+  ///   // ... other parameters
+  /// );
+  /// // Later, access the input field:
+  /// final context = key.currentContext;
+  /// ```
   final GlobalKey<State<StatefulWidget>>? inputKey;
   final List<ItemDropperItem<T>> items;
   final List<ItemDropperItem<T>> selectedItems;
@@ -54,7 +74,6 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   static const double _chipDeleteIconSize = 18.0;
   static const double _chipBorderRadius = 6.0;
   static const double _chipMarginRight = 4.0;
-  static const double _chipDeleteIconLeftPadding = 4.0;
   static const double _minTextFieldWidth = 100.0;
 
   final GlobalKey _fieldKey = GlobalKey();
