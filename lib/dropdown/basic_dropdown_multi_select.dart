@@ -201,17 +201,27 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   }
 
   void _toggleItem(DropDownItem<T> item) {
-    // If maxSelected is set and already reached, ignore further additions.
-    if (widget.maxSelected != null && _selected.length >= widget.maxSelected!) {
+    final bool isCurrentlySelected = _isSelected(item);
+    
+    // If maxSelected is set and already reached, only allow removal (toggle off)
+    if (widget.maxSelected != null && 
+        _selected.length >= widget.maxSelected! && 
+        !isCurrentlySelected) {
+      // Block adding new items when max is reached
       return;
     }
+    // Allow removing items even when max is reached (toggle behavior)
+    
     _updateSelection(() {
-      if (!_isSelected(item)) {
+      if (!isCurrentlySelected) {
         _selected.add(item);
         // Clear search text after selection for continued searching
         _searchController.clear();
+      } else {
+        // Item is already selected, remove it (toggle off)
+        _selected.removeWhere((selected) => selected.value == item.value);
       }
-      // After selection, clear highlights
+      // After selection change, clear highlights
       _clearHighlights();
     });
   }
@@ -305,8 +315,11 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
       _filterUtils.clearCache();
       _clearHighlights();
     });
-    if (_filtered.isNotEmpty && !_overlayController.isShowing) {
-      _overlayController.show();
+    // Show overlay if there are filtered items OR if user is searching (to show empty state)
+    if (_focusNode.hasFocus) {
+      if (!_overlayController.isShowing) {
+        _overlayController.show();
+      }
     } else if (_filtered.isEmpty && _overlayController.isShowing) {
       print("2");
       _overlayController.hide();
@@ -341,6 +354,36 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
         }
       });
     });
+  }
+
+  @override
+  void didUpdateWidget(covariant MultiSearchDropdown<T> oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    
+    // Sync selected items if parent changed them
+    if (widget.selectedItems.length != _selected.length ||
+        !widget.selectedItems.every((item) => _isSelected(item))) {
+      _selected = List.from(widget.selectedItems);
+    }
+    
+    // Invalidate filter cache if items list changed
+    if (widget.items.length != oldWidget.items.length ||
+        !_areItemsEqual(widget.items, oldWidget.items)) {
+      _filterUtils.initializeItems(widget.items);
+      _invalidateOverlayCache();
+      _safeSetState(() {
+        _filterUtils.clearCache();
+      });
+    }
+  }
+  
+  // Helper to check if two item lists are equal (by value)
+  bool _areItemsEqual(List<DropDownItem<T>> a, List<DropDownItem<T>> b) {
+    if (a.length != b.length) return false;
+    final Set<T> aValues = a.map((item) => item.value).toSet();
+    final Set<T> bValues = b.map((item) => item.value).toSet();
+    return aValues.length == bValues.length && 
+           aValues.every((value) => bValues.contains(value));
   }
 
   @override
@@ -662,7 +705,13 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
     final Size inputSize = inputBox?.size ?? Size.zero;
     print("_buildOverlay: inputSize=$inputSize");
 
+    // Show empty state if user is searching but no results found
     if (filteredItems.isEmpty) {
+      if (_searchController.text.isNotEmpty) {
+        // User is searching but no results - show empty state
+        return _buildEmptyStateOverlay(inputContext);
+      }
+      // No search text and no items - hide overlay
       print("_buildOverlay: filteredItems is EMPTY - returning SizedBox.shrink");
       return const SizedBox.shrink();
     }
@@ -705,6 +754,48 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
               customBuilder: itemBuilder,
             );
           },
+        ),
+      ),
+    );
+  }
+
+  /// Builds an empty state overlay when search returns no results
+  Widget _buildEmptyStateOverlay(BuildContext inputContext) {
+    final RenderBox? inputBox = inputContext.findRenderObject() as RenderBox?;
+    if (inputBox == null) return const SizedBox.shrink();
+
+    final MediaQueryData mediaQuery = MediaQuery.of(inputContext);
+    final double screenHeight = mediaQuery.size.height;
+    final EdgeInsets viewInsets = mediaQuery.viewInsets;
+    final Offset inputFieldOffset = inputBox.localToGlobal(Offset.zero);
+    final double inputFieldHeight = inputBox.size.height;
+
+    final double availableSpaceBelow = screenHeight -
+        viewInsets.bottom -
+        (inputFieldOffset.dy + inputFieldHeight +
+            DropdownConstants.kDropdownMargin);
+    final bool shouldShowBelow = availableSpaceBelow > 50.0;
+
+    return CompositedTransformFollower(
+      link: _layerLink,
+      showWhenUnlinked: false,
+      offset: shouldShowBelow
+          ? Offset(0.0, inputFieldHeight + DropdownConstants.kDropdownMargin)
+          : Offset(0.0, -50.0 - DropdownConstants.kDropdownMargin),
+      child: SizedBox(
+        width: widget.width,
+        child: Material(
+          elevation: DropdownConstants.kDropdownElevation,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+            child: Text(
+              'No results found',
+              style: TextStyle(
+                fontSize: widget.textSize,
+                color: Colors.grey.shade600,
+              ),
+            ),
+          ),
         ),
       ),
     );
