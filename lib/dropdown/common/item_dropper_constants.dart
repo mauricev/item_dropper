@@ -1,5 +1,5 @@
 /// Shared UI constants for dropdown components
-class DropdownConstants {
+class ItemDropperConstants {
   // Layout constants
   static const double kDropdownItemHeight = 30.0;
   static const double kDropdownMargin = 4.0;

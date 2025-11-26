@@ -1,14 +1,14 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'basic_dropdown_common.dart';
+import 'item_dropper_common.dart';
 
-class SearchDropdown<T> extends StatefulWidget {
+class SingleItemDropper<T> extends StatefulWidget {
   final GlobalKey? inputKey;
-  final List<DropDownItem<T>> items;
-  final DropDownItem<T>? selectedItem;
-  final DropDownItemCallback<T> onChanged;
-  final Widget Function(BuildContext, DropDownItem<T>, bool)? popupItemBuilder;
+  final List<ItemDropperItem<T>> items;
+  final ItemDropperItem<T>? selectedItem;
+  final ItemDropperItemCallback<T> onChanged;
+  final Widget Function(BuildContext, ItemDropperItem<T>, bool)? popupItemBuilder;
   final InputDecoration decoration;
   final double width;
   final double maxDropdownHeight;
@@ -18,7 +18,7 @@ class SearchDropdown<T> extends StatefulWidget {
   final double? itemHeight;
   final bool enabled;
 
-  const SearchDropdown({
+  const SingleItemDropper({
     super.key,
     this.inputKey,
     required this.items,
@@ -36,7 +36,7 @@ class SearchDropdown<T> extends StatefulWidget {
   });
 
   @override
-  State<SearchDropdown<T>> createState() => _SearchDropdownState<T>();
+  State<SingleItemDropper<T>> createState() => _SingleItemDropperState<T>();
 }
 
 /// Dropdown interaction state
@@ -48,7 +48,7 @@ enum DropdownInteractionState {
   editing,
 }
 
-class _SearchDropdownState<T> extends State<SearchDropdown<T>> {
+class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
   // UI Layout Constants
   static const double _containerBorderRadius = 8.0;
   static const double _textFieldVerticalPadding = 2.0;
@@ -69,15 +69,15 @@ class _SearchDropdownState<T> extends State<SearchDropdown<T>> {
   final LayerLink _layerLink = LayerLink();
   final OverlayPortalController _overlayController = OverlayPortalController();
 
-  int _hoverIndex = DropdownConstants.kNoHighlight;
-  int _keyboardHighlightIndex = DropdownConstants.kNoHighlight;
+  int _hoverIndex = ItemDropperConstants.kNoHighlight;
+  int _keyboardHighlightIndex = ItemDropperConstants.kNoHighlight;
 
   // Use shared filter utils
-  final DropdownFilterUtils<T> _filterUtils = DropdownFilterUtils<T>();
+  final ItemDropperFilterUtils<T> _filterUtils = ItemDropperFilterUtils<T>();
 
   // State management
   DropdownInteractionState _interactionState = DropdownInteractionState.idle;
-  DropDownItem<T>? _selected;
+  ItemDropperItem<T>? _selected;
   bool _squelchOnChanged = false;
 
   // Scroll debouncing
@@ -94,7 +94,7 @@ class _SearchDropdownState<T> extends State<SearchDropdown<T>> {
 
   String get _selectedLabelText => _selected?.label ?? '';
 
-  List<DropDownItem<T>> get _filtered {
+  List<ItemDropperItem<T>> get _filtered {
     return _filterUtils.getFiltered(
       widget.items,
       _controller.text,
@@ -145,7 +145,7 @@ class _SearchDropdownState<T> extends State<SearchDropdown<T>> {
     }
   }
 
-  void _setSelected(DropDownItem<T>? newVal) {
+  void _setSelected(ItemDropperItem<T>? newVal) {
     if (_selected?.value != newVal?.value) {
       _selected = newVal;
       widget.onChanged(newVal);
@@ -156,7 +156,7 @@ class _SearchDropdownState<T> extends State<SearchDropdown<T>> {
     final String trimmedInput = input.trim().toLowerCase();
 
     // Find exact match
-    DropDownItem<T>? match;
+    ItemDropperItem<T>? match;
     for (final item in widget.items) {
       if (item.label.trim().toLowerCase() == trimmedInput) {
         match = item;
@@ -237,12 +237,12 @@ class _SearchDropdownState<T> extends State<SearchDropdown<T>> {
     }
 
     // Reset keyboard highlight when search results change
-    _keyboardHighlightIndex = DropdownConstants.kNoHighlight;
+    _keyboardHighlightIndex = ItemDropperConstants.kNoHighlight;
     _safeSetState(() {});
 
     // Debounced scroll animation
     _scrollDebounceTimer?.cancel();
-    _scrollDebounceTimer = Timer(DropdownConstants.kScrollDebounceDelay, () {
+    _scrollDebounceTimer = Timer(ItemDropperConstants.kScrollDebounceDelay, () {
       _performScrollToMatch();
     });
   }
@@ -259,8 +259,8 @@ class _SearchDropdownState<T> extends State<SearchDropdown<T>> {
         if (itemIndex >= 0) {
           _scrollController.animateTo(
             itemIndex *
-                (widget.itemHeight ?? DropdownConstants.kDropdownItemHeight),
-            duration: DropdownConstants.kScrollAnimationDuration,
+                (widget.itemHeight ?? ItemDropperConstants.kDropdownItemHeight),
+            duration: ItemDropperConstants.kScrollAnimationDuration,
             curve: Curves.easeInOut,
           );
         }
@@ -275,8 +275,8 @@ class _SearchDropdownState<T> extends State<SearchDropdown<T>> {
     if (_filtered.isEmpty) return;
     _waitThenScrollToSelected();
     _safeSetState(() {
-      _hoverIndex = DropdownConstants.kNoHighlight;
-      _keyboardHighlightIndex = DropdownConstants.kNoHighlight;
+      _hoverIndex = ItemDropperConstants.kNoHighlight;
+      _keyboardHighlightIndex = ItemDropperConstants.kNoHighlight;
     });
     _overlayController.show();
   }
@@ -285,8 +285,8 @@ class _SearchDropdownState<T> extends State<SearchDropdown<T>> {
     _focusNode.unfocus();
     _removeOverlay();
     _safeSetState(() {
-      _hoverIndex = DropdownConstants.kNoHighlight;
-      _keyboardHighlightIndex = DropdownConstants.kNoHighlight;
+      _hoverIndex = ItemDropperConstants.kNoHighlight;
+      _keyboardHighlightIndex = ItemDropperConstants.kNoHighlight;
     });
   }
 
@@ -295,20 +295,20 @@ class _SearchDropdownState<T> extends State<SearchDropdown<T>> {
       print("4");
       _overlayController.hide();
     }
-    _hoverIndex = DropdownConstants.kNoHighlight;
-    _keyboardHighlightIndex = DropdownConstants.kNoHighlight;
+    _hoverIndex = ItemDropperConstants.kNoHighlight;
+    _keyboardHighlightIndex = ItemDropperConstants.kNoHighlight;
   }
 
   void _handleArrowDown() {
-    _keyboardHighlightIndex = DropdownKeyboardNavigation.handleArrowDown(
+    _keyboardHighlightIndex = ItemDropperKeyboardNavigation.handleArrowDown(
       _keyboardHighlightIndex,
       _hoverIndex,
       _filtered.length,
     );
     _safeSetState(() {
-      _hoverIndex = DropdownConstants.kNoHighlight;
+      _hoverIndex = ItemDropperConstants.kNoHighlight;
     });
-    DropdownKeyboardNavigation.scrollToHighlight(
+    ItemDropperKeyboardNavigation.scrollToHighlight(
       highlightIndex: _keyboardHighlightIndex,
       scrollController: _scrollController,
       mounted: mounted,
@@ -316,15 +316,15 @@ class _SearchDropdownState<T> extends State<SearchDropdown<T>> {
   }
 
   void _handleArrowUp() {
-    _keyboardHighlightIndex = DropdownKeyboardNavigation.handleArrowUp(
+    _keyboardHighlightIndex = ItemDropperKeyboardNavigation.handleArrowUp(
       _keyboardHighlightIndex,
       _hoverIndex,
       _filtered.length,
     );
     _safeSetState(() {
-      _hoverIndex = DropdownConstants.kNoHighlight;
+      _hoverIndex = ItemDropperConstants.kNoHighlight;
     });
-    DropdownKeyboardNavigation.scrollToHighlight(
+    ItemDropperKeyboardNavigation.scrollToHighlight(
       highlightIndex: _keyboardHighlightIndex,
       scrollController: _scrollController,
       mounted: mounted,
@@ -332,10 +332,10 @@ class _SearchDropdownState<T> extends State<SearchDropdown<T>> {
   }
 
   void _selectKeyboardHighlightedItem() {
-    final List<DropDownItem<T>> filteredItems = _filtered;
+    final List<ItemDropperItem<T>> filteredItems = _filtered;
     if (_keyboardHighlightIndex >= 0 &&
         _keyboardHighlightIndex < filteredItems.length) {
-      final DropDownItem<
+      final ItemDropperItem<
           T> selectedItem = filteredItems[_keyboardHighlightIndex];
       _withSquelch(() {
         _controller.text = selectedItem.label;
@@ -356,7 +356,7 @@ class _SearchDropdownState<T> extends State<SearchDropdown<T>> {
     int retryCount = 0;
 
     void tryScroll() {
-      if (!mounted || retryCount >= DropdownConstants.kMaxScrollRetries) {
+      if (!mounted || retryCount >= ItemDropperConstants.kMaxScrollRetries) {
         return;
       }
 
@@ -370,13 +370,13 @@ class _SearchDropdownState<T> extends State<SearchDropdown<T>> {
 
       // Center the selected item in the viewport if possible
       final double itemTop = selectedIndex *
-          (widget.itemHeight ?? DropdownConstants.kDropdownItemHeight);
+          (widget.itemHeight ?? ItemDropperConstants.kDropdownItemHeight);
       final double viewportHeight = _scrollController.position
           .viewportDimension;
       final double centeredOffset = (itemTop -
-          (viewportHeight / DropdownConstants.kCenteringDivisor) +
-          ((widget.itemHeight ?? DropdownConstants.kDropdownItemHeight) /
-              DropdownConstants.kCenteringDivisor))
+          (viewportHeight / ItemDropperConstants.kCenteringDivisor) +
+          ((widget.itemHeight ?? ItemDropperConstants.kDropdownItemHeight) /
+              ItemDropperConstants.kCenteringDivisor))
           .clamp(0.0, _scrollController.position.maxScrollExtent);
 
       _scrollController.jumpTo(centeredOffset);
@@ -435,14 +435,14 @@ class _SearchDropdownState<T> extends State<SearchDropdown<T>> {
   }
 
   Widget _buildDropdownOverlay() {
-    final List<DropDownItem<T>> filteredItems = _filtered;
+    final List<ItemDropperItem<T>> filteredItems = _filtered;
 
     // Get the input field's context for proper positioning
     final BuildContext? inputContext = (widget.inputKey ?? _internalFieldKey)
         .currentContext;
     if (inputContext == null) return const SizedBox.shrink();
 
-    return DropdownRenderUtils.buildDropdownOverlay(
+    return ItemDropperRenderUtils.buildDropdownOverlay(
       context: inputContext,
       items: filteredItems,
       maxDropdownHeight: widget.maxDropdownHeight,
@@ -450,10 +450,10 @@ class _SearchDropdownState<T> extends State<SearchDropdown<T>> {
       controller: _overlayController,
       scrollController: _scrollController,
       layerLink: _layerLink,
-      isSelected: (DropDownItem<T> item) => item.value == _selected?.value,
-      builder: (BuildContext builderContext, DropDownItem<T> item,
+      isSelected: (ItemDropperItem<T> item) => item.value == _selected?.value,
+      builder: (BuildContext builderContext, ItemDropperItem<T> item,
           bool isSelected) {
-        return DropdownRenderUtils.buildDropdownItemWithHover<T>(
+        return ItemDropperRenderUtils.buildDropdownItemWithHover<T>(
           context: builderContext,
           item: item,
           isSelected: isSelected,
@@ -473,7 +473,7 @@ class _SearchDropdownState<T> extends State<SearchDropdown<T>> {
             _dismissDropdown();
           },
           customBuilder: widget.popupItemBuilder ??
-              DropdownRenderUtils.defaultDropdownPopupItemBuilder<T>,
+              ItemDropperRenderUtils.defaultDropdownPopupItemBuilder<T>,
           itemHeight: widget.itemHeight,
         );
       },
@@ -502,7 +502,7 @@ class _SearchDropdownState<T> extends State<SearchDropdown<T>> {
   }
 
   @override
-  void didUpdateWidget(covariant SearchDropdown<T> oldWidget) {
+  void didUpdateWidget(covariant SingleItemDropper<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
 
     final T? newVal = widget.selectedItem?.value;
@@ -539,7 +539,7 @@ class _SearchDropdownState<T> extends State<SearchDropdown<T>> {
   Widget build(BuildContext context) {
     final bool hasSelection = _selected != null;
 
-    return DropdownWithOverlay(
+    return ItemDropperWithOverlay(
       layerLink: _layerLink,
       overlayController: _overlayController,
       fieldKey: widget.inputKey ?? _internalFieldKey,
@@ -628,7 +628,7 @@ class _SearchDropdownState<T> extends State<SearchDropdown<T>> {
                   height: widget.textSize *
                       3.2, // Match calculated suffix icon height
                 ),
-                suffixIcon: DropdownSuffixIcons(
+                suffixIcon: ItemDropperSuffixIcons(
                   isDropdownShowing: _overlayController.isShowing,
                   enabled: widget.enabled,
                   onClearPressed: () {
@@ -636,7 +636,7 @@ class _SearchDropdownState<T> extends State<SearchDropdown<T>> {
                     _attemptSelectByInput('');
                     if (mounted) {
                       setState(() =>
-                      _hoverIndex = DropdownConstants.kNoHighlight);
+                      _hoverIndex = ItemDropperConstants.kNoHighlight);
                     }
                   },
                   onArrowPressed: () {

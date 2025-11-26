@@ -7,12 +7,12 @@
 
 // Common components
 export 'common/measure_size.dart';
-export 'common/dropdown_item.dart';
-export 'common/dropdown_suffix_icons.dart';
-export 'common/dropdown_constants.dart';
-export 'common/dropdown_with_overlay.dart';
+export 'common/item_dropper_item.dart';
+export 'common/item_dropper_suffix_icons.dart';
+export 'common/item_dropper_constants.dart';
+export 'common/item_dropper_with_overlay.dart';
 
 // Utility classes
-export 'utils/dropdown_render_utils.dart';
-export 'utils/dropdown_filter_utils.dart';
-export 'utils/dropdown_keyboard_navigation.dart';
+export 'utils/item_dropper_render_utils.dart';
+export 'utils/item_dropper_filter_utils.dart';
+export 'utils/item_dropper_keyboard_navigation.dart';

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'basic_dropdown_common.dart';
-import 'basic_dropdown_single_select.dart';
+import 'item_dropper_common.dart';
+import 'item_dropper_single_select.dart';
 
-Widget popupItemBuilder<T>(BuildContext context, DropDownItem<T> item,
+Widget popupItemBuilder<T>(BuildContext context, ItemDropperItem<T> item,
     bool isSelected) {
   return Container(
     color: isSelected ? Colors.grey.shade200 : null,
@@ -21,14 +21,14 @@ InputDecoration returnInputDecorationForDropdown(String? hintText) {
 }
 
 Widget dropDown<T>({required double width,
-  required List<DropDownItem<T>> listItems,
-  DropDownItem<T>? initiallySelected,
-  required Function(DropDownItem<T>?) onChanged,
+  required List<ItemDropperItem<T>> listItems,
+  ItemDropperItem<T>? initiallySelected,
+  required Function(ItemDropperItem<T>?) onChanged,
   String? hintText,
   bool showKeyboard = false,
   double? maxDropdownHeight,
   bool enabled = true}) {
-  return SearchDropdown<T>(
+  return SingleItemDropper<T>(
     width: width,
     items: listItems,
     selectedItem: initiallySelected,

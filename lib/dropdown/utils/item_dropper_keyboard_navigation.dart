@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
-import '../common/dropdown_constants.dart';
+import '../common/item_dropper_constants.dart';
 
 /// Shared keyboard navigation behavior for dropdowns
-class DropdownKeyboardNavigation {
+class ItemDropperKeyboardNavigation {
   /// Handle arrow down navigation
   static int handleArrowDown(int currentIndex,
       int hoverIndex,
       int itemCount,) {
-    if (itemCount == 0) return DropdownConstants.kNoHighlight;
+    if (itemCount == 0) return ItemDropperConstants.kNoHighlight;
 
     int nextIndex = currentIndex;
 
     // If no keyboard highlight but hover index exists, start from there
-    if (nextIndex == DropdownConstants.kNoHighlight &&
-        hoverIndex != DropdownConstants.kNoHighlight) {
+    if (nextIndex == ItemDropperConstants.kNoHighlight &&
+        hoverIndex != ItemDropperConstants.kNoHighlight) {
       nextIndex = hoverIndex;
     }
 
@@ -31,13 +31,13 @@ class DropdownKeyboardNavigation {
   static int handleArrowUp(int currentIndex,
       int hoverIndex,
       int itemCount,) {
-    if (itemCount == 0) return DropdownConstants.kNoHighlight;
+    if (itemCount == 0) return ItemDropperConstants.kNoHighlight;
 
     int nextIndex = currentIndex;
 
     // If no keyboard highlight but hover index exists, start from there
-    if (nextIndex == DropdownConstants.kNoHighlight &&
-        hoverIndex != DropdownConstants.kNoHighlight) {
+    if (nextIndex == ItemDropperConstants.kNoHighlight &&
+        hoverIndex != ItemDropperConstants.kNoHighlight) {
       nextIndex = hoverIndex;
     }
 
@@ -66,9 +66,9 @@ class DropdownKeyboardNavigation {
         if (scrollController.hasClients &&
             scrollController.position.hasContentDimensions) {
           final double itemTop =
-              highlightIndex * DropdownConstants.kDropdownItemHeight;
+              highlightIndex * ItemDropperConstants.kDropdownItemHeight;
           final double itemBottom =
-              itemTop + DropdownConstants.kDropdownItemHeight;
+              itemTop + ItemDropperConstants.kDropdownItemHeight;
           final double viewportStart = scrollController.offset;
           final double viewportEnd =
               viewportStart + scrollController.position.viewportDimension;
@@ -76,13 +76,13 @@ class DropdownKeyboardNavigation {
           if (itemTop < viewportStart) {
             scrollController.animateTo(
               itemTop,
-              duration: DropdownConstants.kScrollAnimationDuration,
+              duration: ItemDropperConstants.kScrollAnimationDuration,
               curve: Curves.easeInOut,
             );
           } else if (itemBottom > viewportEnd) {
             scrollController.animateTo(
               itemBottom - scrollController.position.viewportDimension,
-              duration: DropdownConstants.kScrollAnimationDuration,
+              duration: ItemDropperConstants.kScrollAnimationDuration,
               curve: Curves.easeInOut,
             );
           }

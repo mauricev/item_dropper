@@ -1,14 +1,14 @@
-import '../common/dropdown_item.dart';
+import '../common/item_dropper_item.dart';
 
 /// Shared filtering behavior for dropdown items
-class DropdownFilterUtils<T> {
-  List<({String label, DropDownItem<T> item})> _normalizedItems = [];
-  List<DropDownItem<T>>? _lastItemsRef;
-  List<DropDownItem<T>>? _cachedFilteredItems;
+class ItemDropperFilterUtils<T> {
+  List<({String label, ItemDropperItem<T> item})> _normalizedItems = [];
+  List<ItemDropperItem<T>>? _lastItemsRef;
+  List<ItemDropperItem<T>>? _cachedFilteredItems;
   String _lastFilterInput = '';
 
   /// Initialize normalized items for fast filtering
-  void initializeItems(List<DropDownItem<T>> items) {
+  void initializeItems(List<ItemDropperItem<T>> items) {
     _lastItemsRef = items;
     _normalizedItems = items
         .map((item) => (label: item.label.trim().toLowerCase(), item: item))
@@ -16,7 +16,7 @@ class DropdownFilterUtils<T> {
   }
 
   /// Get filtered items based on search text
-  List<DropDownItem<T>> getFiltered(List<DropDownItem<T>> items,
+  List<ItemDropperItem<T>> getFiltered(List<ItemDropperItem<T>> items,
       String searchText, {
         bool isUserEditing = false,
         Set<T>? excludeValues,
@@ -46,7 +46,7 @@ class DropdownFilterUtils<T> {
     }
 
     // Compute and cache filtered list
-    final List<DropDownItem<T>> filteredResult = _normalizedItems
+    final List<ItemDropperItem<T>> filteredResult = _normalizedItems
         .where((entry) =>
     entry.label.contains(input) &&
         (excludeValues == null || !excludeValues.contains(entry.item.value)))

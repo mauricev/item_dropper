@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'basic_dropdown_common.dart';
-import 'basic_dropdown_multi_select.dart';
+import 'item_dropper_common.dart';
+import 'item_dropper_multi_select.dart';
 
-Widget popupItemBuilderMulti<T>(BuildContext context, DropDownItem<T> item,
+Widget popupItemBuilderMulti<T>(BuildContext context, ItemDropperItem<T> item,
     bool isSelected) {
   return Text(item.label);
 }
@@ -18,14 +18,14 @@ InputDecoration returnInputDecorationForMultiDropdown(String? hintText) {
 
 Widget multiDropDown<T>({
   required double width,
-  required List<DropDownItem<T>> listItems,
-  List<DropDownItem<T>>? initiallySelected,
-  required Function(List<DropDownItem<T>>) onChanged,
+  required List<ItemDropperItem<T>> listItems,
+  List<ItemDropperItem<T>>? initiallySelected,
+  required Function(List<ItemDropperItem<T>>) onChanged,
   String? hintText,
   double? maxDropdownHeight,
   bool enabled = true,
 }) {
-  return MultiSearchDropdown<T>(
+  return MultiItemDropper<T>(
     width: width,
     items: listItems,
     selectedItems: initiallySelected ?? [],

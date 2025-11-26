@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../common/dropdown_constants.dart';
+import '../common/item_dropper_constants.dart';
 
 /// Shared widget that wraps dropdown input fields with overlay functionality
-class DropdownWithOverlay extends StatelessWidget {
+class ItemDropperWithOverlay extends StatelessWidget {
   final LayerLink layerLink;
   final OverlayPortalController overlayController;
   final GlobalKey fieldKey;
@@ -10,7 +10,7 @@ class DropdownWithOverlay extends StatelessWidget {
   final Widget overlay;
   final VoidCallback onDismiss;
 
-  const DropdownWithOverlay({
+  const ItemDropperWithOverlay({
     super.key,
     required this.layerLink,
     required this.overlayController,

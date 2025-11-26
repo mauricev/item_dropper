@@ -1,22 +1,22 @@
 import 'package:flutter/material.dart';
-import '../common/dropdown_constants.dart';
-import '../common/dropdown_item.dart';
+import '../common/item_dropper_constants.dart';
+import '../common/item_dropper_item.dart';
 
 /// Shared dropdown rendering utilities
-class DropdownRenderUtils {
+class ItemDropperRenderUtils {
   /// Builds a complete dropdown item with MouseRegion and hover handling
   /// This wraps buildDropdownItem with the standard hover behavior
   static Widget buildDropdownItemWithHover<T>({
     required BuildContext context,
-    required DropDownItem<T> item,
+    required ItemDropperItem<T> item,
     required bool isSelected,
-    required List<DropDownItem<T>> filteredItems,
+    required List<ItemDropperItem<T>> filteredItems,
     required int hoverIndex,
     required int keyboardHighlightIndex,
     required void Function(void Function()) safeSetState,
     required void Function(int) setHoverIndex,
     required VoidCallback onTap,
-    required Widget Function(BuildContext, DropDownItem<T>, bool) customBuilder,
+    required Widget Function(BuildContext, ItemDropperItem<T>, bool) customBuilder,
     double? itemHeight, // Optional item height parameter
   }) {
     final int itemIndex = filteredItems.indexWhere(
@@ -24,18 +24,18 @@ class DropdownRenderUtils {
     );
     return MouseRegion(
       onEnter: (_) {
-        if (keyboardHighlightIndex == DropdownConstants.kNoHighlight) {
+        if (keyboardHighlightIndex == ItemDropperConstants.kNoHighlight) {
           safeSetState(() => setHoverIndex(itemIndex));
         }
       },
       onExit: (_) =>
-          safeSetState(() => setHoverIndex(DropdownConstants.kNoHighlight)),
+          safeSetState(() => setHoverIndex(ItemDropperConstants.kNoHighlight)),
       child: buildDropdownItem<T>(
         context: context,
         item: item,
         isHovered:
         itemIndex == hoverIndex &&
-            keyboardHighlightIndex == DropdownConstants.kNoHighlight,
+            keyboardHighlightIndex == ItemDropperConstants.kNoHighlight,
         isKeyboardHighlighted: itemIndex == keyboardHighlightIndex,
         isSelected: isSelected,
         isSingleItem: filteredItems.length == 1,
@@ -49,13 +49,13 @@ class DropdownRenderUtils {
   /// Renders a dropdown item with hover/selection/keyboard highlight states
   static Widget buildDropdownItem<T>({
     required BuildContext context,
-    required DropDownItem<T> item,
+    required ItemDropperItem<T> item,
     required bool isHovered,
     required bool isKeyboardHighlighted,
     required bool isSelected,
     required bool isSingleItem,
     required VoidCallback onTap,
-    required Widget Function(BuildContext, DropDownItem<T>, bool) builder,
+    required Widget Function(BuildContext, ItemDropperItem<T>, bool) builder,
     double? itemHeight, // Optional item height parameter
   }) {
     Widget w = builder(context, item, isSelected);
@@ -70,7 +70,7 @@ class DropdownRenderUtils {
           .colorScheme
           .secondary
           .withAlpha(
-          (DropdownConstants.kSelectedItemBackgroundAlpha * 255).toInt());
+          (ItemDropperConstants.kSelectedItemBackgroundAlpha * 255).toInt());
     } else {
       background = null;
     }
@@ -78,7 +78,7 @@ class DropdownRenderUtils {
       hoverColor: Colors.transparent,
       onTap: onTap,
       child: Container(
-        height: itemHeight ?? DropdownConstants.kDropdownItemHeight,
+        height: itemHeight ?? ItemDropperConstants.kDropdownItemHeight,
         color: background,
         child: w,
       ),
@@ -87,7 +87,7 @@ class DropdownRenderUtils {
 
   /// Default popup row builder for dropdown items
   static Widget defaultDropdownPopupItemBuilder<T>(BuildContext context,
-      DropDownItem<T> item,
+      ItemDropperItem<T> item,
       bool isSelected,) {
     return Container(
       color: isSelected ? Colors.grey.shade200 : null,
@@ -104,14 +104,14 @@ class DropdownRenderUtils {
   /// the complete item widget including MouseRegion and tap handling
   static Widget buildDropdownOverlay<T>({
     required BuildContext context,
-    required List<DropDownItem<T>> items,
+    required List<ItemDropperItem<T>> items,
     required double maxDropdownHeight,
     required double width,
     required OverlayPortalController controller,
     required ScrollController scrollController,
     required LayerLink layerLink,
-    required bool Function(DropDownItem<T>) isSelected,
-    required Widget Function(BuildContext, DropDownItem<T>, bool) builder,
+    required bool Function(ItemDropperItem<T>) isSelected,
+    required Widget Function(BuildContext, ItemDropperItem<T>, bool) builder,
     bool showScrollbar = true,
     double scrollbarThickness = 6.0,
     double? itemHeight, // Optional item height parameter
@@ -132,11 +132,11 @@ class DropdownRenderUtils {
     final double availableSpaceBelow = screenHeight -
         viewInsets.bottom -
         (inputFieldOffset.dy + inputFieldHeight +
-            DropdownConstants.kDropdownMargin);
+            ItemDropperConstants.kDropdownMargin);
     final double availableSpaceAbove =
-        inputFieldOffset.dy - DropdownConstants.kDropdownMargin;
+        inputFieldOffset.dy - ItemDropperConstants.kDropdownMargin;
     final bool shouldShowBelow = availableSpaceBelow >
-        maxDropdownHeight / DropdownConstants.kDropdownMaxHeightDivisor;
+        maxDropdownHeight / ItemDropperConstants.kDropdownMaxHeightDivisor;
     final double constrainedMaxHeight = (shouldShowBelow
         ? availableSpaceBelow
         : availableSpaceAbove)
@@ -147,15 +147,15 @@ class DropdownRenderUtils {
       link: layerLink,
       showWhenUnlinked: false,
       offset: shouldShowBelow
-          ? Offset(0.0, inputFieldHeight + DropdownConstants.kDropdownMargin)
+          ? Offset(0.0, inputFieldHeight + ItemDropperConstants.kDropdownMargin)
           : Offset(
-          0.0, -constrainedMaxHeight - DropdownConstants.kDropdownMargin),
+          0.0, -constrainedMaxHeight - ItemDropperConstants.kDropdownMargin),
       child: SizedBox(
         width: width,
         child: FocusScope(
           canRequestFocus: false,
           child: Material(
-            elevation: DropdownConstants.kDropdownElevation,
+            elevation: ItemDropperConstants.kDropdownElevation,
             child: ConstrainedBox(
               constraints: BoxConstraints(
                 maxHeight: constrainedMaxHeight,
@@ -166,7 +166,7 @@ class DropdownRenderUtils {
                     .textTheme
                     .bodyMedium!
                     .copyWith(
-                  fontSize: DropdownConstants.kDropdownFontSize,
+                  fontSize: ItemDropperConstants.kDropdownFontSize,
                 ),
                 child: Scrollbar(
                   controller: scrollController,
@@ -177,7 +177,7 @@ class DropdownRenderUtils {
                     padding: EdgeInsets.zero,
                     itemCount: items.length,
                     itemExtent: itemHeight ??
-                        DropdownConstants.kDropdownItemHeight,
+                        ItemDropperConstants.kDropdownItemHeight,
                     itemBuilder: (c, i) =>
                         builder(
                           context,

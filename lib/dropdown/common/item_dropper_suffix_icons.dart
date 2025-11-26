@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 /// Shared suffix icon widget for dropdown fields
 /// Displays clear and dropdown arrow buttons
-class DropdownSuffixIcons extends StatelessWidget {
+class ItemDropperSuffixIcons extends StatelessWidget {
   final bool isDropdownShowing;
   final bool enabled;
   final VoidCallback onClearPressed;
@@ -14,7 +14,7 @@ class DropdownSuffixIcons extends StatelessWidget {
   final double arrowButtonRightPosition;
   final double textSize;
 
-  const DropdownSuffixIcons({
+  const ItemDropperSuffixIcons({
     super.key,
     required this.isDropdownShowing,
     required this.enabled,

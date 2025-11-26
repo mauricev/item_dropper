@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'basic_dropdown_common.dart';
+import 'item_dropper_common.dart';
 
 /// Multi-select dropdown widget
 /// Allows selecting multiple items with chip-based display
-class MultiSearchDropdown<T> extends StatefulWidget {
+class MultiItemDropper<T> extends StatefulWidget {
   final GlobalKey<State<StatefulWidget>>? inputKey;
-  final List<DropDownItem<T>> items;
-  final List<DropDownItem<T>> selectedItems;
-  final void Function(List<DropDownItem<T>>) onChanged;
-  final Widget Function(BuildContext, DropDownItem<T>, bool)? popupItemBuilder;
+  final List<ItemDropperItem<T>> items;
+  final List<ItemDropperItem<T>> selectedItems;
+  final void Function(List<ItemDropperItem<T>>) onChanged;
+  final Widget Function(BuildContext, ItemDropperItem<T>, bool)? popupItemBuilder;
   final InputDecoration decoration;
   final double width;
   final double? itemHeight; // Optional item height parameter
@@ -21,7 +21,7 @@ class MultiSearchDropdown<T> extends StatefulWidget {
   final double scrollbarThickness;
   final double? elevation;
 
-  const MultiSearchDropdown({
+  const MultiItemDropper({
     super.key,
     required this.items,
     required this.selectedItems,
@@ -42,10 +42,10 @@ class MultiSearchDropdown<T> extends StatefulWidget {
       maxSelected >= 2, 'maxSelected must be null or >= 2');
 
   @override
-  State<MultiSearchDropdown<T>> createState() => _MultiSearchDropdownState<T>();
+  State<MultiItemDropper<T>> createState() => _MultiItemDropperState<T>();
 }
 
-class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
+class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   // UI Layout Constants
   static const double _containerBorderRadius = 8.0;
   static const double _chipHorizontalPadding = 8.0;
@@ -65,9 +65,9 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   final LayerLink _layerLink = LayerLink();
   final OverlayPortalController _overlayController = OverlayPortalController();
 
-  List<DropDownItem<T>> _selected = [];
-  int _keyboardHighlightIndex = DropdownConstants.kNoHighlight;
-  int _hoverIndex = DropdownConstants.kNoHighlight;
+  List<ItemDropperItem<T>> _selected = [];
+  int _keyboardHighlightIndex = ItemDropperConstants.kNoHighlight;
+  int _hoverIndex = ItemDropperConstants.kNoHighlight;
   
   // Overlay cache tracking
   Widget? _cachedOverlayWidget;
@@ -77,7 +77,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   final _ChipMeasurementHelper _measurements = _ChipMeasurementHelper();
 
   // Use shared filter utils
-  final DropdownFilterUtils<T> _filterUtils = DropdownFilterUtils<T>();
+  final ItemDropperFilterUtils<T> _filterUtils = ItemDropperFilterUtils<T>();
 
   @override
   void initState() {
@@ -94,7 +94,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
     _focusNode.onKeyEvent = _handleKeyEvent;
   }
 
-  List<DropDownItem<T>> get _filtered {
+  List<ItemDropperItem<T>> get _filtered {
     // Filter out already selected items
     final Set<T> excludeValues = _selected.map((item) => item.value).toSet();
     final result = _filterUtils.getFiltered(
@@ -107,13 +107,13 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
     return result;
   }
 
-  bool _isSelected(DropDownItem<T> item) {
+  bool _isSelected(ItemDropperItem<T> item) {
     return _selected.any((selected) => selected.value == item.value);
   }
 
   void _clearHighlights() {
-    _keyboardHighlightIndex = DropdownConstants.kNoHighlight;
-    _hoverIndex = DropdownConstants.kNoHighlight;
+    _keyboardHighlightIndex = ItemDropperConstants.kNoHighlight;
+    _hoverIndex = ItemDropperConstants.kNoHighlight;
   }
 
   void _handleFocusChange() {
@@ -161,19 +161,19 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   void _updateSelection(void Function() selectionUpdate) {
     print("_updateSelection1 - before setState, _selected.length=${_selected.length}");
     // Preserve keyboard highlight state - only reset if keyboard navigation was active
-    final bool wasKeyboardActive = _keyboardHighlightIndex != DropdownConstants.kNoHighlight;
+    final bool wasKeyboardActive = _keyboardHighlightIndex != ItemDropperConstants.kNoHighlight;
     final int previousHoverIndex = _hoverIndex;
     _safeSetState(() {
       selectionUpdate();
-      final List<DropDownItem<T>> remainingFilteredItems = _filtered;
+      final List<ItemDropperItem<T>> remainingFilteredItems = _filtered;
       if (remainingFilteredItems.isNotEmpty) {
         // Only reset keyboard highlight if keyboard navigation was active
         if (wasKeyboardActive) {
           _keyboardHighlightIndex = 0;
-          _hoverIndex = DropdownConstants.kNoHighlight;
+          _hoverIndex = ItemDropperConstants.kNoHighlight;
         } else {
           // Clear keyboard highlight so mouse hover can work
-          _keyboardHighlightIndex = DropdownConstants.kNoHighlight;
+          _keyboardHighlightIndex = ItemDropperConstants.kNoHighlight;
           // Don't clear hover index - preserve it so highlighting continues to work
           // MouseRegion's onEnter will naturally update it when mouse moves
           // If hover index becomes invalid (out of bounds), it just won't highlight anything
@@ -183,7 +183,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
             _hoverIndex = previousHoverIndex;
           } else {
             // Hover index is invalid, clear it
-            _hoverIndex = DropdownConstants.kNoHighlight;
+            _hoverIndex = ItemDropperConstants.kNoHighlight;
           }
         }
       } else {
@@ -200,7 +200,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
     print("_updateSelection - done");
   }
 
-  void _toggleItem(DropDownItem<T> item) {
+  void _toggleItem(ItemDropperItem<T> item) {
     final bool isCurrentlySelected = _isSelected(item);
     
     // If maxSelected is set and already reached, only allow removal (toggle off)
@@ -226,7 +226,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
     });
   }
 
-  void _removeChip(DropDownItem<T> item) {
+  void _removeChip(ItemDropperItem<T> item) {
     print("_removeChip called - calling setState");
     setState(() {
       _selected.removeWhere((selected) => selected.value == item.value);
@@ -261,15 +261,15 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   }
 
   void _handleArrowDown() {
-    _keyboardHighlightIndex = DropdownKeyboardNavigation.handleArrowDown(
+    _keyboardHighlightIndex = ItemDropperKeyboardNavigation.handleArrowDown(
       _keyboardHighlightIndex,
       _hoverIndex,
       _filtered.length,
     );
     _safeSetState(() {
-      _hoverIndex = DropdownConstants.kNoHighlight;
+      _hoverIndex = ItemDropperConstants.kNoHighlight;
     });
-    DropdownKeyboardNavigation.scrollToHighlight(
+    ItemDropperKeyboardNavigation.scrollToHighlight(
       highlightIndex: _keyboardHighlightIndex,
       scrollController: _scrollController,
       mounted: mounted,
@@ -277,15 +277,15 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   }
 
   void _handleArrowUp() {
-    _keyboardHighlightIndex = DropdownKeyboardNavigation.handleArrowUp(
+    _keyboardHighlightIndex = ItemDropperKeyboardNavigation.handleArrowUp(
       _keyboardHighlightIndex,
       _hoverIndex,
       _filtered.length,
     );
     _safeSetState(() {
-      _hoverIndex = DropdownConstants.kNoHighlight;
+      _hoverIndex = ItemDropperConstants.kNoHighlight;
     });
-    DropdownKeyboardNavigation.scrollToHighlight(
+    ItemDropperKeyboardNavigation.scrollToHighlight(
       highlightIndex: _keyboardHighlightIndex,
       scrollController: _scrollController,
       mounted: mounted,
@@ -293,7 +293,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   }
 
   void _handleEnter() {
-    final List<DropDownItem<T>> filteredItems = _filtered;
+    final List<ItemDropperItem<T>> filteredItems = _filtered;
 
     if (_keyboardHighlightIndex >= 0 &&
         _keyboardHighlightIndex < filteredItems.length) {
@@ -357,7 +357,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   }
 
   @override
-  void didUpdateWidget(covariant MultiSearchDropdown<T> oldWidget) {
+  void didUpdateWidget(covariant MultiItemDropper<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
     
     // Sync selected items if parent changed them
@@ -378,7 +378,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   }
   
   // Helper to check if two item lists are equal (by value)
-  bool _areItemsEqual(List<DropDownItem<T>> a, List<DropDownItem<T>> b) {
+  bool _areItemsEqual(List<ItemDropperItem<T>> a, List<ItemDropperItem<T>> b) {
     if (a.length != b.length) return false;
     final Set<T> aValues = a.map((item) => item.value).toSet();
     final Set<T> bValues = b.map((item) => item.value).toSet();
@@ -398,7 +398,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   @override
   Widget build(BuildContext context) {
     print("build() called - _selected.length=${_selected.length}");
-    return DropdownWithOverlay(
+    return ItemDropperWithOverlay(
       layerLink: _layerLink,
       overlayController: _overlayController,
       fieldKey: widget.inputKey ?? _fieldKey,
@@ -466,7 +466,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
                     // Selected chips
                     ..._selected.asMap().entries.map((entry) {
                       final int index = entry.key;
-                      final DropDownItem<T> item = entry.value;
+                      final ItemDropperItem<T> item = entry.value;
                       final bool isLastChip = index == _selected.length - 1;
                       return _buildChip(item, isLastChip ? _measurements.lastChipKey : null);
                     }),
@@ -527,7 +527,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
     return rowContentHeight + verticalPadding;
   }
 
-  Widget _buildChip(DropDownItem<T> item, [GlobalKey? chipKey]) {
+  Widget _buildChip(ItemDropperItem<T> item, [GlobalKey? chipKey]) {
     // Only measure the first chip (index 0) to avoid GlobalKey conflicts
     final bool isFirstChip = _selected.isNotEmpty && _selected.first.value == item.value;
     final GlobalKey? rowKey = isFirstChip ? _measurements.chipRowKey : null;
@@ -650,7 +650,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   }
 
   Widget _getOverlay() {
-    final List<DropDownItem<T>> filteredItems = _filtered;
+    final List<ItemDropperItem<T>> filteredItems = _filtered;
     final _OverlayCacheKey currentKey = _OverlayCacheKey(
       filteredLength: filteredItems.length,
       selectedCount: _selected.length,
@@ -688,7 +688,7 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   }
 
   Widget _buildOverlay() {
-    final List<DropDownItem<T>> filteredItems = _filtered;
+    final List<ItemDropperItem<T>> filteredItems = _filtered;
     print("_buildOverlay called: filteredItems.length=${filteredItems.length}");
     
     // Get the input field's context for proper positioning
@@ -718,16 +718,16 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
     
     print("_buildOverlay: building overlay with ${filteredItems.length} items");
 
-    final Widget Function(BuildContext, DropDownItem<T>, bool) itemBuilder =
+    final Widget Function(BuildContext, ItemDropperItem<T>, bool) itemBuilder =
         widget.popupItemBuilder ??
-            DropdownRenderUtils.defaultDropdownPopupItemBuilder;
+            ItemDropperRenderUtils.defaultDropdownPopupItemBuilder;
 
     // Use RepaintBoundary with stable key to prevent unnecessary rebuilds
     // The overlay content will update via the items list, but the widget tree structure stays stable
     return RepaintBoundary(
       key: const ValueKey<String>('overlay_stable'),
       child: Container(
-        child: DropdownRenderUtils.buildDropdownOverlay(
+        child: ItemDropperRenderUtils.buildDropdownOverlay(
           context: inputContext,
           items: filteredItems,
           maxDropdownHeight: widget.maxDropdownHeight ?? 200.0,
@@ -735,11 +735,11 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
           controller: _overlayController,
           scrollController: _scrollController,
           layerLink: _layerLink,
-          isSelected: (DropDownItem<T> item) =>
+          isSelected: (ItemDropperItem<T> item) =>
               _selected.any((x) => x.value == item.value),
-          builder: (BuildContext builderContext, DropDownItem<T> item,
+          builder: (BuildContext builderContext, ItemDropperItem<T> item,
               bool isSelected) {
-            return DropdownRenderUtils.buildDropdownItemWithHover<T>(
+            return ItemDropperRenderUtils.buildDropdownItemWithHover<T>(
               context: builderContext,
               item: item,
               isSelected: isSelected,
@@ -773,19 +773,19 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
     final double availableSpaceBelow = screenHeight -
         viewInsets.bottom -
         (inputFieldOffset.dy + inputFieldHeight +
-            DropdownConstants.kDropdownMargin);
+            ItemDropperConstants.kDropdownMargin);
     final bool shouldShowBelow = availableSpaceBelow > 50.0;
 
     return CompositedTransformFollower(
       link: _layerLink,
       showWhenUnlinked: false,
       offset: shouldShowBelow
-          ? Offset(0.0, inputFieldHeight + DropdownConstants.kDropdownMargin)
-          : Offset(0.0, -50.0 - DropdownConstants.kDropdownMargin),
+          ? Offset(0.0, inputFieldHeight + ItemDropperConstants.kDropdownMargin)
+          : Offset(0.0, -50.0 - ItemDropperConstants.kDropdownMargin),
       child: SizedBox(
         width: widget.width,
         child: Material(
-          elevation: DropdownConstants.kDropdownElevation,
+          elevation: ItemDropperConstants.kDropdownElevation,
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
             child: Text(

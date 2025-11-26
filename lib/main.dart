@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
-import 'dropdown/basic_dropdown_common.dart';
-import 'dropdown/basic_dropdown_caller.dart';
-import 'dropdown/basic_dropdown_multi_caller.dart';
+import 'dropdown/item_dropper_common.dart';
+import 'dropdown/item_dropper_caller.dart';
+import 'dropdown/item_dropper_multi_caller.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -53,19 +53,19 @@ class DropdownTestPage extends StatefulWidget {
 
 class _DropdownTestPageState extends State<DropdownTestPage> {
   // Selected values for single-select dropdowns
-  DropDownItem<String>? selectedFruit;
-  DropDownItem<int>? selectedNumber;
-  DropDownItem<String>? selectedCountry;
-  DropDownItem<int>? selectedLargeItem;
+  ItemDropperItem<String>? selectedFruit;
+  ItemDropperItem<int>? selectedNumber;
+  ItemDropperItem<String>? selectedCountry;
+  ItemDropperItem<int>? selectedLargeItem;
 
   // Selected values for multi-select dropdown
-  List<DropDownItem<String>> selectedFruits = [];
+  List<ItemDropperItem<String>> selectedFruits = [];
 
   // Generate dummy data
-  late final List<DropDownItem<String>> fruits;
-  late final List<DropDownItem<int>> numbers;
-  late final List<DropDownItem<String>> countries;
-  late final List<DropDownItem<int>> largeItemsList;
+  late final List<ItemDropperItem<String>> fruits;
+  late final List<ItemDropperItem<int>> numbers;
+  late final List<ItemDropperItem<String>> countries;
+  late final List<ItemDropperItem<int>> largeItemsList;
 
   @override
   void initState() {
@@ -73,21 +73,21 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
 
     // Dropdown 1: Small list of fruits
     fruits = const [
-      DropDownItem(value: 'apple', label: 'Apple'),
-      DropDownItem(value: 'banana', label: 'Banana'),
-      DropDownItem(value: 'cherry', label: 'Cherry'),
-      DropDownItem(value: 'date', label: 'Date'),
-      DropDownItem(value: 'elderberry', label: 'Elderberry'),
-      DropDownItem(value: 'fig', label: 'Fig'),
-      DropDownItem(value: 'grape', label: 'Grape'),
-      DropDownItem(value: 'honeydew', label: 'Honeydew'),
+      ItemDropperItem(value: 'apple', label: 'Apple'),
+      ItemDropperItem(value: 'banana', label: 'Banana'),
+      ItemDropperItem(value: 'cherry', label: 'Cherry'),
+      ItemDropperItem(value: 'date', label: 'Date'),
+      ItemDropperItem(value: 'elderberry', label: 'Elderberry'),
+      ItemDropperItem(value: 'fig', label: 'Fig'),
+      ItemDropperItem(value: 'grape', label: 'Grape'),
+      ItemDropperItem(value: 'honeydew', label: 'Honeydew'),
     ];
 
     // Dropdown 2: Numbers 1-50
     numbers = List.generate(
       50,
           (index) =>
-          DropDownItem(
+          ItemDropperItem(
             value: index + 1,
             label: 'Number ${index + 1}',
           ),
@@ -95,28 +95,28 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
 
     // Dropdown 3: Countries
     countries = const [
-      DropDownItem(value: 'us', label: 'United States'),
-      DropDownItem(value: 'uk', label: 'United Kingdom'),
-      DropDownItem(value: 'ca', label: 'Canada'),
-      DropDownItem(value: 'au', label: 'Australia'),
-      DropDownItem(value: 'de', label: 'Germany'),
-      DropDownItem(value: 'fr', label: 'France'),
-      DropDownItem(value: 'jp', label: 'Japan'),
-      DropDownItem(value: 'cn', label: 'China'),
-      DropDownItem(value: 'in', label: 'India'),
-      DropDownItem(value: 'br', label: 'Brazil'),
-      DropDownItem(value: 'mx', label: 'Mexico'),
-      DropDownItem(value: 'es', label: 'Spain'),
-      DropDownItem(value: 'it', label: 'Italy'),
-      DropDownItem(value: 'ru', label: 'Russia'),
-      DropDownItem(value: 'kr', label: 'South Korea'),
+      ItemDropperItem(value: 'us', label: 'United States'),
+      ItemDropperItem(value: 'uk', label: 'United Kingdom'),
+      ItemDropperItem(value: 'ca', label: 'Canada'),
+      ItemDropperItem(value: 'au', label: 'Australia'),
+      ItemDropperItem(value: 'de', label: 'Germany'),
+      ItemDropperItem(value: 'fr', label: 'France'),
+      ItemDropperItem(value: 'jp', label: 'Japan'),
+      ItemDropperItem(value: 'cn', label: 'China'),
+      ItemDropperItem(value: 'in', label: 'India'),
+      ItemDropperItem(value: 'br', label: 'Brazil'),
+      ItemDropperItem(value: 'mx', label: 'Mexico'),
+      ItemDropperItem(value: 'es', label: 'Spain'),
+      ItemDropperItem(value: 'it', label: 'Italy'),
+      ItemDropperItem(value: 'ru', label: 'Russia'),
+      ItemDropperItem(value: 'kr', label: 'South Korea'),
     ];
 
     // Dropdown 4: Large list with 5000 items to test performance
     largeItemsList = List.generate(
       5000,
           (index) =>
-          DropDownItem(
+          ItemDropperItem(
             value: index,
             label: 'Item ${index.toString().padLeft(
                 4, '0')} - ${_getRandomLabel(index)}',
