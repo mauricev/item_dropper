@@ -119,13 +119,42 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
   void _handleFocusChange() {
     print("_handleFocusChange called - hasFocus=${_focusNode.hasFocus}, isShowing=${_overlayController.isShowing}");
     if (_focusNode.hasFocus) {
-      if (!_overlayController.isShowing && _filtered.isNotEmpty) {
-        print("_handleFocusChange - calling setState to show overlay");
-        _safeSetState(() {
+      // Show overlay when focused if there are any filtered items available
+      // Use a post-frame callback to ensure input context is available
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || !_focusNode.hasFocus) {
+          print("_handleFocusChange - post-frame: not mounted or lost focus");
+          return;
+        }
+        // Check if input context is now available
+        final BuildContext? inputContext = (widget.inputKey ?? _fieldKey).currentContext;
+        if (inputContext == null) {
+          print("_handleFocusChange - post-frame: inputContext still null, waiting another frame");
+          // Try again next frame
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted || !_focusNode.hasFocus) return;
+            final filtered = _filtered;
+            if (!_overlayController.isShowing && filtered.isNotEmpty) {
+              _invalidateOverlayCache();
+              _clearHighlights();
+              _overlayController.show();
+            }
+          });
+          return;
+        }
+        final filtered = _filtered;
+        print("_handleFocusChange - post-frame: filtered.length=${filtered.length}, isShowing=${_overlayController.isShowing}");
+        if (!_overlayController.isShowing && filtered.isNotEmpty) {
+          print("_handleFocusChange - showing overlay in post-frame");
+          // Invalidate cache to ensure overlay is rebuilt with valid context
+          _invalidateOverlayCache();
           _clearHighlights();
-        });
-        _overlayController.show();
-      }
+          _overlayController.show();
+          print("_handleFocusChange - overlay.show() called, isShowing=${_overlayController.isShowing}");
+        }
+      });
+    } else {
+      print("_handleFocusChange - focus lost, isShowing=${_overlayController.isShowing}");
     }
   }
 
@@ -586,21 +615,38 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
       keyboardHighlightIndex: _keyboardHighlightIndex,
     );
     
+    // Check if input context is available - don't cache if it's not
+    final BuildContext? inputContext = (widget.inputKey ?? _fieldKey).currentContext;
+    final bool hasValidContext = inputContext != null;
+    
     // Include hover and keyboard highlight in cache key so overlay rebuilds when they change
     // This ensures hover state is current, while stable keys prevent flicker
-    if (_cachedOverlayWidget != null && _overlayCacheKey == currentKey) {
+    // Only use cache if we have a valid context (otherwise overlay will be empty)
+    if (_cachedOverlayWidget != null && 
+        _overlayCacheKey == currentKey && 
+        hasValidContext) {
       print("_getOverlay: returning cached overlay, key=$currentKey");
       return _cachedOverlayWidget!;
     }
     
-    print("_getOverlay: building new overlay, key=$currentKey");
-    _cachedOverlayWidget = _buildOverlay();
-    _overlayCacheKey = currentKey;
-    return _cachedOverlayWidget!;
+    print("_getOverlay: building new overlay, key=$currentKey, hasValidContext=$hasValidContext");
+    final Widget overlay = _buildOverlay();
+    
+    // Only cache if we have a valid context
+    if (hasValidContext) {
+      _cachedOverlayWidget = overlay;
+      _overlayCacheKey = currentKey;
+    } else {
+      // Don't cache empty overlays - they'll be rebuilt when context is available
+      print("_getOverlay: not caching overlay (no valid context)");
+    }
+    
+    return overlay;
   }
 
   Widget _buildOverlay() {
     final List<DropDownItem<T>> filteredItems = _filtered;
+    print("_buildOverlay called: filteredItems.length=${filteredItems.length}");
     
     // Get the input field's context for proper positioning
     final BuildContext? inputContext = (widget.inputKey ?? _fieldKey)
@@ -614,11 +660,14 @@ class _MultiSearchDropdownState<T> extends State<MultiSearchDropdown<T>> {
     // Get current input field size for dynamic positioning
     final RenderBox? inputBox = inputContext.findRenderObject() as RenderBox?;
     final Size inputSize = inputBox?.size ?? Size.zero;
+    print("_buildOverlay: inputSize=$inputSize");
 
     if (filteredItems.isEmpty) {
       print("_buildOverlay: filteredItems is EMPTY - returning SizedBox.shrink");
       return const SizedBox.shrink();
     }
+    
+    print("_buildOverlay: building overlay with ${filteredItems.length} items");
 
     final Widget Function(BuildContext, DropDownItem<T>, bool) itemBuilder =
         widget.popupItemBuilder ??
