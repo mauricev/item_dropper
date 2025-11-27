@@ -220,6 +220,11 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   }
 
   void _toggleItem(ItemDropperItem<T> item) {
+    // Group headers cannot be selected
+    if (item.isGroupHeader) {
+      return;
+    }
+    
     final bool isCurrentlySelected = _isSelected(item);
     
     // If maxSelected is set and already reached, only allow removal (toggle off)
@@ -280,10 +285,12 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   }
 
   void _handleArrowDown() {
-    _keyboardHighlightIndex = ItemDropperKeyboardNavigation.handleArrowDown(
-      _keyboardHighlightIndex,
-      _hoverIndex,
-      _filtered.length,
+    final filtered = _filtered;
+    _keyboardHighlightIndex = ItemDropperKeyboardNavigation.handleArrowDown<T>(
+      currentIndex: _keyboardHighlightIndex,
+      hoverIndex: _hoverIndex,
+      itemCount: filtered.length,
+      items: filtered,
     );
     _safeSetState(() {
       _hoverIndex = ItemDropperConstants.kNoHighlight;
@@ -296,10 +303,12 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   }
 
   void _handleArrowUp() {
-    _keyboardHighlightIndex = ItemDropperKeyboardNavigation.handleArrowUp(
-      _keyboardHighlightIndex,
-      _hoverIndex,
-      _filtered.length,
+    final filtered = _filtered;
+    _keyboardHighlightIndex = ItemDropperKeyboardNavigation.handleArrowUp<T>(
+      currentIndex: _keyboardHighlightIndex,
+      hoverIndex: _hoverIndex,
+      itemCount: filtered.length,
+      items: filtered,
     );
     _safeSetState(() {
       _hoverIndex = ItemDropperConstants.kNoHighlight;
@@ -317,13 +326,21 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     if (_keyboardHighlightIndex >= 0 &&
         _keyboardHighlightIndex < filteredItems.length) {
       // Keyboard navigation is active, select highlighted item
-      _toggleItem(filteredItems[_keyboardHighlightIndex]);
-    } else if (filteredItems.length == 1) {
-      // No keyboard navigation, but exactly 1 item - auto-select it
-      debugPrint('MULTI: Auto-selecting single item');
-      _toggleItem(filteredItems[0]);
+      final item = filteredItems[_keyboardHighlightIndex];
+      // Skip group headers
+      if (!item.isGroupHeader) {
+        _toggleItem(item);
+      }
     } else {
-      debugPrint('MULTI: No valid item to select');
+      // Find first selectable item for auto-select
+      final selectableItems = filteredItems.where((item) => !item.isGroupHeader).toList();
+      if (selectableItems.length == 1) {
+        // No keyboard navigation, but exactly 1 selectable item - auto-select it
+        debugPrint('MULTI: Auto-selecting single item');
+        _toggleItem(selectableItems[0]);
+      } else {
+        debugPrint('MULTI: No valid item to select');
+      }
     }
   }
 

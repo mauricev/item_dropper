@@ -22,6 +22,23 @@ class ItemDropperRenderUtils {
     final int itemIndex = filteredItems.indexWhere(
           (x) => x.value == item.value,
     );
+    
+    // Group headers don't get hover effects
+    if (item.isGroupHeader) {
+      return buildDropdownItem<T>(
+        context: context,
+        item: item,
+        isHovered: false,
+        isKeyboardHighlighted: false,
+        isSelected: false,
+        isSingleItem: false,
+        isGroupHeader: true,
+        onTap: () {}, // Group headers are not clickable
+        builder: customBuilder,
+        itemHeight: itemHeight,
+      );
+    }
+    
     return MouseRegion(
       onEnter: (_) {
         if (keyboardHighlightIndex == ItemDropperConstants.kNoHighlight) {
@@ -39,6 +56,7 @@ class ItemDropperRenderUtils {
         isKeyboardHighlighted: itemIndex == keyboardHighlightIndex,
         isSelected: isSelected,
         isSingleItem: filteredItems.length == 1,
+        isGroupHeader: false,
         onTap: onTap,
         builder: customBuilder,
         itemHeight: itemHeight, // Pass the itemHeight parameter
@@ -54,13 +72,18 @@ class ItemDropperRenderUtils {
     required bool isKeyboardHighlighted,
     required bool isSelected,
     required bool isSingleItem,
+    required bool isGroupHeader,
     required VoidCallback onTap,
     required Widget Function(BuildContext, ItemDropperItem<T>, bool) builder,
     double? itemHeight, // Optional item height parameter
   }) {
     Widget w = builder(context, item, isSelected);
     Color? background;
-    if (isKeyboardHighlighted || isHovered || isSingleItem) {
+    
+    // Group headers have different styling - no hover/selection effects
+    if (isGroupHeader) {
+      background = Theme.of(context).colorScheme.surfaceContainerHighest.withAlpha(200);
+    } else if (isKeyboardHighlighted || isHovered || isSingleItem) {
       background = Theme
           .of(context)
           .hoverColor;
@@ -74,9 +97,10 @@ class ItemDropperRenderUtils {
     } else {
       background = null;
     }
+    
     return InkWell(
       hoverColor: Colors.transparent,
-      onTap: onTap,
+      onTap: isGroupHeader ? null : onTap, // Group headers are not clickable
       child: Container(
         height: itemHeight ?? ItemDropperConstants.kDropdownItemHeight,
         color: background,
@@ -89,6 +113,21 @@ class ItemDropperRenderUtils {
   static Widget defaultDropdownPopupItemBuilder<T>(BuildContext context,
       ItemDropperItem<T> item,
       bool isSelected,) {
+    // Group headers have different styling
+    if (item.isGroupHeader) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        child: Text(
+          item.label,
+          style: TextStyle(
+            fontSize: 9.0,
+            fontWeight: FontWeight.bold,
+            color: Theme.of(context).colorScheme.onSurface.withAlpha(200),
+          ),
+        ),
+      );
+    }
+    
     return Container(
       color: isSelected ? Colors.grey.shade200 : null,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -143,7 +182,7 @@ class ItemDropperRenderUtils {
         .clamp(0.0, maxDropdownHeight);
 
     return CompositedTransformFollower(
-      key: ValueKey<String>('follower_${inputFieldHeight}_${width}'),
+      key: ValueKey<String>('follower_$inputFieldHeight\_$width'),
       link: layerLink,
       showWhenUnlinked: false,
       offset: shouldShowBelow

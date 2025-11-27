@@ -322,10 +322,12 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
   }
 
   void _handleArrowDown() {
-    _keyboardHighlightIndex = ItemDropperKeyboardNavigation.handleArrowDown(
-      _keyboardHighlightIndex,
-      _hoverIndex,
-      _filtered.length,
+    final filtered = _filtered;
+    _keyboardHighlightIndex = ItemDropperKeyboardNavigation.handleArrowDown<T>(
+      currentIndex: _keyboardHighlightIndex,
+      hoverIndex: _hoverIndex,
+      itemCount: filtered.length,
+      items: filtered,
     );
     _safeSetState(() {
       _hoverIndex = ItemDropperConstants.kNoHighlight;
@@ -338,10 +340,12 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
   }
 
   void _handleArrowUp() {
-    _keyboardHighlightIndex = ItemDropperKeyboardNavigation.handleArrowUp(
-      _keyboardHighlightIndex,
-      _hoverIndex,
-      _filtered.length,
+    final filtered = _filtered;
+    _keyboardHighlightIndex = ItemDropperKeyboardNavigation.handleArrowUp<T>(
+      currentIndex: _keyboardHighlightIndex,
+      hoverIndex: _hoverIndex,
+      itemCount: filtered.length,
+      items: filtered,
     );
     _safeSetState(() {
       _hoverIndex = ItemDropperConstants.kNoHighlight;
@@ -357,8 +361,11 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
     final List<ItemDropperItem<T>> filteredItems = _filtered;
     if (_keyboardHighlightIndex >= 0 &&
         _keyboardHighlightIndex < filteredItems.length) {
-      final ItemDropperItem<
-          T> selectedItem = filteredItems[_keyboardHighlightIndex];
+      final ItemDropperItem<T> selectedItem = filteredItems[_keyboardHighlightIndex];
+      // Skip group headers
+      if (selectedItem.isGroupHeader) {
+        return;
+      }
       _withSquelch(() {
         _controller.text = selectedItem.label;
         _controller.selection = const TextSelection.collapsed(offset: 0);
@@ -427,8 +434,10 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
     } else {
       // No keyboard navigation, check for single item auto-select
       final filteredList = _filtered;
-      if (filteredList.length == 1) {
-        final item = filteredList.first;
+      // Find first selectable item
+      final selectableItems = filteredList.where((item) => !item.isGroupHeader).toList();
+      if (selectableItems.length == 1) {
+        final item = selectableItems.first;
         _withSquelch(() {
           _controller.text = item.label;
           _controller.selection = const TextSelection.collapsed(offset: 0);
@@ -485,6 +494,10 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
           safeSetState: _safeSetState,
           setHoverIndex: (index) => _hoverIndex = index,
           onTap: () {
+            // Skip group headers
+            if (item.isGroupHeader) {
+              return;
+            }
             debugPrint("single buildDropdownItem onTap called!");
             _withSquelch(() {
               _controller.text = item.label;

@@ -33,10 +33,11 @@ class ItemDropperFilterUtils<T> {
     // No filtering if not editing or empty input
     if (!isUserEditing || input.isEmpty) {
       if (excludeValues == null || excludeValues.isEmpty) {
-        return items;
+        return items; // Include all items including group headers
       }
+      // Exclude selected items, but always include group headers
       return items
-          .where((item) => !excludeValues.contains(item.value))
+          .where((item) => item.isGroupHeader || !excludeValues.contains(item.value))
           .toList();
     }
 
@@ -46,10 +47,14 @@ class ItemDropperFilterUtils<T> {
     }
 
     // Compute and cache filtered list
+    // Group headers are excluded from search results (they don't match search text)
+    // But if a group header's label matches, we might want to show it for context
+    // For now, exclude group headers from search results
     final List<ItemDropperItem<T>> filteredResult = _normalizedItems
         .where((entry) =>
-    entry.label.contains(input) &&
-        (excludeValues == null || !excludeValues.contains(entry.item.value)))
+            !entry.item.isGroupHeader && // Exclude group headers from search
+            entry.label.contains(input) &&
+            (excludeValues == null || !excludeValues.contains(entry.item.value)))
         .map((entry) => entry.item)
         .toList(growable: false);
 
