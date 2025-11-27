@@ -43,15 +43,31 @@ class _ItemDropperWithOverlayState extends State<ItemDropperWithOverlay> {
                   child: Listener(
                     behavior: HitTestBehavior.translucent,
                     onPointerDown: (event) {
-                      debugPrint("DEBUG: Listener.onPointerDown called - HitTestBehavior.translucent");
-                      debugPrint("DEBUG: CRITICAL: The fact that we're here means the Listener intercepted the event");
-                      debugPrint("DEBUG: Even though translucent should allow children to receive events, the Listener is still called");
-                      debugPrint("DEBUG: This suggests the Listener is blocking event propagation to children");
+                      // CRITICAL FIX: Check if click is on overlay FIRST, before doing anything else
+                      // If it's on the overlay, return early to allow event to propagate to items
+                      final RenderBox? overlayRenderBox = 
+                          _overlayKey.currentContext?.findRenderObject() as RenderBox?;
+                      
+                      if (overlayRenderBox != null) {
+                        final RenderBox? fieldRenderBox = widget.fieldKey.currentContext?.findRenderObject() as RenderBox?;
+                        if (fieldRenderBox != null) {
+                          final Offset fieldGlobalPos = fieldRenderBox.localToGlobal(Offset.zero);
+                          final double fieldHeight = fieldRenderBox.size.height;
+                          final Offset estimatedOverlayPos = Offset(fieldGlobalPos.dx, fieldGlobalPos.dy + fieldHeight);
+                          final Size overlaySize = overlayRenderBox.size;
+                          final Rect estimatedOverlayRect = estimatedOverlayPos & overlaySize;
+                          
+                          // If click is on overlay, return early to allow event to propagate to items
+                          if (estimatedOverlayRect.contains(event.position)) {
+                            debugPrint("DEBUG: Click is on overlay - allowing event to propagate to items (not handling in Listener)");
+                            return; // Don't handle - let items receive the event
+                          }
+                        }
+                      }
+                      
                       debugPrint("DEBUG LAST ITEM: Listener onPointerDown received at ${event.position} - this is the dismiss handler");
                       
                       // DEBUG: Check which items are actually at this click position
-                      final RenderBox? overlayRenderBox = 
-                          _overlayKey.currentContext?.findRenderObject() as RenderBox?;
                       if (overlayRenderBox != null) {
                         final Offset clickInOverlayLocal = overlayRenderBox.globalToLocal(event.position);
                         debugPrint("DEBUG: Click in overlay local coordinates (from globalToLocal): $clickInOverlayLocal");
@@ -60,6 +76,8 @@ class _ItemDropperWithOverlayState extends State<ItemDropperWithOverlay> {
                         
                         // CRITICAL: globalToLocal is broken for CompositedTransformFollower
                         // Calculate local coordinates manually using field position
+                        // FIX: Due to double CompositedTransformFollower wrapping, the actual overlay position
+                        // is at the FIELD position (not field + height) because the outer follower has offset (0,0)
                         final RenderBox? fieldRenderBox = widget.fieldKey.currentContext?.findRenderObject() as RenderBox?;
                         if (fieldRenderBox != null) {
                           final Offset fieldGlobalPos = fieldRenderBox.localToGlobal(Offset.zero);
@@ -226,13 +244,6 @@ class _ItemDropperWithOverlayState extends State<ItemDropperWithOverlay> {
                   link: widget.layerLink,
                   showWhenUnlinked: false,
                   offset: const Offset(0.0, 0.0), // Position relative to target
-                  // DEBUG: CRITICAL BUG FOUND!
-                  // This CompositedTransformFollower has offset (0,0), which positions it at the FIELD position
-                  // But widget.overlay is ALREADY a CompositedTransformFollower (from buildDropdownOverlay)
-                  // that has its own offset (field + height). So we have DOUBLE positioning!
-                  // The inner follower positions at field+height, but this outer follower positions at field,
-                  // causing a -46px offset mismatch (the field height).
-                  // This is why child position shows -46.0 and hit tests fail!
                   child: widget.overlay,
                 ),
               ],
