@@ -116,6 +116,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   // Single rebuild mechanism - prevents cascading rebuilds
   bool _needsRebuild = false;
   bool _rebuildScheduled = false;
+  // Track when we're the source of selection changes to prevent didUpdateWidget from rebuilding
+  bool _isInternalSelectionChange = false;
 
   // Use shared filter utils
   final ItemDropperFilterUtils<T> _filterUtils = ItemDropperFilterUtils<T>();
@@ -196,6 +198,9 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   }
 
   void _updateSelection(void Function() selectionUpdate) {
+    // Mark that we're the source of this selection change
+    _isInternalSelectionChange = true;
+    
     // Set debug flag to track rebuilds after selection change
     _debugSelectionChange = true;
     _debugBuildCount = 0;
@@ -252,10 +257,17 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         widget.onChanged(List.from(_selected));
-        // Invalidate overlay cache if showing (will rebuild on next natural build)
-        if (_overlayController.isShowing) {
-          _invalidateOverlayCache();
-        }
+        // Clear the internal change flag after parent has been notified
+        // This allows didUpdateWidget to detect external changes in the next frame
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            _isInternalSelectionChange = false;
+            // Invalidate overlay cache if showing (will rebuild on next natural build)
+            if (_overlayController.isShowing) {
+              _invalidateOverlayCache();
+            }
+          }
+        });
       }
     });
     
@@ -308,6 +320,9 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   }
 
   void _removeChip(ItemDropperItem<T> item) {
+    // Mark that we're the source of this selection change
+    _isInternalSelectionChange = true;
+    
     // Set debug flag to track rebuilds after selection change
     _debugSelectionChange = true;
     _debugBuildCount = 0;
@@ -335,14 +350,20 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         widget.onChanged(List.from(_selected));
-        // Invalidate overlay cache if showing (will rebuild on next natural build)
-        if (_overlayController.isShowing) {
-          _invalidateOverlayCache();
-        }
-        // Focus the text field if we don't already have focus
-        if (!_focusNode.hasFocus) {
-          _focusNode.requestFocus();
-        }
+        // Clear the internal change flag after parent has been notified
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            _isInternalSelectionChange = false;
+            // Invalidate overlay cache if showing (will rebuild on next natural build)
+            if (_overlayController.isShowing) {
+              _invalidateOverlayCache();
+            }
+            // Focus the text field if we don't already have focus
+            if (!_focusNode.hasFocus) {
+              _focusNode.requestFocus();
+            }
+          }
+        });
       }
     });
   }
@@ -521,9 +542,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       print("DEBUG: didUpdateWidget() called - _rebuildScheduled=$_rebuildScheduled");
     }
     
-    // Sync selected items if parent changed them
-    if (widget.selectedItems.length != _selected.length ||
-        !widget.selectedItems.every((item) => _isSelected(item))) {
+    // Sync selected items if parent changed them (and we didn't cause the change)
+    if (!_isInternalSelectionChange && !_areItemsEqual(widget.selectedItems, _selected)) {
       if (_debugSelectionChange) {
         print("DEBUG: didUpdateWidget() - syncing selectedItems from parent");
       }
@@ -536,8 +556,10 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     }
     
     // Invalidate filter cache if items list changed
-    if (widget.items.length != oldWidget.items.length ||
-        !_areItemsEqual(widget.items, oldWidget.items)) {
+    // Fast path: check reference equality first (O(1))
+    if (!identical(widget.items, oldWidget.items) &&
+        (widget.items.length != oldWidget.items.length ||
+         !_areItemsEqual(widget.items, oldWidget.items))) {
       _filterUtils.initializeItems(widget.items);
       _invalidateOverlayCache();
       // Use central rebuild mechanism instead of direct setState
@@ -549,10 +571,30 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   }
   
   // Helper to check if two item lists are equal (by value)
+  // Optimized for performance: early returns and efficient Set-based comparison
+  // Time complexity: O(n) where n is the length of the lists
   bool _areItemsEqual(List<ItemDropperItem<T>> a, List<ItemDropperItem<T>> b) {
+    // Fast path: reference equality
+    if (identical(a, b)) return true;
+    
+    // Fast path: length check (O(1))
     if (a.length != b.length) return false;
+    
+    // Fast path: empty lists
+    if (a.isEmpty) return true;
+    
+    // For small lists, use simple iteration (more cache-friendly)
+    if (a.length <= 10) {
+      final Set<T> bValues = b.map((item) => item.value).toSet();
+      return a.every((item) => bValues.contains(item.value));
+    }
+    
+    // For larger lists, use Set-based comparison
     final Set<T> aValues = a.map((item) => item.value).toSet();
     final Set<T> bValues = b.map((item) => item.value).toSet();
+    
+    // If lengths are equal and all a values are in b, then all b values must be in a
+    // (since Set length equals list length when there are no duplicates)
     return aValues.length == bValues.length && 
            aValues.every((value) => bValues.contains(value));
   }
