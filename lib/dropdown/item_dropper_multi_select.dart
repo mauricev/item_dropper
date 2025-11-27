@@ -371,6 +371,20 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       } else {
         // Item is already selected, remove it (toggle off)
         _selected.removeWhere((selected) => selected.value == item.value);
+        
+        // FIX: Show overlay again if we're below maxSelected after removal
+        // This handles the case where user removes an item after reaching max
+        if (wasAtMax && 
+            widget.maxSelected != null && 
+            _selected.length < widget.maxSelected! &&
+            _manualFocusState) {
+          final filtered = _filtered;
+          if (!_overlayController.isShowing && filtered.isNotEmpty) {
+            _invalidateOverlayCache();
+            _clearHighlights();
+            _overlayController.show();
+          }
+        }
       }
       // After selection change, clear highlights
       _clearHighlights();
@@ -422,6 +436,18 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
             // Ensure focus is maintained (manual focus management)
             if (_manualFocusState && !_focusNode.hasFocus) {
               _focusNode.requestFocus();
+            }
+            
+            // FIX: Show overlay again if we're below maxSelected and still focused
+            // This handles the case where user removes an item after reaching max
+            if (_manualFocusState && 
+                (widget.maxSelected == null || _selected.length < widget.maxSelected!)) {
+              final filtered = _filtered;
+              if (!_overlayController.isShowing && filtered.isNotEmpty) {
+                _invalidateOverlayCache();
+                _clearHighlights();
+                _overlayController.show();
+              }
             }
           }
         });
@@ -790,10 +816,11 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
 
                 // Measure Wrap after render to detect wrapping and get actual remaining width
                 // Only measure if contexts are available (after first frame)
+                // Only measure if we have selected items (prevents measurement issues when empty)
                 final wrapContext = _measurements.wrapKey.currentContext;
-                if (wrapContext != null) {
+                if (wrapContext != null && _selected.isNotEmpty) {
                   if (_debugSelectionChange) {
-                    print("DEBUG: _buildInputField #$_debugBuildCount - calling measureWrapAndTextField");
+                    print("DEBUG: _buildInputField #$_debugBuildCount - calling measureWrapAndTextField (selectedCount=${_selected.length})");
                   }
                   _measurements.measureWrapAndTextField(
                     wrapContext: wrapContext,
@@ -804,6 +831,9 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
                     minTextFieldWidth: _minTextFieldWidth,
                     requestRebuild: _requestRebuild,
                   );
+                } else if (_selected.isEmpty) {
+                  // Reset measurement state when selection is cleared
+                  _measurements.resetMeasurementState();
                 }
                 if (_debugSelectionChange) {
                   print("DEBUG: _buildInputField #$_debugBuildCount - building Wrap widget");
@@ -1185,6 +1215,13 @@ class _ChipMeasurementHelper {
   bool _isMeasuring = false;
   int _lastMeasuredSelectedCount = -1;
   
+  // Reset measurement state - call when selection is cleared
+  void resetMeasurementState() {
+    _lastMeasuredSelectedCount = -1;
+    remainingWidth = null;
+    _isMeasuring = false;
+  }
+  
   void measureChip({
     required BuildContext context,
     required GlobalKey rowKey,
@@ -1241,7 +1278,16 @@ class _ChipMeasurementHelper {
     required void Function() requestRebuild, // Changed from safeSetState
   }) {
     // Only measure if selection count changed or we haven't measured yet
-    if (wrapContext == null || selectedCount == 0) return;
+    if (wrapContext == null) return;
+    
+    // Reset measurement tracking when selection count goes to 0
+    if (selectedCount == 0) {
+      _lastMeasuredSelectedCount = -1;
+      remainingWidth = null; // Reset remaining width when no items
+      return;
+    }
+    
+    // Only measure if count changed - prevents duplicate measurements during same build
     if (_lastMeasuredSelectedCount == selectedCount) return;
     if (_isMeasuring) return; // Already measuring, skip
     
@@ -1288,12 +1334,22 @@ class _ChipMeasurementHelper {
               needsUpdate = true;
             }
           } else {
+            // TextField wrapped to new line - calculate remaining width on first line
             final double lastChipRight = lastChipPos.dx - wrapPos.dx + lastChipBox.size.width;
             final double firstLineRemaining = wrapWidth - lastChipRight - chipSpacing;
             
-            if (firstLineRemaining > minTextFieldWidth) {
+            // Only update if we have enough space and it's different from current
+            if (firstLineRemaining > minTextFieldWidth && 
+                (remainingWidth == null || (remainingWidth! - firstLineRemaining).abs() > 1.0)) {
               remainingWidth = firstLineRemaining;
               needsUpdate = true;
+            } else if (firstLineRemaining <= minTextFieldWidth) {
+              // Not enough space on first line - use minimum width
+              // TextField will wrap to next line
+              if (remainingWidth == null || remainingWidth != minTextFieldWidth) {
+                remainingWidth = minTextFieldWidth;
+                needsUpdate = true;
+              }
             }
           }
         }
