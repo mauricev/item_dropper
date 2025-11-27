@@ -108,14 +108,12 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   // Cache decoration to prevent recreation on every build
   BoxDecoration? _cachedDecoration;
   bool? _lastFocusState;
-  
-  // Debug flag to track rebuilds after selection changes
-  bool _debugSelectionChange = false;
-  int _debugBuildCount = 0;
 
   // Single rebuild mechanism - prevents cascading rebuilds
   bool _needsRebuild = false;
   bool _rebuildScheduled = false;
+  // Track when we're the source of selection changes to prevent didUpdateWidget from rebuilding
+  bool _isInternalSelectionChange = false;
 
   // Use shared filter utils
   final ItemDropperFilterUtils<T> _filterUtils = ItemDropperFilterUtils<T>();
@@ -217,21 +215,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   }
 
   void _updateSelection(void Function() selectionUpdate) {
-    // Set debug flag to track rebuilds after selection change
-    _debugSelectionChange = true;
-    _debugBuildCount = 0;
-    print("DEBUG: Selection change detected - starting rebuild tracking");
-    
-    // Clear debug flag after a few frames to stop tracking
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && _debugSelectionChange) {
-          print("DEBUG: Stopping rebuild tracking after $_debugBuildCount builds");
-          _debugSelectionChange = false;
-          _debugBuildCount = 0;
-        }
-      });
-    });
+    // Mark that we're the source of this selection change
+    _isInternalSelectionChange = true;
     
     // Preserve keyboard highlight state - only reset if keyboard navigation was active
     final bool wasKeyboardActive = _keyboardHighlightIndex != ItemDropperConstants.kNoHighlight;
@@ -268,24 +253,22 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       }
     });
     
-    // Defer parent notification until after our rebuild completes
-    // Use multiple post-frame callbacks to ensure parent rebuild happens after our rebuild
-    // This prevents parent rebuild from causing didUpdateWidget to trigger another rebuild
+    // Notify parent after our rebuild completes (single post-frame callback)
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        widget.onChanged(List.from(_selected));
+        // Clear the internal change flag after parent has been notified
+        // This allows didUpdateWidget to detect external changes in the next frame
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
-            widget.onChanged(List.from(_selected));
+            _isInternalSelectionChange = false;
             // Schedule overlay reposition after parent rebuilds
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted && _overlayController.isShowing) {
-                _invalidateOverlayCache();
-                // Don't call setState here - overlay will rebuild on next natural build
-              }
-            });
+            if (_overlayController.isShowing) {
+              _invalidateOverlayCache();
+            }
           }
         });
-      });
+      }
     });
     
     _focusNode.requestFocus();
@@ -337,21 +320,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   }
 
   void _removeChip(ItemDropperItem<T> item) {
-    // Set debug flag to track rebuilds after selection change
-    _debugSelectionChange = true;
-    _debugBuildCount = 0;
-    print("DEBUG: Chip removal detected - starting rebuild tracking");
-    
-    // Clear debug flag after a few frames to stop tracking
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && _debugSelectionChange) {
-          print("DEBUG: Stopping rebuild tracking after $_debugBuildCount builds");
-          _debugSelectionChange = false;
-          _debugBuildCount = 0;
-        }
-      });
-    });
+    // Mark that we're the source of this selection change
+    _isInternalSelectionChange = true;
     
     // Update selection immediately (synchronous)
     _selected.removeWhere((selected) => selected.value == item.value);
@@ -360,15 +330,18 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     // Request rebuild through central mechanism
     _requestRebuild();
     
-    // Notify parent of change after rebuild completes
+    // Notify parent after our rebuild completes (single post-frame callback)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         widget.onChanged(List.from(_selected));
-        // Schedule overlay reposition after parent rebuilds
+        // Clear the internal change flag after parent has been notified
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted && _overlayController.isShowing) {
-            _invalidateOverlayCache();
-            // Don't call setState here - overlay will rebuild on next natural build
+          if (mounted) {
+            _isInternalSelectionChange = false;
+            // Schedule overlay reposition after parent rebuilds
+            if (_overlayController.isShowing) {
+              _invalidateOverlayCache();
+            }
           }
         });
       }
@@ -490,11 +463,6 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   // Helper method to safely call setState
   void _safeSetState(void Function() fn) {
     if (mounted) {
-      if (_debugSelectionChange) {
-        final String stackTrace = StackTrace.current.toString().split('\n').take(8).join('\n');
-        print("DEBUG: _safeSetState() called - _rebuildScheduled=$_rebuildScheduled");
-        print("DEBUG: _safeSetState() stack trace:\n$stackTrace");
-      }
       setState(fn);
     }
   }
@@ -504,25 +472,13 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   void _requestRebuild([void Function()? stateUpdate]) {
     if (!mounted) return;
     
-    if (_debugSelectionChange) {
-      print("DEBUG: _requestRebuild() called - _rebuildScheduled=$_rebuildScheduled, hasStateUpdate=${stateUpdate != null}");
-      final String stackTrace = StackTrace.current.toString().split('\n').take(8).join('\n');
-      print("DEBUG: _requestRebuild() stack trace:\n$stackTrace");
-    }
-    
     // If rebuild already in progress, ignore this request
     if (_rebuildScheduled) {
-      if (_debugSelectionChange) {
-        print("DEBUG: _requestRebuild() - rebuild already in progress, ignoring");
-      }
       return;
     }
     
     // Mark that rebuild is scheduled and trigger it immediately
     _rebuildScheduled = true;
-    if (_debugSelectionChange) {
-      print("DEBUG: _requestRebuild() - triggering immediate rebuild");
-    }
     
     // Trigger immediate rebuild - state updates happen inside setState callback
     _safeSetState(() {
@@ -534,9 +490,6 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _rebuildScheduled = false;
-        if (_debugSelectionChange) {
-          print("DEBUG: _requestRebuild() - rebuild complete, flag reset");
-        }
       }
     });
   }
@@ -552,16 +505,10 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   void didUpdateWidget(covariant MultiItemDropper<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
     
-    if (_debugSelectionChange) {
-      print("DEBUG: didUpdateWidget() called - _rebuildScheduled=$_rebuildScheduled");
-    }
-    
-    // Sync selected items if parent changed them
-    if (widget.selectedItems.length != _selected.length ||
-        !widget.selectedItems.every((item) => _isSelected(item))) {
-      if (_debugSelectionChange) {
-        print("DEBUG: didUpdateWidget() - syncing selectedItems from parent");
-      }
+    // Sync selected items if parent changed them (and we didn't cause the change)
+    if (!_isInternalSelectionChange && 
+        (widget.selectedItems.length != _selected.length ||
+         !widget.selectedItems.every((item) => _isSelected(item)))) {
       _selected = List.from(widget.selectedItems);
       // Don't trigger rebuild here if we're already rebuilding
       // Parent change will be reflected in the current rebuild cycle
@@ -603,12 +550,6 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
 
   @override
   Widget build(BuildContext context) {
-    if (_debugSelectionChange) {
-      _debugBuildCount++;
-      final String stackTrace = StackTrace.current.toString().split('\n').take(5).join('\n');
-      print("DEBUG: build() called #$_debugBuildCount - _needsRebuild=$_needsRebuild, _rebuildScheduled=$_rebuildScheduled");
-      print("DEBUG: build() stack trace:\n$stackTrace");
-    }
     return ItemDropperWithOverlay(
       layerLink: _layerLink,
       overlayController: _overlayController,
@@ -625,25 +566,9 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   }
 
   Widget _buildInputField({InputDecoration? previewDecoration}) {
-    // Debug: Only print when tracking selection changes
-    if (_debugSelectionChange) {
-      _debugBuildCount++;
-      // Check if this is a new build or same build
-      if (_debugBuildCount == 2) {
-        final String stackTrace = StackTrace.current.toString().split('\n').take(10).join('\n');
-        print("DEBUG: _buildInputField called #$_debugBuildCount (selection change tracking active)");
-        print("DEBUG: _buildInputField stack trace:\n$stackTrace");
-      } else {
-        print("DEBUG: _buildInputField called #$_debugBuildCount (selection change tracking active)");
-      }
-    }
-    
     // Cache decoration and only recreate when focus state changes
     final bool hasFocus = _focusNode.hasFocus;
     if (_cachedDecoration == null || _lastFocusState != hasFocus) {
-      if (_debugSelectionChange) {
-        print("DEBUG: _buildInputField #$_debugBuildCount - recreating decoration (focus changed or first time)");
-      }
       _lastFocusState = hasFocus;
       _cachedDecoration = BoxDecoration(
         gradient: LinearGradient(
@@ -683,9 +608,6 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
                 // Only measure if contexts are available (after first frame)
                 final wrapContext = _measurements.wrapKey.currentContext;
                 if (wrapContext != null) {
-                  if (_debugSelectionChange) {
-                    print("DEBUG: _buildInputField #$_debugBuildCount - calling measureWrapAndTextField");
-                  }
                   _measurements.measureWrapAndTextField(
                     wrapContext: wrapContext,
                     textFieldContext: _measurements.textFieldKey.currentContext,
@@ -695,9 +617,6 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
                     minTextFieldWidth: _minTextFieldWidth,
                     requestRebuild: _requestRebuild,
                   );
-                }
-                if (_debugSelectionChange) {
-                  print("DEBUG: _buildInputField #$_debugBuildCount - building Wrap widget");
                 }
                 return Wrap(
                   key: _measurements.wrapKey,
@@ -721,9 +640,6 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
                     if (_selected.isNotEmpty)
                       Builder(
                         builder: (context) {
-                          if (_debugSelectionChange) {
-                            print("DEBUG: _buildInputField #$_debugBuildCount - building TextField Builder");
-                          }
                           // Use measured remaining width if available (from previous render)
                           // Otherwise use a simple calculation as initial estimate
                           final double actualRemaining = _measurements.remainingWidth ?? 
