@@ -151,6 +151,9 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
 
   void _handleFocusChange() {
     print("_handleFocusChange called - hasFocus=${_focusNode.hasFocus}, isShowing=${_overlayController.isShowing}");
+    // Trigger rebuild to update border color when focus changes
+    _safeSetState(() {});
+    
     if (_focusNode.hasFocus) {
       // Don't show overlay if maxSelected is reached
       if (widget.maxSelected != null && 
@@ -761,6 +764,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         onChanged: (value) => _handleTextChanged(value),
         onSubmitted: (value) => _handleEnter(),
         enabled: widget.enabled,
+        // Ensure TextField can receive focus
+        autofocus: false,
       ),
     );
   }
