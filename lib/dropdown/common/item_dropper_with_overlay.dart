@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 
 /// Shared widget that wraps dropdown input fields with overlay functionality
 class ItemDropperWithOverlay extends StatefulWidget {
@@ -42,15 +43,107 @@ class _ItemDropperWithOverlayState extends State<ItemDropperWithOverlay> {
                   child: Listener(
                     behavior: HitTestBehavior.translucent,
                     onPointerDown: (event) {
+                      debugPrint("DEBUG: Listener.onPointerDown called - HitTestBehavior.translucent");
+                      debugPrint("DEBUG: CRITICAL: The fact that we're here means the Listener intercepted the event");
+                      debugPrint("DEBUG: Even though translucent should allow children to receive events, the Listener is still called");
+                      debugPrint("DEBUG: This suggests the Listener is blocking event propagation to children");
                       debugPrint("DEBUG LAST ITEM: Listener onPointerDown received at ${event.position} - this is the dismiss handler");
-                      debugPrint("DEBUG: Listener is intercepting event - HitTestBehavior.translucent should allow events to pass through");
-                      debugPrint("DEBUG: Event details - kind=${event.kind}, buttons=${event.buttons}, position=${event.position}");
-                      debugPrint("DEBUG: WARNING - Listener is receiving event BEFORE items. This may prevent items from receiving events.");
-                      debugPrint("DEBUG: Stack order: Listener (Positioned.fill) is FIRST, CompositedTransformFollower (overlay) is SECOND");
-                      debugPrint("DEBUG: In Stack, LAST child is on top, so overlay should be on top, but Listener may still intercept");
-                      debugPrint("DEBUG: CRITICAL - Listener.onPointerDown is being called, which means it's in the hit test path");
-                      debugPrint("DEBUG: Even with HitTestBehavior.translucent, handling onPointerDown may prevent children from receiving events");
-                      debugPrint("DEBUG: The event should propagate to children AFTER this handler, but we're not seeing MouseRegion/InkWell events");
+                      
+                      // DEBUG: Check which items are actually at this click position
+                      final RenderBox? overlayRenderBox = 
+                          _overlayKey.currentContext?.findRenderObject() as RenderBox?;
+                      if (overlayRenderBox != null) {
+                        final Offset clickInOverlayLocal = overlayRenderBox.globalToLocal(event.position);
+                        debugPrint("DEBUG: Click in overlay local coordinates (from globalToLocal): $clickInOverlayLocal");
+                        debugPrint("DEBUG: Overlay size: ${overlayRenderBox.size}");
+                        debugPrint("DEBUG: Checking if click is within overlay bounds: dx=${clickInOverlayLocal.dx >= 0 && clickInOverlayLocal.dx <= overlayRenderBox.size.width}, dy=${clickInOverlayLocal.dy >= 0 && clickInOverlayLocal.dy <= overlayRenderBox.size.height}");
+                        
+                        // CRITICAL: globalToLocal is broken for CompositedTransformFollower
+                        // Calculate local coordinates manually using field position
+                        final RenderBox? fieldRenderBox = widget.fieldKey.currentContext?.findRenderObject() as RenderBox?;
+                        if (fieldRenderBox != null) {
+                          final Offset fieldGlobalPos = fieldRenderBox.localToGlobal(Offset.zero);
+                          final double fieldHeight = fieldRenderBox.size.height;
+                          final Offset estimatedOverlayPos = Offset(fieldGlobalPos.dx, fieldGlobalPos.dy + fieldHeight);
+                          
+                          // Calculate correct local coordinates
+                          final Offset correctLocalCoords = Offset(
+                            event.position.dx - estimatedOverlayPos.dx,
+                            event.position.dy - estimatedOverlayPos.dy,
+                          );
+                          debugPrint("DEBUG: Correct local coordinates (manual calc): $correctLocalCoords");
+                          debugPrint("DEBUG: Correct local within bounds: dx=${correctLocalCoords.dx >= 0 && correctLocalCoords.dx <= overlayRenderBox.size.width}, dy=${correctLocalCoords.dy >= 0 && correctLocalCoords.dy <= overlayRenderBox.size.height}");
+                          
+                          // Try hit test with CORRECT local coordinates
+                          if (correctLocalCoords.dx >= 0 && correctLocalCoords.dx <= overlayRenderBox.size.width &&
+                              correctLocalCoords.dy >= 0 && correctLocalCoords.dy <= overlayRenderBox.size.height) {
+                            // DEBUG: Check what item should be at this Y position
+                            // Items are 30px tall, overlay starts at estimatedOverlayPos
+                            final double itemHeight = 30.0;
+                            final int expectedItemIndex = (correctLocalCoords.dy / itemHeight).floor();
+                            debugPrint("DEBUG: Expected item index at y=${correctLocalCoords.dy}: $expectedItemIndex (itemHeight=$itemHeight)");
+                            
+                            // Try to find the ListView within the overlay
+                            // CRITICAL: The child position calculation is wrong because overlayRenderBox.localToGlobal returns (0,0)
+                            // We need to calculate it manually
+                            overlayRenderBox.visitChildren((child) {
+                              debugPrint("DEBUG: Overlay child: ${child.runtimeType}");
+                              if (child is RenderBox) {
+                                // Get child's global position
+                                final Offset childGlobalPos = child.localToGlobal(Offset.zero);
+                                // Calculate child's position relative to overlay using estimated overlay position
+                                final Offset childLocalPos = childGlobalPos - estimatedOverlayPos;
+                                debugPrint("DEBUG:   Child global position: $childGlobalPos");
+                                debugPrint("DEBUG:   Estimated overlay position: $estimatedOverlayPos");
+                                debugPrint("DEBUG:   Child position in overlay (manual calc): $childLocalPos, size: ${child.size}");
+                                
+                                // Try hit test on child with corrected coordinates
+                                final Offset childLocalCoords = correctLocalCoords - childLocalPos;
+                                debugPrint("DEBUG:   Hit test coords for child: $childLocalCoords (correctLocalCoords=$correctLocalCoords - childLocalPos=$childLocalPos)");
+                                if (childLocalCoords.dx >= 0 && childLocalCoords.dx <= child.size.width &&
+                                    childLocalCoords.dy >= 0 && childLocalCoords.dy <= child.size.height) {
+                                  final BoxHitTestResult childResult = BoxHitTestResult();
+                                  child.hitTest(childResult, position: childLocalCoords);
+                                  debugPrint("DEBUG:   Hit test on child at $childLocalCoords: ${childResult.path.length} targets found");
+                                  if (childResult.path.length > 0) {
+                                    int i = 0;
+                                    for (final entry in childResult.path) {
+                                      if (i < 5) {
+                                        debugPrint("DEBUG:     Child hit target $i: ${entry.target.runtimeType}");
+                                        i++;
+                                      } else {
+                                        break;
+                                      }
+                                    }
+                                  }
+                                } else {
+                                  debugPrint("DEBUG:   Hit test coords outside child bounds");
+                                }
+                              }
+                            });
+                            
+                            final BoxHitTestResult result = BoxHitTestResult();
+                            overlayRenderBox.hitTest(result, position: correctLocalCoords);
+                            debugPrint("DEBUG: Hit test with CORRECT coords - ${result.path.length} targets found");
+                            int i = 0;
+                            for (final entry in result.path) {
+                              if (i < 10) {
+                                debugPrint("DEBUG:   Hit target $i: ${entry.target.runtimeType}");
+                                i++;
+                              } else {
+                                break;
+                              }
+                            }
+                          } else {
+                            debugPrint("DEBUG: Correct local coords are outside overlay bounds - cannot hit test");
+                          }
+                        }
+                        
+                        // Also try with broken globalToLocal for comparison
+                        final BoxHitTestResult brokenResult = BoxHitTestResult();
+                        overlayRenderBox.hitTest(brokenResult, position: clickInOverlayLocal);
+                        debugPrint("DEBUG: Hit test with BROKEN globalToLocal coords - ${brokenResult.path.length} targets found");
+                      }
                       // Use the field's render box for dismissal detection
                       final RenderBox? renderBox =
                       widget.fieldKey.currentContext?.findRenderObject() as RenderBox?;
@@ -133,6 +226,13 @@ class _ItemDropperWithOverlayState extends State<ItemDropperWithOverlay> {
                   link: widget.layerLink,
                   showWhenUnlinked: false,
                   offset: const Offset(0.0, 0.0), // Position relative to target
+                  // DEBUG: CRITICAL BUG FOUND!
+                  // This CompositedTransformFollower has offset (0,0), which positions it at the FIELD position
+                  // But widget.overlay is ALREADY a CompositedTransformFollower (from buildDropdownOverlay)
+                  // that has its own offset (field + height). So we have DOUBLE positioning!
+                  // The inner follower positions at field+height, but this outer follower positions at field,
+                  // causing a -46px offset mismatch (the field height).
+                  // This is why child position shows -46.0 and hit tests fail!
                   child: widget.overlay,
                 ),
               ],

@@ -327,10 +327,26 @@ class ItemDropperRenderUtils {
                       // DEBUG: Check if itemWidget contains MouseRegion/InkWell
                       debugPrint("DEBUG: Item widget built for index=$i, type=${itemWidget.runtimeType}");
                       
-                      // If this is a group header and there's a previous non-group-header item,
-                      // wrap with separator. But the default builder should handle this.
-                      // For custom builders, we can't add separators automatically.
-                      return itemWidget;
+                      // DEBUG: Wrap item to track its bounds and visibility
+                      return Builder(
+                        builder: (itemContext) {
+                          // Use a post-frame callback to measure item bounds after it's laid out
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            final RenderBox? itemBox = itemContext.findRenderObject() as RenderBox?;
+                            if (itemBox != null) {
+                              final Offset itemGlobalPos = itemBox.localToGlobal(Offset.zero);
+                              final Size itemSize = itemBox.size;
+                              final Rect itemRect = itemGlobalPos & itemSize;
+                              debugPrint("DEBUG: Item $i bounds - globalPos=$itemGlobalPos, size=$itemSize, rect=$itemRect");
+                              debugPrint("DEBUG: Item $i - is visible in viewport? ${itemBox.attached}");
+                            } else {
+                              debugPrint("DEBUG: Item $i - RenderBox is null (not laid out yet)");
+                            }
+                          });
+                          
+                          return itemWidget;
+                        },
+                      );
                     },
                   ),
                 ),
