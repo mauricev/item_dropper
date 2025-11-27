@@ -2,8 +2,73 @@ import 'package:flutter/material.dart';
 import '../common/item_dropper_constants.dart';
 import '../common/item_dropper_item.dart';
 
+/// Result of dropdown positioning calculation
+class DropdownPositionResult {
+  final bool shouldShowBelow;
+  final double constrainedMaxHeight;
+  final Offset offset;
+
+  const DropdownPositionResult({
+    required this.shouldShowBelow,
+    required this.constrainedMaxHeight,
+    required this.offset,
+  });
+}
+
 /// Shared dropdown rendering utilities
 class ItemDropperRenderUtils {
+  /// Calculates dropdown positioning (above/below) and constraints
+  /// 
+  /// Returns positioning information including:
+  /// - Whether to show below or above
+  /// - The constrained max height based on available space
+  /// - The offset for CompositedTransformFollower
+  static DropdownPositionResult calculateDropdownPosition({
+    required BuildContext context,
+    required RenderBox inputBox,
+    required double inputFieldHeight,
+    required double maxDropdownHeight,
+  }) {
+    final MediaQueryData mediaQuery = MediaQuery.of(context);
+    // Get window size (client area)
+    final double windowHeight = mediaQuery.size.height;
+    final EdgeInsets viewInsets = mediaQuery.viewInsets;
+    
+    // Get input field position relative to the window (not screen)
+    // We need to get the position relative to the widget's ancestor that represents the window
+    // The context should be the overlay's context, which is relative to the window
+    final Offset inputFieldOffset = inputBox.localToGlobal(Offset.zero, ancestor: context.findRenderObject());
+    
+    // Calculate available space below the input field within the window
+    final double inputFieldBottom = inputFieldOffset.dy + inputFieldHeight;
+    final double availableSpaceBelow = windowHeight -
+        inputFieldBottom -
+        ItemDropperConstants.kDropdownMargin -
+        viewInsets.bottom;
+    
+    // Calculate available space above the input field
+    final double availableSpaceAbove = inputFieldOffset.dy -
+        ItemDropperConstants.kDropdownMargin;
+    
+    // Only show below if there's enough space (at least half the max height)
+    final bool shouldShowBelow = availableSpaceBelow >
+        maxDropdownHeight / ItemDropperConstants.kDropdownMaxHeightDivisor;
+    
+    final double constrainedMaxHeight = (shouldShowBelow
+        ? availableSpaceBelow
+        : availableSpaceAbove)
+        .clamp(0.0, maxDropdownHeight);
+    
+    final Offset offset = shouldShowBelow
+        ? Offset(0.0, inputFieldHeight + ItemDropperConstants.kDropdownMargin)
+        : Offset(0.0, -constrainedMaxHeight - ItemDropperConstants.kDropdownMargin);
+    
+    return DropdownPositionResult(
+      shouldShowBelow: shouldShowBelow,
+      constrainedMaxHeight: constrainedMaxHeight,
+      offset: offset,
+    );
+  }
   /// Builds a complete dropdown item with MouseRegion and hover handling
   /// This wraps buildDropdownItem with the standard hover behavior
   static Widget buildDropdownItemWithHover<T>({
@@ -189,43 +254,29 @@ class ItemDropperRenderUtils {
     final RenderBox? inputBox = context.findRenderObject() as RenderBox?;
     if (inputBox == null) return const SizedBox.shrink();
 
-    final MediaQueryData mediaQuery = MediaQuery.of(context);
-    final double screenHeight = mediaQuery.size.height;
-    final EdgeInsets viewInsets = mediaQuery.viewInsets;
-    final Offset inputFieldOffset = inputBox.localToGlobal(Offset.zero);
     final double inputFieldHeight = inputBox.size.height;
-
-    final double availableSpaceBelow = screenHeight -
-        viewInsets.bottom -
-        (inputFieldOffset.dy + inputFieldHeight +
-            ItemDropperConstants.kDropdownMargin);
-    final double availableSpaceAbove =
-        inputFieldOffset.dy - ItemDropperConstants.kDropdownMargin;
-    final bool shouldShowBelow = availableSpaceBelow >
-        maxDropdownHeight / ItemDropperConstants.kDropdownMaxHeightDivisor;
-    final double constrainedMaxHeight = (shouldShowBelow
-        ? availableSpaceBelow
-        : availableSpaceAbove)
-        .clamp(0.0, maxDropdownHeight);
+    final DropdownPositionResult position = calculateDropdownPosition(
+      context: context,
+      inputBox: inputBox,
+      inputFieldHeight: inputFieldHeight,
+      maxDropdownHeight: maxDropdownHeight,
+    );
 
     return CompositedTransformFollower(
       key: ValueKey<String>('follower_$inputFieldHeight\_$width'),
       link: layerLink,
       showWhenUnlinked: false,
-      offset: shouldShowBelow
-          ? Offset(0.0, inputFieldHeight + ItemDropperConstants.kDropdownMargin)
-          : Offset(
-          0.0, -constrainedMaxHeight - ItemDropperConstants.kDropdownMargin),
+      offset: position.offset,
       child: SizedBox(
         width: width,
         child: FocusScope(
           canRequestFocus: false,
           child: Material(
             elevation: ItemDropperConstants.kDropdownElevation,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxHeight: constrainedMaxHeight,
-              ),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: position.constrainedMaxHeight,
+                ),
               child: DefaultTextStyle(
                 style: Theme
                     .of(context)

@@ -879,24 +879,20 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     final RenderBox? inputBox = inputContext.findRenderObject() as RenderBox?;
     if (inputBox == null) return const SizedBox.shrink();
 
-    final MediaQueryData mediaQuery = MediaQuery.of(inputContext);
-    final double screenHeight = mediaQuery.size.height;
-    final EdgeInsets viewInsets = mediaQuery.viewInsets;
-    final Offset inputFieldOffset = inputBox.localToGlobal(Offset.zero);
     final double inputFieldHeight = inputBox.size.height;
-
-    final double availableSpaceBelow = screenHeight -
-        viewInsets.bottom -
-        (inputFieldOffset.dy + inputFieldHeight +
-            ItemDropperConstants.kDropdownMargin);
-    final bool shouldShowBelow = availableSpaceBelow > 50.0;
+    final double maxDropdownHeight = widget.maxDropdownHeight ?? 200.0;
+    
+    final position = ItemDropperRenderUtils.calculateDropdownPosition(
+      context: inputContext,
+      inputBox: inputBox,
+      inputFieldHeight: inputFieldHeight,
+      maxDropdownHeight: maxDropdownHeight,
+    );
 
     return CompositedTransformFollower(
       link: _layerLink,
       showWhenUnlinked: false,
-      offset: shouldShowBelow
-          ? Offset(0.0, inputFieldHeight + ItemDropperConstants.kDropdownMargin)
-          : Offset(0.0, -50.0 - ItemDropperConstants.kDropdownMargin),
+      offset: position.offset,
       child: SizedBox(
         width: widget.width,
         child: Material(

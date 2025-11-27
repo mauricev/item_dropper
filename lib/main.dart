@@ -1,3 +1,4 @@
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 import 'dropdown/item_dropper_common.dart';
@@ -10,9 +11,20 @@ void main() async {
   // Configure window size for desktop platforms
   await windowManager.ensureInitialized();
 
-  const windowOptions = WindowOptions(
-    size: Size(1400, 1000),
-    minimumSize: Size(1400, 1000),
+  // Get screen size using PlatformDispatcher
+  final screenSize = ui.PlatformDispatcher.instance.views.first.physicalSize /
+      ui.PlatformDispatcher.instance.views.first.devicePixelRatio;
+  
+  // On macOS, account for menubar (~22px) and dock (varies, typically ~50-60px when visible)
+  // We'll use a conservative estimate of 80px total for system UI
+  final windowSize = Size(
+    screenSize.width,
+    screenSize.height - 80, // Account for menubar and dock
+  );
+
+  final windowOptions = WindowOptions(
+    size: windowSize,
+    minimumSize: const Size(800, 600),
     center: true,
     backgroundColor: Colors.transparent,
     skipTaskbar: false,
