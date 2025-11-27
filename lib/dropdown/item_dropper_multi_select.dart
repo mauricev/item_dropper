@@ -104,6 +104,10 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   
   // Measurement helper
   final _ChipMeasurementHelper _measurements = _ChipMeasurementHelper();
+  
+  // Cache decoration to prevent recreation on every build
+  BoxDecoration? _cachedDecoration;
+  bool? _lastFocusState;
 
   // Use shared filter utils
   final ItemDropperFilterUtils<T> _filterUtils = ItemDropperFilterUtils<T>();
@@ -506,22 +510,29 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   }
 
   Widget _buildInputField({InputDecoration? previewDecoration}) {
-    return Container(
-      key: widget.inputKey ?? _fieldKey,
-      width: widget.width, // Constrain to 500px
-      // Let content determine height naturally to prevent overflow
-      decoration: BoxDecoration(
+    // Cache decoration and only recreate when focus state changes
+    final bool hasFocus = _focusNode.hasFocus;
+    if (_cachedDecoration == null || _lastFocusState != hasFocus) {
+      _lastFocusState = hasFocus;
+      _cachedDecoration = BoxDecoration(
         gradient: LinearGradient(
           colors: [Colors.white, Colors.grey.shade200],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         ),
         border: Border.all(
-          color: _focusNode.hasFocus ? Colors.blue : Colors.grey.shade400,
+          color: hasFocus ? Colors.blue : Colors.grey.shade400,
           width: 1.0,
         ),
         borderRadius: BorderRadius.circular(_containerBorderRadius),
-      ),
+      );
+    }
+    
+    return Container(
+      key: widget.inputKey ?? _fieldKey,
+      width: widget.width, // Constrain to 500px
+      // Let content determine height naturally to prevent overflow
+      decoration: _cachedDecoration,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         // Fill available space instead of min
@@ -531,21 +542,26 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
           Padding(
             padding: const EdgeInsets.fromLTRB(12.0, 5.0, 12.0, 3.0),
             child: LayoutBuilder(
+              key: const ValueKey<String>('layout_builder_stable'),
               builder: (context, constraints) {
                 final double availableWidth = constraints.maxWidth;
                 final double textFieldWidth = _calculateTextFieldWidth(
                     availableWidth);
 
                 // Measure Wrap after render to detect wrapping and get actual remaining width
-                _measurements.measureWrapAndTextField(
-                  wrapContext: _measurements.wrapKey.currentContext,
-                  textFieldContext: _measurements.textFieldKey.currentContext,
-                  lastChipContext: _measurements.lastChipKey.currentContext,
-                  selectedCount: _selected.length,
-                  chipSpacing: _chipSpacing,
-                  minTextFieldWidth: _minTextFieldWidth,
-                  safeSetState: _safeSetState,
-                );
+                // Only measure if contexts are available (after first frame)
+                final wrapContext = _measurements.wrapKey.currentContext;
+                if (wrapContext != null) {
+                  _measurements.measureWrapAndTextField(
+                    wrapContext: wrapContext,
+                    textFieldContext: _measurements.textFieldKey.currentContext,
+                    lastChipContext: _measurements.lastChipKey.currentContext,
+                    selectedCount: _selected.length,
+                    chipSpacing: _chipSpacing,
+                    minTextFieldWidth: _minTextFieldWidth,
+                    safeSetState: _safeSetState,
+                  );
+                }
 
                 return Wrap(
                   key: _measurements.wrapKey,
@@ -559,7 +575,11 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
                       final int index = entry.key;
                       final ItemDropperItem<T> item = entry.value;
                       final bool isLastChip = index == _selected.length - 1;
-                      return _buildChip(item, isLastChip ? _measurements.lastChipKey : null);
+                      return _buildChip(
+                        item, 
+                        isLastChip ? _measurements.lastChipKey : null,
+                        ValueKey<T>(item.value), // Stable key based on item value
+                      );
                     }),
                     // TextField with proper width based on available space
                     if (_selected.isNotEmpty)
@@ -618,12 +638,13 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     return rowContentHeight + verticalPadding;
   }
 
-  Widget _buildChip(ItemDropperItem<T> item, [GlobalKey? chipKey]) {
+  Widget _buildChip(ItemDropperItem<T> item, [GlobalKey? chipKey, Key? valueKey]) {
     // Only measure the first chip (index 0) to avoid GlobalKey conflicts
     final bool isFirstChip = _selected.isNotEmpty && _selected.first.value == item.value;
     final GlobalKey? rowKey = isFirstChip ? _measurements.chipRowKey : null;
     
     return LayoutBuilder(
+      key: valueKey, // Use stable ValueKey for widget preservation
       builder: (context, constraints) {
         // Measure chip dimensions after first render (only for first chip)
         if (isFirstChip && rowKey != null) {
@@ -637,7 +658,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         }
         
         return Container(
-          key: chipKey, // Use provided key (for last chip) or null
+          key: chipKey, // Use provided GlobalKey (for last chip) or null
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
