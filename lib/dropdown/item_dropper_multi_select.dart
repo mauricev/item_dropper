@@ -265,85 +265,55 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     final bool wasKeyboardActive = _keyboardHighlightIndex != ItemDropperConstants.kNoHighlight;
     final int previousHoverIndex = _hoverIndex;
     
-    // SECTION 2 COMMENTED OUT: Rebuild mechanism - testing if this causes extra rebuilds
     // Update selection and all related state inside setState to ensure single rebuild
-    // _requestRebuild(() {
-    //   // Update selection inside the rebuild callback
-    //   selectionUpdate();
-    //   
-    //   // Update highlights based on filtered items
-    //   final List<ItemDropperItem<T>> remainingFilteredItems = _filtered;
-    //   
-    //   if (remainingFilteredItems.isNotEmpty) {
-    //     // Only reset keyboard highlight if keyboard navigation was active
-    //     if (wasKeyboardActive) {
-    //       _keyboardHighlightIndex = 0;
-    //       _hoverIndex = ItemDropperConstants.kNoHighlight;
-    //     } else {
-    //       // Clear keyboard highlight so mouse hover can work
-    //       _keyboardHighlightIndex = ItemDropperConstants.kNoHighlight;
-    //       // Don't clear hover index - preserve it so highlighting continues to work
-    //       if (previousHoverIndex >= 0 && previousHoverIndex < remainingFilteredItems.length) {
-    //         // Hover index is still valid, keep it
-    //         _hoverIndex = previousHoverIndex;
-    //       } else {
-    //         // Hover index is invalid, clear it
-    //         _hoverIndex = ItemDropperConstants.kNoHighlight;
-    //       }
-    //     }
-    //   } else {
-    //     _clearHighlights();
-    //     _overlayController.hide();
-    //   }
-    // });
-    
-    // TEMPORARY: Direct state update without rebuild - testing
-    selectionUpdate();
-    
-    // Update highlights based on filtered items
-    final List<ItemDropperItem<T>> remainingFilteredItems = _filtered;
-    
-    if (remainingFilteredItems.isNotEmpty) {
-      // Only reset keyboard highlight if keyboard navigation was active
-      if (wasKeyboardActive) {
-        _keyboardHighlightIndex = 0;
-        _hoverIndex = ItemDropperConstants.kNoHighlight;
-      } else {
-        // Clear keyboard highlight so mouse hover can work
-        _keyboardHighlightIndex = ItemDropperConstants.kNoHighlight;
-        // Don't clear hover index - preserve it so highlighting continues to work
-        if (previousHoverIndex >= 0 && previousHoverIndex < remainingFilteredItems.length) {
-          // Hover index is still valid, keep it
-          _hoverIndex = previousHoverIndex;
-        } else {
-          // Hover index is invalid, clear it
+    _requestRebuild(() {
+      // Update selection inside the rebuild callback
+      selectionUpdate();
+      
+      // Update highlights based on filtered items
+      final List<ItemDropperItem<T>> remainingFilteredItems = _filtered;
+      
+      if (remainingFilteredItems.isNotEmpty) {
+        // Only reset keyboard highlight if keyboard navigation was active
+        if (wasKeyboardActive) {
+          _keyboardHighlightIndex = 0;
           _hoverIndex = ItemDropperConstants.kNoHighlight;
+        } else {
+          // Clear keyboard highlight so mouse hover can work
+          _keyboardHighlightIndex = ItemDropperConstants.kNoHighlight;
+          // Don't clear hover index - preserve it so highlighting continues to work
+          if (previousHoverIndex >= 0 && previousHoverIndex < remainingFilteredItems.length) {
+            // Hover index is still valid, keep it
+            _hoverIndex = previousHoverIndex;
+          } else {
+            // Hover index is invalid, clear it
+            _hoverIndex = ItemDropperConstants.kNoHighlight;
+          }
         }
+      } else {
+        _clearHighlights();
+        _overlayController.hide();
       }
-    } else {
-      _clearHighlights();
-      _overlayController.hide();
-    }
+    });
     
-    // SECTION 1 COMMENTED OUT: Parent notification - this triggers Build #3
     // Defer parent notification until after our rebuild completes
     // Single post-frame callback is sufficient - our rebuild completes in the current frame
-    // WidgetsBinding.instance.addPostFrameCallback((_) {
-    //   if (mounted) {
-    //     widget.onChanged(List.from(_selected));
-    //     // Clear the internal change flag after parent has been notified
-    //     // This allows didUpdateWidget to detect external changes in the next frame
-    //     WidgetsBinding.instance.addPostFrameCallback((_) {
-    //       if (mounted) {
-    //         _isInternalSelectionChange = false;
-    //         // Invalidate overlay cache if showing (will rebuild on next natural build)
-    //         if (_overlayController.isShowing) {
-    //           _invalidateOverlayCache();
-    //         }
-    //       }
-    //     });
-    //   }
-    // });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        widget.onChanged(List.from(_selected));
+        // Clear the internal change flag after parent has been notified
+        // This allows didUpdateWidget to detect external changes in the next frame
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            _isInternalSelectionChange = false;
+            // Invalidate overlay cache if showing (will rebuild on next natural build)
+            if (_overlayController.isShowing) {
+              _invalidateOverlayCache();
+            }
+          }
+        });
+      }
+    });
     
     // Manual focus management - ensure focus is maintained after selection update
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -431,31 +401,32 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     _selected.removeWhere((selected) => selected.value == item.value);
     _clearHighlights();
     
-    // SECTION 2 COMMENTED OUT: Rebuild in _removeChip - testing
-    // Request rebuild through central mechanism
-    // _requestRebuild();
+    // Mark that this is an internal selection change
+    _isInternalSelectionChange = true;
     
-    // SECTION 1 COMMENTED OUT: Parent notification in _removeChip - this triggers Build #3
+    // Request rebuild through central mechanism
+    _requestRebuild();
+    
     // Notify parent of change after rebuild completes
-    // WidgetsBinding.instance.addPostFrameCallback((_) {
-    //   if (mounted) {
-    //     widget.onChanged(List.from(_selected));
-    //     // Clear the internal change flag after parent has been notified
-    //     WidgetsBinding.instance.addPostFrameCallback((_) {
-    //       if (mounted) {
-    //         _isInternalSelectionChange = false;
-    //         // Invalidate overlay cache if showing (will rebuild on next natural build)
-    //         if (_overlayController.isShowing) {
-    //           _invalidateOverlayCache();
-    //         }
-    //         // Focus the text field if we don't already have focus
-    //         if (!_focusNode.hasFocus) {
-    //           _focusNode.requestFocus();
-    //         }
-    //       }
-    //     });
-    //   }
-    // });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        widget.onChanged(List.from(_selected));
+        // Clear the internal change flag after parent has been notified
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            _isInternalSelectionChange = false;
+            // Invalidate overlay cache if showing (will rebuild on next natural build)
+            if (_overlayController.isShowing) {
+              _invalidateOverlayCache();
+            }
+            // Ensure focus is maintained (manual focus management)
+            if (_manualFocusState && !_focusNode.hasFocus) {
+              _focusNode.requestFocus();
+            }
+          }
+        });
+      }
+    });
   }
 
   KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
