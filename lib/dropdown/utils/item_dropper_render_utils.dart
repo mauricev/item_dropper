@@ -104,10 +104,20 @@ class ItemDropperRenderUtils {
       );
     }
     
+    // DEBUG: Track last item AND track all items for debugging
+    final bool isLastItem = filteredItems.isNotEmpty && filteredItems.last.value == item.value;
+    
     return MouseRegion(
-      onEnter: (_) {
+      onEnter: (event) {
+        debugPrint("DEBUG: MouseRegion onEnter - itemIndex=$itemIndex, label=${item.label}, isLastItem=$isLastItem, position=${event.position}");
+        if (isLastItem) {
+          debugPrint("DEBUG LAST ITEM: MouseRegion onEnter for last item - itemIndex=$itemIndex, label=${item.label}");
+        }
         if (keyboardHighlightIndex == ItemDropperConstants.kNoHighlight) {
+          debugPrint("DEBUG: MouseRegion onEnter - setting hoverIndex to $itemIndex");
           safeSetState(() => setHoverIndex(itemIndex));
+        } else {
+          debugPrint("DEBUG: MouseRegion onEnter - keyboard highlight active (index=$keyboardHighlightIndex), not setting hover");
         }
       },
       onExit: (_) =>
@@ -165,7 +175,12 @@ class ItemDropperRenderUtils {
     
     return InkWell(
       hoverColor: Colors.transparent,
-      onTap: isGroupHeader ? null : onTap, // Group headers are not clickable
+      onTap: isGroupHeader ? null : () {
+        debugPrint("DEBUG: InkWell onTap called for item: ${item.label}, isGroupHeader=$isGroupHeader");
+        debugPrint("DEBUG: InkWell onTap - ABOUT TO CALL onTap callback");
+        onTap();
+        debugPrint("DEBUG: InkWell onTap - CALLBACK COMPLETED");
+      }, // Group headers are not clickable
       child: Container(
         height: itemHeight ?? ItemDropperConstants.kDropdownItemHeight,
         color: background,
@@ -300,11 +315,17 @@ class ItemDropperRenderUtils {
                       final hasPrevious = i > 0;
                       final previousIsGroupHeader = hasPrevious && items[i - 1].isGroupHeader;
                       
+                      // DEBUG: Track which item is being built
+                      debugPrint("DEBUG: ListView.builder building item index=$i, label=${item.label}");
+                      
                       // Call builder - if it's the default builder, it will use the separator info
                       // We need to wrap the builder call to pass separator info
                       // Since we can't modify the builder signature, we'll handle separators
                       // by wrapping the result for group headers
                       Widget itemWidget = builder(context, item, isSelected(item));
+                      
+                      // DEBUG: Check if itemWidget contains MouseRegion/InkWell
+                      debugPrint("DEBUG: Item widget built for index=$i, type=${itemWidget.runtimeType}");
                       
                       // If this is a group header and there's a previous non-group-header item,
                       // wrap with separator. But the default builder should handle this.

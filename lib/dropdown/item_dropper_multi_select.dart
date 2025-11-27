@@ -1140,6 +1140,13 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
               _selected.any((x) => x.value == item.value),
           builder: (BuildContext builderContext, ItemDropperItem<T> item,
               bool isSelected) {
+            // DEBUG: Track last item in builder
+            final bool isLastItem = filteredItems.isNotEmpty && filteredItems.last.value == item.value;
+            final int itemIndex = filteredItems.indexWhere((i) => i.value == item.value);
+            if (isLastItem) {
+              print("DEBUG LAST ITEM: Building last item in overlay - index=$itemIndex, label=${item.label}, isSelected=$isSelected, filteredItems.length=${filteredItems.length}");
+            }
+            
             return ItemDropperRenderUtils.buildDropdownItemWithHover<T>(
               context: builderContext,
               item: item,
@@ -1150,7 +1157,13 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
               safeSetState: _safeSetState,
               setHoverIndex: (index) => _hoverIndex = index,
               onTap: () {
+                if (isLastItem) {
+                  print("DEBUG LAST ITEM: onTap called for last item: ${item.label} - ABOUT TO CALL _toggleItem");
+                }
                 _toggleItem(item);
+                if (isLastItem) {
+                  print("DEBUG LAST ITEM: _toggleItem COMPLETED for last item");
+                }
               },
               customBuilder: itemBuilder,
             );
