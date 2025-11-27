@@ -31,12 +31,21 @@ class SingleItemDropper<T> extends StatefulWidget {
   final ItemDropperItem<T>? selectedItem;
   final ItemDropperItemCallback<T> onChanged;
   final Widget Function(BuildContext, ItemDropperItem<T>, bool)? popupItemBuilder;
-  final InputDecoration decoration;
   final double width;
   final double maxDropdownHeight;
   final double elevation;
   final bool showKeyboard;
-  final double textSize;
+  /// TextStyle for input field text.
+  /// If null, defaults to fontSize 12 with black color.
+  final TextStyle? fieldTextStyle;
+  /// TextStyle for popup dropdown items (used by default popupItemBuilder).
+  /// If null, defaults to fontSize 10.
+  /// Ignored if custom popupItemBuilder is provided.
+  final TextStyle? popupTextStyle;
+  /// TextStyle for group headers in popup (used by default popupItemBuilder).
+  /// If null, defaults to fontSize 9, bold, with reduced opacity.
+  /// Ignored if custom popupItemBuilder is provided.
+  final TextStyle? popupGroupHeaderStyle;
   final double? itemHeight;
   final bool enabled;
 
@@ -47,12 +56,13 @@ class SingleItemDropper<T> extends StatefulWidget {
     this.selectedItem,
     required this.onChanged,
     this.popupItemBuilder,
-    required this.decoration,
     required this.width,
     this.maxDropdownHeight = 200.0,
     this.elevation = 4.0,
     this.showKeyboard = false,
-    this.textSize = 12.0,
+    this.fieldTextStyle,
+    this.popupTextStyle,
+    this.popupGroupHeaderStyle,
     this.itemHeight,
     this.enabled = true,
   });
@@ -508,7 +518,21 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
             _dismissDropdown();
           },
           customBuilder: widget.popupItemBuilder ??
-              ItemDropperRenderUtils.defaultDropdownPopupItemBuilder<T>,
+              (context, item, isSelected) {
+                final int itemIndex = filteredItems.indexWhere((x) => x.value == item.value);
+                final bool hasPrevious = itemIndex > 0;
+                final bool previousIsGroupHeader = hasPrevious && filteredItems[itemIndex - 1].isGroupHeader;
+                
+                return ItemDropperRenderUtils.defaultDropdownPopupItemBuilder(
+                  context,
+                  item,
+                  isSelected,
+                  popupTextStyle: widget.popupTextStyle,
+                  popupGroupHeaderStyle: widget.popupGroupHeaderStyle,
+                  hasPreviousItem: hasPrevious,
+                  previousItemIsGroupHeader: previousIsGroupHeader,
+                );
+              },
           itemHeight: widget.itemHeight,
         );
       },
@@ -599,9 +623,10 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
               readOnly: !widget.showKeyboard,
               showCursor: true,
               enableInteractiveSelection: false,
-              style: TextStyle(
-                fontSize: widget.textSize,
-                color: widget.enabled ? Colors.black : Colors.grey,
+              style: (widget.fieldTextStyle ?? const TextStyle(fontSize: 12.0)).copyWith(
+                color: widget.enabled 
+                    ? (widget.fieldTextStyle?.color ?? Colors.black)
+                    : Colors.grey,
               ),
               onTap: () {
                 final textLength = _controller.text.length;
@@ -641,7 +666,7 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
 
                 // No selection → normal typing; live search managed by controller listener
               },
-              decoration: widget.decoration.copyWith(
+              decoration: InputDecoration(
                 filled: false,
                 enabledBorder: OutlineInputBorder(
                   borderSide: BorderSide(
@@ -660,7 +685,7 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
                 ),
                 suffixIconConstraints: BoxConstraints.tightFor(
                   width: _suffixIconWidth,
-                  height: widget.textSize *
+                  height: (widget.fieldTextStyle?.fontSize ?? 12.0) *
                       3.2, // Match calculated suffix icon height
                 ),
                 suffixIcon: ItemDropperSuffixIcons(
@@ -686,7 +711,7 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
                   iconButtonSize: _iconButtonSize,
                   clearButtonRightPosition: _clearButtonRightPosition,
                   arrowButtonRightPosition: _arrowButtonRightPosition,
-                  textSize: widget.textSize, // Pass font size
+                  textSize: widget.fieldTextStyle?.fontSize ?? 12.0, // Pass font size
                 ),
               ),
             ),

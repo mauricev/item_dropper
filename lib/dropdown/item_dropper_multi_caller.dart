@@ -25,15 +25,20 @@ Widget multiDropDown<T>({
   double? maxDropdownHeight,
   int? maxSelected,
   bool enabled = true,
+  TextStyle? fieldTextStyle,
+  TextStyle? popupTextStyle,
+  TextStyle? popupGroupHeaderStyle,
+  Widget Function(BuildContext, ItemDropperItem<T>, bool)? popupItemBuilder,
 }) {
   return MultiItemDropper<T>(
     width: width,
     items: listItems,
     selectedItems: initiallySelected ?? [],
     onChanged: onChanged,
-    // popupItemBuilder: omitted to use default
-    decoration: returnInputDecorationForMultiDropdown(hintText),
-    textSize: 14,
+    popupItemBuilder: popupItemBuilder,
+    fieldTextStyle: fieldTextStyle,
+    popupTextStyle: popupTextStyle,
+    popupGroupHeaderStyle: popupGroupHeaderStyle,
     maxDropdownHeight: maxDropdownHeight ?? 200,
     maxSelected: maxSelected,
     enabled: enabled,

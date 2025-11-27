@@ -20,23 +20,30 @@ InputDecoration returnInputDecorationForDropdown(String? hintText) {
   );
 }
 
-Widget dropDown<T>({required double width,
+Widget dropDown<T>({
+  required double width,
   required List<ItemDropperItem<T>> listItems,
   ItemDropperItem<T>? initiallySelected,
   required Function(ItemDropperItem<T>?) onChanged,
   String? hintText,
   bool showKeyboard = false,
   double? maxDropdownHeight,
-  bool enabled = true}) {
+  bool enabled = true,
+  TextStyle? fieldTextStyle,
+  TextStyle? popupTextStyle,
+  TextStyle? popupGroupHeaderStyle,
+  Widget Function(BuildContext, ItemDropperItem<T>, bool)? popupItemBuilder,
+}) {
   return SingleItemDropper<T>(
     width: width,
     items: listItems,
     selectedItem: initiallySelected,
     onChanged: onChanged,
-    // popupItemBuilder: omitted to use default
-    decoration: returnInputDecorationForDropdown(hintText),
+    popupItemBuilder: popupItemBuilder,
     showKeyboard: showKeyboard,
-    textSize: 10,
+    fieldTextStyle: fieldTextStyle,
+    popupTextStyle: popupTextStyle,
+    popupGroupHeaderStyle: popupGroupHeaderStyle,
     maxDropdownHeight: maxDropdownHeight ?? 200,
     enabled: enabled,
   );

@@ -80,9 +80,9 @@ class ItemDropperRenderUtils {
     Widget w = builder(context, item, isSelected);
     Color? background;
     
-    // Group headers have different styling - no hover/selection effects
+    // Group headers have different styling - no hover/selection effects, no background
     if (isGroupHeader) {
-      background = Theme.of(context).colorScheme.surfaceContainerHighest.withAlpha(200);
+      background = null; // No background for group headers
     } else if (isKeyboardHighlighted || isHovered || isSingleItem) {
       background = Theme
           .of(context)
@@ -110,30 +110,57 @@ class ItemDropperRenderUtils {
   }
 
   /// Default popup row builder for dropdown items
-  static Widget defaultDropdownPopupItemBuilder<T>(BuildContext context,
-      ItemDropperItem<T> item,
-      bool isSelected,) {
+  /// 
+  /// [popupTextStyle] - TextStyle for normal items. If null, defaults to fontSize 10.
+  /// [popupGroupHeaderStyle] - TextStyle for group headers. If null, defaults to fontSize 9, bold, reduced opacity.
+  /// [hasPreviousItem] - Whether there is a previous item (used to determine if separator should be shown above group header).
+  /// [previousItemIsGroupHeader] - Whether the previous item is a group header (used to determine if separator should be shown).
+  static Widget defaultDropdownPopupItemBuilder<T>(
+    BuildContext context,
+    ItemDropperItem<T> item,
+    bool isSelected, {
+    TextStyle? popupTextStyle,
+    TextStyle? popupGroupHeaderStyle,
+    bool hasPreviousItem = false,
+    bool previousItemIsGroupHeader = false,
+  }) {
     // Group headers have different styling
     if (item.isGroupHeader) {
+      final defaultGroupStyle = TextStyle(
+        fontSize: 9.0,
+        fontWeight: FontWeight.bold,
+        color: Theme.of(context).colorScheme.onSurface.withAlpha(200),
+      );
+      
+      // Add separator line above group header if there's a previous item that's not a group header
+      final bool showSeparator = hasPreviousItem && !previousItemIsGroupHeader;
+      
       return Container(
+        decoration: showSeparator
+            ? BoxDecoration(
+                border: Border(
+                  top: BorderSide(
+                    color: Colors.grey.shade300,
+                    width: 1.0,
+                  ),
+                ),
+              )
+            : null,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         child: Text(
           item.label,
-          style: TextStyle(
-            fontSize: 9.0,
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.onSurface.withAlpha(200),
-          ),
+          style: popupGroupHeaderStyle ?? defaultGroupStyle,
         ),
       );
     }
     
+    final defaultItemStyle = const TextStyle(fontSize: 10.0);
     return Container(
       color: isSelected ? Colors.grey.shade200 : null,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Text(
         item.label,
-        style: const TextStyle(fontSize: 10.0),
+        style: popupTextStyle ?? defaultItemStyle,
       ),
     );
   }
@@ -217,12 +244,22 @@ class ItemDropperRenderUtils {
                     itemCount: items.length,
                     itemExtent: itemHeight ??
                         ItemDropperConstants.kDropdownItemHeight,
-                    itemBuilder: (c, i) =>
-                        builder(
-                          context,
-                          items[i],
-                          isSelected(items[i]),
-                        ),
+                    itemBuilder: (c, i) {
+                      final item = items[i];
+                      final hasPrevious = i > 0;
+                      final previousIsGroupHeader = hasPrevious && items[i - 1].isGroupHeader;
+                      
+                      // Call builder - if it's the default builder, it will use the separator info
+                      // We need to wrap the builder call to pass separator info
+                      // Since we can't modify the builder signature, we'll handle separators
+                      // by wrapping the result for group headers
+                      Widget itemWidget = builder(context, item, isSelected(item));
+                      
+                      // If this is a group header and there's a previous non-group-header item,
+                      // wrap with separator. But the default builder should handle this.
+                      // For custom builders, we can't add separators automatically.
+                      return itemWidget;
+                    },
                   ),
                 ),
               ),

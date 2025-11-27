@@ -30,11 +30,20 @@ class MultiItemDropper<T> extends StatefulWidget {
   final List<ItemDropperItem<T>> selectedItems;
   final void Function(List<ItemDropperItem<T>>) onChanged;
   final Widget Function(BuildContext, ItemDropperItem<T>, bool)? popupItemBuilder;
-  final InputDecoration decoration;
   final double width;
   final double? itemHeight; // Optional item height parameter
   final bool enabled;
-  final double textSize;
+  /// TextStyle for input field text and chips.
+  /// If null, defaults to fontSize 10 with black color.
+  final TextStyle? fieldTextStyle;
+  /// TextStyle for popup dropdown items (used by default popupItemBuilder).
+  /// If null, defaults to fontSize 10.
+  /// Ignored if custom popupItemBuilder is provided.
+  final TextStyle? popupTextStyle;
+  /// TextStyle for group headers in popup (used by default popupItemBuilder).
+  /// If null, defaults to fontSize 9, bold, with reduced opacity.
+  /// Ignored if custom popupItemBuilder is provided.
+  final TextStyle? popupGroupHeaderStyle;
   final int? maxSelected;
   final double? maxDropdownHeight; // Change back to maxDropdownHeight
   final bool showScrollbar;
@@ -48,9 +57,10 @@ class MultiItemDropper<T> extends StatefulWidget {
     required this.onChanged,
     required this.width,
     this.inputKey,
-    this.decoration = const InputDecoration(),
     this.enabled = true,
-    this.textSize = 10,
+    this.fieldTextStyle,
+    this.popupTextStyle,
+    this.popupGroupHeaderStyle,
     this.maxDropdownHeight = 300, // Change back to maxDropdownHeight
     this.maxSelected,
     this.showScrollbar = true,
@@ -600,7 +610,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   double _calculateTextFieldHeight() {
     // Calculate height to match chip: max(textLineHeight, 24px icon) + 12px padding
     // This matches the chip structure exactly
-    final double fontSize = widget.textSize;
+    final double fontSize = widget.fieldTextStyle?.fontSize ?? 10.0;
     final double textLineHeight = fontSize * 1.2;
     const double iconHeight = 24.0;
     final double rowContentHeight = textLineHeight > iconHeight ? textLineHeight : iconHeight;
@@ -620,7 +630,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
           _measurements.measureChip(
             context: context,
             rowKey: rowKey,
-            textSize: widget.textSize,
+            textSize: widget.fieldTextStyle?.fontSize ?? 10.0,
             chipVerticalPadding: _chipVerticalPadding,
             safeSetState: _safeSetState,
           );
@@ -651,8 +661,11 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
             children: [
               Text(
                 item.label,
-                style: TextStyle(fontSize: widget.textSize,
-                    color: widget.enabled ? Colors.black : Colors.grey.shade500),
+                style: (widget.fieldTextStyle ?? const TextStyle(fontSize: 10.0)).copyWith(
+                  color: widget.enabled 
+                      ? (widget.fieldTextStyle?.color ?? Colors.black)
+                      : Colors.grey.shade500,
+                ),
               ),
               if (widget.enabled)
                 Container(
@@ -675,7 +688,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   Widget _buildTextFieldChip(double width) {
     // Use measured chip dimensions if available, otherwise fall back to calculation
     final double chipHeight = _measurements.chipHeight ?? _calculateTextFieldHeight();
-    final double textLineHeight = widget.textSize * 1.2; // Approximate
+    final double fontSize = widget.fieldTextStyle?.fontSize ?? 10.0;
+    final double textLineHeight = fontSize * 1.2; // Approximate
     
     double textFieldPaddingTop;
     double textFieldPaddingBottom;
@@ -713,10 +727,10 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       child: TextField(
         controller: _searchController,
         focusNode: _focusNode,
-        style: TextStyle(fontSize: widget.textSize),
+        style: widget.fieldTextStyle ?? const TextStyle(fontSize: 10.0),
         decoration: InputDecoration(
           contentPadding: EdgeInsets.only(
-            right: widget.textSize * 1.2,
+            right: fontSize * 1.2,
             top: textFieldPaddingTop,
             bottom: textFieldPaddingBottom,
           ),
@@ -799,9 +813,29 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     
     print("_buildOverlay: building overlay with ${filteredItems.length} items");
 
-    final Widget Function(BuildContext, ItemDropperItem<T>, bool) itemBuilder =
-        widget.popupItemBuilder ??
-            ItemDropperRenderUtils.defaultDropdownPopupItemBuilder;
+    // Use custom builder if provided, otherwise use default with style parameters
+    // We'll create a wrapper that passes separator info to the default builder
+    final Widget Function(BuildContext, ItemDropperItem<T>, bool) itemBuilder;
+    if (widget.popupItemBuilder != null) {
+      itemBuilder = widget.popupItemBuilder!;
+    } else {
+      // Create a builder that tracks previous items for separator logic
+      itemBuilder = (context, item, isSelected) {
+        final int itemIndex = filteredItems.indexWhere((x) => x.value == item.value);
+        final bool hasPrevious = itemIndex > 0;
+        final bool previousIsGroupHeader = hasPrevious && filteredItems[itemIndex - 1].isGroupHeader;
+        
+        return ItemDropperRenderUtils.defaultDropdownPopupItemBuilder(
+          context,
+          item,
+          isSelected,
+          popupTextStyle: widget.popupTextStyle,
+          popupGroupHeaderStyle: widget.popupGroupHeaderStyle,
+          hasPreviousItem: hasPrevious,
+          previousItemIsGroupHeader: previousIsGroupHeader,
+        );
+      };
+    }
 
     // Use RepaintBoundary with stable key to prevent unnecessary rebuilds
     // The overlay content will update via the items list, but the widget tree structure stays stable
@@ -871,8 +905,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
             child: Text(
               'No results found',
-              style: TextStyle(
-                fontSize: widget.textSize,
+              style: (widget.fieldTextStyle ?? const TextStyle(fontSize: 10.0)).copyWith(
                 color: Colors.grey.shade600,
               ),
             ),
