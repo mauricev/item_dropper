@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'item_dropper_common.dart';
@@ -120,6 +121,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   bool _rebuildScheduled = false;
   // Track when we're the source of selection changes to prevent didUpdateWidget from rebuilding
   bool _isInternalSelectionChange = false;
+  // Manual focus management - track focus state ourselves instead of relying on Flutter
+  bool _manualFocusState = false;
 
   // Use shared filter utils
   final ItemDropperFilterUtils<T> _filterUtils = ItemDropperFilterUtils<T>();
@@ -162,21 +165,35 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   }
 
   void _handleFocusChange() {
-    // Don't trigger rebuild if we're already in a rebuild cycle
-    if (_rebuildScheduled) {
-      return; // Rebuild already scheduled, focus change will be handled in that rebuild
-    }
-    // Don't trigger rebuild if we're in the middle of a selection change
-    // The selection change rebuild will handle the border color update
-    if (_isInternalSelectionChange) {
-      return; // Selection change rebuild will handle border color
-    }
-    // Trigger rebuild to update border color when focus changes
-    // Mark as active code rebuild for tracking
-    _debugRebuildFromActiveCode = true;
-    _safeSetState(() {});
+    // Manual focus management - only update our manual state when Flutter's focus changes
+    // But we control the visual state (border color) based on our manual state
+    final bool flutterHasFocus = _focusNode.hasFocus;
     
-    if (_focusNode.hasFocus) {
+    // DEBUG: Track focus changes
+    if (_debugSelectionChange) {
+      final String stackTrace = StackTrace.current.toString().split('\n').take(10).join('\n');
+      print("DEBUG: FOCUS CHANGE - flutterHasFocus=$flutterHasFocus, _manualFocusState=$_manualFocusState");
+      print("DEBUG: FOCUS CHANGE stack trace:\n$stackTrace");
+    }
+    
+    // Only update manual focus state if Flutter gained focus (user clicked TextField)
+    // Don't update if Flutter lost focus - we manage that manually
+    if (flutterHasFocus && !_manualFocusState) {
+      _manualFocusState = true;
+      _updateFocusVisualState();
+    }
+    // If Flutter lost focus but we want to keep it (overlay tap), restore it
+    else if (!flutterHasFocus && _manualFocusState) {
+      // User didn't intentionally unfocus - restore it
+      scheduleMicrotask(() {
+        if (mounted && _manualFocusState && !_focusNode.hasFocus) {
+          _focusNode.requestFocus();
+        }
+      });
+    }
+    
+    // Use manual focus state for overlay logic
+    if (_manualFocusState) {
       // Don't show overlay if maxSelected is reached
       if (widget.maxSelected != null && 
           _selected.length >= widget.maxSelected!) {
@@ -186,7 +203,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       // Show overlay when focused if there are any filtered items available
       // Use a post-frame callback to ensure input context is available
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted || !_focusNode.hasFocus) {
+        if (!mounted || !_manualFocusState) {
           return;
         }
         
@@ -205,8 +222,26 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       });
     }
   }
+  
+  // Update visual state (border color) based on manual focus state
+  void _updateFocusVisualState() {
+    if (_rebuildScheduled) {
+      return;
+    }
+    if (_isInternalSelectionChange) {
+      return;
+    }
+    _debugRebuildFromActiveCode = true;
+    _safeSetState(() {
+      // Invalidate decoration cache so it rebuilds with new focus state
+      _cachedDecoration = null;
+    });
+  }
 
   void _updateSelection(void Function() selectionUpdate) {
+    // Store focus state before selection update
+    final bool hadFocusBeforeUpdate = _focusNode.hasFocus;
+    
     // Mark that we're the source of this selection change
     _isInternalSelectionChange = true;
     
@@ -310,16 +345,27 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     //   }
     // });
     
-    // Only request focus if we don't already have it (avoid unnecessary focus change rebuild)
-    if (!_focusNode.hasFocus) {
-      _focusNode.requestFocus();
-    }
+    // Manual focus management - ensure focus is maintained after selection update
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _manualFocusState && !_focusNode.hasFocus) {
+        if (_debugSelectionChange) {
+          print("DEBUG: Restoring Flutter focus to match manual focus state");
+        }
+        _focusNode.requestFocus();
+      }
+    });
   }
 
   void _toggleItem(ItemDropperItem<T> item) {
     // Group headers cannot be selected
     if (item.isGroupHeader) {
       return;
+    }
+    
+    // Manual focus management - maintain focus state when clicking overlay items
+    // Don't let Flutter lose focus - we control it manually
+    if (_debugSelectionChange) {
+      print("DEBUG: _toggleItem - maintaining manual focus state: $_manualFocusState");
     }
     
     final bool isCurrentlySelected = _isSelected(item);
@@ -424,6 +470,12 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       _handleArrowUp();
       return KeyEventResult.handled;
     } else if (event.logicalKey == LogicalKeyboardKey.escape) {
+      // Manual focus management - user explicitly unfocused with Escape
+      final String stackTrace = StackTrace.current.toString().split('\n').take(10).join('\n');
+      print("DEBUG: UNFOCUS called from _handleKeyEvent (Escape key) - updating manual focus state");
+      print("DEBUG: UNFOCUS stack trace:\n$stackTrace");
+      _manualFocusState = false;
+      _updateFocusVisualState();
       _focusNode.unfocus();
       return KeyEventResult.handled;
     }
@@ -511,7 +563,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       _clearHighlights();
     });
     // Show overlay if there are filtered items OR if user is searching (to show empty state)
-    if (_focusNode.hasFocus) {
+    // Use manual focus state
+    if (_manualFocusState) {
       if (!_overlayController.isShowing) {
         _overlayController.show();
       }
@@ -688,6 +741,12 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       overlayController: _overlayController,
       fieldKey: widget.inputKey ?? _fieldKey,
       onDismiss: () {
+        // Manual focus management - user clicked outside, unfocus
+        final String stackTrace = StackTrace.current.toString().split('\n').take(10).join('\n');
+        print("DEBUG: onDismiss() called - updating manual focus state to false");
+        print("DEBUG: onDismiss() stack trace:\n$stackTrace");
+        _manualFocusState = false;
+        _updateFocusVisualState();
         _focusNode.unfocus();
         if (_overlayController.isShowing) {
           _overlayController.hide();
@@ -717,13 +776,13 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       }
     }
     
-    // Cache decoration and only recreate when focus state changes
-    final bool hasFocus = _focusNode.hasFocus;
-    if (_cachedDecoration == null || _lastFocusState != hasFocus) {
+    // Cache decoration and only recreate when manual focus state changes
+    // Use manual focus state instead of Flutter's focus state for border color
+    if (_cachedDecoration == null || _lastFocusState != _manualFocusState) {
       if (_debugSelectionChange) {
-        print("DEBUG: _buildInputField #$_debugBuildCount - recreating decoration (focus changed or first time)");
+        print("DEBUG: _buildInputField #$_debugBuildCount - recreating decoration (manual focus changed: $_manualFocusState)");
       }
-      _lastFocusState = hasFocus;
+      _lastFocusState = _manualFocusState;
       _cachedDecoration = BoxDecoration(
         gradient: LinearGradient(
           colors: [Colors.white, Colors.grey.shade200],
@@ -731,7 +790,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
           end: Alignment.bottomCenter,
         ),
         border: Border.all(
-          color: hasFocus ? Colors.blue : Colors.grey.shade400,
+          color: _manualFocusState ? Colors.blue : Colors.grey.shade400,
           width: 1.0,
         ),
         borderRadius: BorderRadius.circular(_containerBorderRadius),
