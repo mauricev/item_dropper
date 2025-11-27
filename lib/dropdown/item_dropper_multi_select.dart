@@ -138,6 +138,13 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   void _handleFocusChange() {
     print("_handleFocusChange called - hasFocus=${_focusNode.hasFocus}, isShowing=${_overlayController.isShowing}");
     if (_focusNode.hasFocus) {
+      // Don't show overlay if maxSelected is reached
+      if (widget.maxSelected != null && 
+          _selected.length >= widget.maxSelected!) {
+        print("_handleFocusChange - maxSelected reached, not showing overlay");
+        return;
+      }
+      
       // Show overlay when focused if there are any filtered items available
       // Use a post-frame callback to ensure input context is available
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -145,6 +152,14 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
           print("_handleFocusChange - post-frame: not mounted or lost focus");
           return;
         }
+        
+        // Check again if maxSelected is reached (might have changed)
+        if (widget.maxSelected != null && 
+            _selected.length >= widget.maxSelected!) {
+          print("_handleFocusChange - post-frame: maxSelected reached, not showing overlay");
+          return;
+        }
+        
         // Check if input context is now available
         final BuildContext? inputContext = (widget.inputKey ?? _fieldKey).currentContext;
         if (inputContext == null) {
@@ -152,6 +167,11 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
           // Try again next frame
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (!mounted || !_focusNode.hasFocus) return;
+            // Check maxSelected again
+            if (widget.maxSelected != null && 
+                _selected.length >= widget.maxSelected!) {
+              return;
+            }
             final filtered = _filtered;
             if (!_overlayController.isShowing && filtered.isNotEmpty) {
               _invalidateOverlayCache();
@@ -232,15 +252,29 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         _selected.length >= widget.maxSelected! && 
         !isCurrentlySelected) {
       // Block adding new items when max is reached
+      // Close the overlay and keep it closed
+      if (_overlayController.isShowing) {
+        _overlayController.hide();
+      }
       return;
     }
     // Allow removing items even when max is reached (toggle behavior)
     
     _updateSelection(() {
+      final bool wasAtMax = widget.maxSelected != null && 
+          _selected.length >= widget.maxSelected!;
+      
       if (!isCurrentlySelected) {
         _selected.add(item);
         // Clear search text after selection for continued searching
         _searchController.clear();
+        
+        // If we just reached the max, close the overlay
+        if (widget.maxSelected != null && 
+            _selected.length >= widget.maxSelected! &&
+            _overlayController.isShowing) {
+          _overlayController.hide();
+        }
       } else {
         // Item is already selected, remove it (toggle off)
         _selected.removeWhere((selected) => selected.value == item.value);
@@ -346,6 +380,17 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
 
   void _handleTextChanged(String value) {
     print("_handleTextChanged called with value='$value'");
+    
+    // Don't show overlay if maxSelected is reached
+    if (widget.maxSelected != null && 
+        _selected.length >= widget.maxSelected!) {
+      // Hide overlay if it's showing
+      if (_overlayController.isShowing) {
+        _overlayController.hide();
+      }
+      return;
+    }
+    
     _invalidateOverlayCache(); // Invalidate cache when search changes
     _safeSetState(() {
       _filterUtils.clearCache();

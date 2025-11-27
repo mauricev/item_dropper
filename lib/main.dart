@@ -11,8 +11,8 @@ void main() async {
   await windowManager.ensureInitialized();
 
   const windowOptions = WindowOptions(
-    size: Size(900, 1300),
-    minimumSize: Size(900, 1300),
+    size: Size(1400, 1000),
+    minimumSize: Size(1400, 1000),
     center: true,
     backgroundColor: Colors.transparent,
     skipTaskbar: false,
@@ -60,12 +60,16 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
 
   // Selected values for multi-select dropdown
   List<ItemDropperItem<String>> selectedFruits = [];
+  List<ItemDropperItem<String>> selectedMaxItems = [];
+  ItemDropperItem<String>? selectedCity;
 
   // Generate dummy data
   late final List<ItemDropperItem<String>> fruits;
   late final List<ItemDropperItem<int>> numbers;
   late final List<ItemDropperItem<String>> countries;
   late final List<ItemDropperItem<int>> largeItemsList;
+  late final List<ItemDropperItem<String>> maxTestItems;
+  late final List<ItemDropperItem<String>> citiesWithStates;
 
   @override
   void initState() {
@@ -122,6 +126,45 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
                 4, '0')} - ${_getRandomLabel(index)}',
           ),
     );
+
+    // Dropdown 6: 10 items with maxSelected of 4
+    maxTestItems = const [
+      ItemDropperItem(value: 'item1', label: 'Item 1'),
+      ItemDropperItem(value: 'item2', label: 'Item 2'),
+      ItemDropperItem(value: 'item3', label: 'Item 3'),
+      ItemDropperItem(value: 'item4', label: 'Item 4'),
+      ItemDropperItem(value: 'item5', label: 'Item 5'),
+      ItemDropperItem(value: 'item6', label: 'Item 6'),
+      ItemDropperItem(value: 'item7', label: 'Item 7'),
+      ItemDropperItem(value: 'item8', label: 'Item 8'),
+      ItemDropperItem(value: 'item9', label: 'Item 9'),
+      ItemDropperItem(value: 'item10', label: 'Item 10'),
+    ];
+
+    // Dropdown 7: Cities grouped by states
+    citiesWithStates = const [
+      // New York group
+      ItemDropperItem(value: 'ny_header', label: 'New York', isGroupHeader: true),
+      ItemDropperItem(value: 'nyc', label: 'New York City'),
+      ItemDropperItem(value: 'buffalo', label: 'Buffalo'),
+      ItemDropperItem(value: 'rochester', label: 'Rochester'),
+      ItemDropperItem(value: 'albany', label: 'Albany'),
+      ItemDropperItem(value: 'syracuse', label: 'Syracuse'),
+      // Connecticut group
+      ItemDropperItem(value: 'ct_header', label: 'Connecticut', isGroupHeader: true),
+      ItemDropperItem(value: 'hartford', label: 'Hartford'),
+      ItemDropperItem(value: 'new_haven', label: 'New Haven'),
+      ItemDropperItem(value: 'stamford', label: 'Stamford'),
+      ItemDropperItem(value: 'bridgeport', label: 'Bridgeport'),
+      ItemDropperItem(value: 'waterbury', label: 'Waterbury'),
+      // New Jersey group
+      ItemDropperItem(value: 'nj_header', label: 'New Jersey', isGroupHeader: true),
+      ItemDropperItem(value: 'newark', label: 'Newark'),
+      ItemDropperItem(value: 'jersey_city', label: 'Jersey City'),
+      ItemDropperItem(value: 'paterson', label: 'Paterson'),
+      ItemDropperItem(value: 'edison', label: 'Edison'),
+      ItemDropperItem(value: 'trenton', label: 'Trenton'),
+    ];
   }
 
   String _getRandomLabel(int seed) {
@@ -152,7 +195,7 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
         padding: const EdgeInsets.all(24.0),
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 800),
+            constraints: const BoxConstraints(maxWidth: 1400),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -167,8 +210,17 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
                 ),
                 const SizedBox(height: 32),
 
-                // Dropdown 1: Fruits (Small list)
-                _buildDropdownSection(
+                // Two-column layout
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Left column: Dropdowns 1-5
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Dropdown 1: Fruits (Small list)
+                          _buildDropdownSection(
                   title: '1. Fruits (8 items)',
                   description: 'Small list for basic functionality testing',
                   selectedValue: selectedFruit?.label,
@@ -253,23 +305,80 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
 
                 const SizedBox(height: 32),
 
-                // Dropdown 5: Multi-Select Fruits
-                _buildMultiDropdownSection(
-                  title: '5. Multi-Select Fruits (8 items)',
-                  description: 'Select multiple fruits with chip-based display',
-                  selectedValues: selectedFruits.map((e) => e.label).join(', '),
-                  dropdown: multiDropDown<String>(
-                    width: 500,
-                    listItems: fruits,
-                    initiallySelected: selectedFruits,
-                    onChanged: (items) {
-                      setState(() {
-                        selectedFruits = items;
-                      });
-                    },
-                    hintText: 'Select fruits...',
-                    maxDropdownHeight: 250,
-                  ),
+                          // Dropdown 5: Multi-Select Fruits
+                          _buildMultiDropdownSection(
+                            title: '5. Multi-Select Fruits (8 items)',
+                            description: 'Select multiple fruits with chip-based display',
+                            selectedValues: selectedFruits.map((e) => e.label).join(', '),
+                            dropdown: multiDropDown<String>(
+                              width: 500,
+                              listItems: fruits,
+                              initiallySelected: selectedFruits,
+                              onChanged: (items) {
+                                setState(() {
+                                  selectedFruits = items;
+                                });
+                              },
+                              hintText: 'Select fruits...',
+                              maxDropdownHeight: 250,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(width: 32),
+
+                    // Right column: Dropdowns 6-7
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Dropdown 6: Multi-Select with maxSelected of 4
+                          _buildMultiDropdownSection(
+                            title: '6. Multi-Select with Max (10 items, max 4)',
+                            description: 'Test maxSelected functionality - can only select up to 4 items',
+                            selectedValues: selectedMaxItems.map((e) => e.label).join(', '),
+                            dropdown: multiDropDown<String>(
+                              width: 500,
+                              listItems: maxTestItems,
+                              initiallySelected: selectedMaxItems,
+                              onChanged: (items) {
+                                setState(() {
+                                  selectedMaxItems = items;
+                                });
+                              },
+                              hintText: 'Select up to 4 items...',
+                              maxDropdownHeight: 250,
+                              maxSelected: 4,
+                            ),
+                          ),
+
+                          const SizedBox(height: 32),
+
+                          // Dropdown 7: Cities with State Group Headers
+                          _buildDropdownSection(
+                            title: '7. Cities by State (with Group Headers)',
+                            description: 'Test group headers - states are non-selectable labels',
+                            selectedValue: selectedCity?.label,
+                            dropdown: dropDown<String>(
+                              width: 400,
+                              listItems: citiesWithStates,
+                              initiallySelected: selectedCity,
+                              onChanged: (item) {
+                                setState(() {
+                                  selectedCity = item;
+                                });
+                              },
+                              hintText: 'Select a city...',
+                              showKeyboard: true,
+                              maxDropdownHeight: 300,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
 
                 const SizedBox(height: 48),
@@ -303,6 +412,12 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
                           'Multi Fruits:', selectedFruits.isEmpty
                           ? 'None'
                           : selectedFruits.map((e) => e.label).join(', ')),
+                      _buildSelectionRow(
+                          'Max Items (4 max):', selectedMaxItems.isEmpty
+                          ? 'None'
+                          : selectedMaxItems.map((e) => e.label).join(', ')),
+                      _buildSelectionRow(
+                          'City:', selectedCity?.label ?? 'None'),
                     ],
                   ),
                 ),

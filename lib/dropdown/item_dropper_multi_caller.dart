@@ -23,6 +23,7 @@ Widget multiDropDown<T>({
   required Function(List<ItemDropperItem<T>>) onChanged,
   String? hintText,
   double? maxDropdownHeight,
+  int? maxSelected,
   bool enabled = true,
 }) {
   return MultiItemDropper<T>(
@@ -34,6 +35,7 @@ Widget multiDropDown<T>({
     decoration: returnInputDecorationForMultiDropdown(hintText),
     textSize: 14,
     maxDropdownHeight: maxDropdownHeight ?? 200,
+    maxSelected: maxSelected,
     enabled: enabled,
   );
 }
