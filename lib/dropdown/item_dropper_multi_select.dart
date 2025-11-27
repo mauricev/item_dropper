@@ -108,6 +108,14 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   // Cache decoration to prevent recreation on every build
   BoxDecoration? _cachedDecoration;
   bool? _lastFocusState;
+  
+  // Debug flag to track rebuilds after selection changes
+  bool _debugSelectionChange = false;
+  int _debugBuildCount = 0;
+
+  // Single rebuild mechanism - prevents cascading rebuilds
+  bool _needsRebuild = false;
+  bool _rebuildScheduled = false;
 
   // Use shared filter utils
   final ItemDropperFilterUtils<T> _filterUtils = ItemDropperFilterUtils<T>();
@@ -150,7 +158,10 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   }
 
   void _handleFocusChange() {
-    print("_handleFocusChange called - hasFocus=${_focusNode.hasFocus}, isShowing=${_overlayController.isShowing}");
+    // Don't trigger rebuild if we're already in a rebuild cycle
+    if (_rebuildScheduled) {
+      return; // Rebuild already scheduled, focus change will be handled in that rebuild
+    }
     // Trigger rebuild to update border color when focus changes
     _safeSetState(() {});
     
@@ -158,7 +169,6 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       // Don't show overlay if maxSelected is reached
       if (widget.maxSelected != null && 
           _selected.length >= widget.maxSelected!) {
-        print("_handleFocusChange - maxSelected reached, not showing overlay");
         return;
       }
       
@@ -166,21 +176,18 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       // Use a post-frame callback to ensure input context is available
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted || !_focusNode.hasFocus) {
-          print("_handleFocusChange - post-frame: not mounted or lost focus");
           return;
         }
         
         // Check again if maxSelected is reached (might have changed)
         if (widget.maxSelected != null && 
             _selected.length >= widget.maxSelected!) {
-          print("_handleFocusChange - post-frame: maxSelected reached, not showing overlay");
           return;
         }
         
         // Check if input context is now available
         final BuildContext? inputContext = (widget.inputKey ?? _fieldKey).currentContext;
         if (inputContext == null) {
-          print("_handleFocusChange - post-frame: inputContext still null, waiting another frame");
           // Try again next frame
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (!mounted || !_focusNode.hasFocus) return;
@@ -199,29 +206,45 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
           return;
         }
         final filtered = _filtered;
-        print("_handleFocusChange - post-frame: filtered.length=${filtered.length}, isShowing=${_overlayController.isShowing}");
         if (!_overlayController.isShowing && filtered.isNotEmpty) {
-          print("_handleFocusChange - showing overlay in post-frame");
           // Invalidate cache to ensure overlay is rebuilt with valid context
           _invalidateOverlayCache();
           _clearHighlights();
           _overlayController.show();
-          print("_handleFocusChange - overlay.show() called, isShowing=${_overlayController.isShowing}");
         }
       });
-    } else {
-      print("_handleFocusChange - focus lost, isShowing=${_overlayController.isShowing}");
     }
   }
 
   void _updateSelection(void Function() selectionUpdate) {
-    print("_updateSelection1 - before setState, _selected.length=${_selected.length}");
+    // Set debug flag to track rebuilds after selection change
+    _debugSelectionChange = true;
+    _debugBuildCount = 0;
+    print("DEBUG: Selection change detected - starting rebuild tracking");
+    
+    // Clear debug flag after a few frames to stop tracking
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _debugSelectionChange) {
+          print("DEBUG: Stopping rebuild tracking after $_debugBuildCount builds");
+          _debugSelectionChange = false;
+          _debugBuildCount = 0;
+        }
+      });
+    });
+    
     // Preserve keyboard highlight state - only reset if keyboard navigation was active
     final bool wasKeyboardActive = _keyboardHighlightIndex != ItemDropperConstants.kNoHighlight;
     final int previousHoverIndex = _hoverIndex;
-    _safeSetState(() {
+    
+    // Update selection and all related state inside setState to ensure single rebuild
+    _requestRebuild(() {
+      // Update selection inside the rebuild callback
       selectionUpdate();
+      
+      // Update highlights based on filtered items
       final List<ItemDropperItem<T>> remainingFilteredItems = _filtered;
+      
       if (remainingFilteredItems.isNotEmpty) {
         // Only reset keyboard highlight if keyboard navigation was active
         if (wasKeyboardActive) {
@@ -231,9 +254,6 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
           // Clear keyboard highlight so mouse hover can work
           _keyboardHighlightIndex = ItemDropperConstants.kNoHighlight;
           // Don't clear hover index - preserve it so highlighting continues to work
-          // MouseRegion's onEnter will naturally update it when mouse moves
-          // If hover index becomes invalid (out of bounds), it just won't highlight anything
-          // until mouse moves, which is acceptable
           if (previousHoverIndex >= 0 && previousHoverIndex < remainingFilteredItems.length) {
             // Hover index is still valid, keep it
             _hoverIndex = previousHoverIndex;
@@ -244,16 +264,31 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         }
       } else {
         _clearHighlights();
-        print("1");
         _overlayController.hide();
-     }
+      }
     });
-    // Notify parent of change and schedule overlay reposition after layout settles
-    print("_updateSelection - calling widget.onChanged (deferred)");
-    _scheduleOverlayReposition();
-    print("_updateSelection - calling _focusNode.requestFocus()");
+    
+    // Defer parent notification until after our rebuild completes
+    // Use multiple post-frame callbacks to ensure parent rebuild happens after our rebuild
+    // This prevents parent rebuild from causing didUpdateWidget to trigger another rebuild
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            widget.onChanged(List.from(_selected));
+            // Schedule overlay reposition after parent rebuilds
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted && _overlayController.isShowing) {
+                _invalidateOverlayCache();
+                // Don't call setState here - overlay will rebuild on next natural build
+              }
+            });
+          }
+        });
+      });
+    });
+    
     _focusNode.requestFocus();
-    print("_updateSelection - done");
   }
 
   void _toggleItem(ItemDropperItem<T> item) {
@@ -302,17 +337,48 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   }
 
   void _removeChip(ItemDropperItem<T> item) {
-    print("_removeChip called - calling setState");
-    setState(() {
-      _selected.removeWhere((selected) => selected.value == item.value);
-      // After removal, clear highlights
-      _clearHighlights();
-    });
-    // Notify parent of change and schedule overlay reposition after layout settles
-    _scheduleOverlayReposition();
-    // Focus the text field after layout settles, especially important for last chip removal
+    // Set debug flag to track rebuilds after selection change
+    _debugSelectionChange = true;
+    _debugBuildCount = 0;
+    print("DEBUG: Chip removal detected - starting rebuild tracking");
+    
+    // Clear debug flag after a few frames to stop tracking
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _focusNode.requestFocus();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _debugSelectionChange) {
+          print("DEBUG: Stopping rebuild tracking after $_debugBuildCount builds");
+          _debugSelectionChange = false;
+          _debugBuildCount = 0;
+        }
+      });
+    });
+    
+    // Update selection immediately (synchronous)
+    _selected.removeWhere((selected) => selected.value == item.value);
+    _clearHighlights();
+    
+    // Request rebuild through central mechanism
+    _requestRebuild();
+    
+    // Notify parent of change after rebuild completes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        widget.onChanged(List.from(_selected));
+        // Schedule overlay reposition after parent rebuilds
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _overlayController.isShowing) {
+            _invalidateOverlayCache();
+            // Don't call setState here - overlay will rebuild on next natural build
+          }
+        });
+      }
+    });
+    
+    // Focus the text field after layout settles (only if we don't already have focus)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_focusNode.hasFocus) {
+        _focusNode.requestFocus();
+      }
     });
   }
 
@@ -396,8 +462,6 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   }
 
   void _handleTextChanged(String value) {
-    print("_handleTextChanged called with value='$value'");
-    
     // Don't show overlay if maxSelected is reached
     if (widget.maxSelected != null && 
         _selected.length >= widget.maxSelected!) {
@@ -419,7 +483,6 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         _overlayController.show();
       }
     } else if (_filtered.isEmpty && _overlayController.isShowing) {
-      print("2");
       _overlayController.hide();
     }
   }
@@ -427,8 +490,55 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   // Helper method to safely call setState
   void _safeSetState(void Function() fn) {
     if (mounted) {
+      if (_debugSelectionChange) {
+        final String stackTrace = StackTrace.current.toString().split('\n').take(8).join('\n');
+        print("DEBUG: _safeSetState() called - _rebuildScheduled=$_rebuildScheduled");
+        print("DEBUG: _safeSetState() stack trace:\n$stackTrace");
+      }
       setState(fn);
     }
+  }
+
+  // Central rebuild mechanism - prevents cascading rebuilds
+  // Only allows one rebuild at a time - ignores further requests until rebuild completes
+  void _requestRebuild([void Function()? stateUpdate]) {
+    if (!mounted) return;
+    
+    if (_debugSelectionChange) {
+      print("DEBUG: _requestRebuild() called - _rebuildScheduled=$_rebuildScheduled, hasStateUpdate=${stateUpdate != null}");
+      final String stackTrace = StackTrace.current.toString().split('\n').take(8).join('\n');
+      print("DEBUG: _requestRebuild() stack trace:\n$stackTrace");
+    }
+    
+    // If rebuild already in progress, ignore this request
+    if (_rebuildScheduled) {
+      if (_debugSelectionChange) {
+        print("DEBUG: _requestRebuild() - rebuild already in progress, ignoring");
+      }
+      return;
+    }
+    
+    // Mark that rebuild is scheduled and trigger it immediately
+    _rebuildScheduled = true;
+    if (_debugSelectionChange) {
+      print("DEBUG: _requestRebuild() - triggering immediate rebuild");
+    }
+    
+    // Trigger immediate rebuild - state updates happen inside setState callback
+    _safeSetState(() {
+      // Execute state update callback if provided
+      stateUpdate?.call();
+    });
+    
+    // After rebuild completes, reset flag to allow future rebuilds
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _rebuildScheduled = false;
+        if (_debugSelectionChange) {
+          print("DEBUG: _requestRebuild() - rebuild complete, flag reset");
+        }
+      }
+    });
   }
 
   // Invalidate overlay cache - call this whenever overlay needs to rebuild
@@ -437,31 +547,27 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     _overlayCacheKey = null;
   }
 
-  // Schedule overlay reposition after parent rebuilds and layout settles
-  // This ensures overlay repositions after input field has moved (e.g., when chips wrap/unwrap)
-  void _scheduleOverlayReposition() {
-    // First post-frame: notify parent of change
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      widget.onChanged(List.from(_selected));
-      // Second post-frame: after parent rebuilds and layout settles, reposition overlay
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && _overlayController.isShowing) {
-          _invalidateOverlayCache();
-          _safeSetState(() {});
-        }
-      });
-    });
-  }
 
   @override
   void didUpdateWidget(covariant MultiItemDropper<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
     
+    if (_debugSelectionChange) {
+      print("DEBUG: didUpdateWidget() called - _rebuildScheduled=$_rebuildScheduled");
+    }
+    
     // Sync selected items if parent changed them
     if (widget.selectedItems.length != _selected.length ||
         !widget.selectedItems.every((item) => _isSelected(item))) {
+      if (_debugSelectionChange) {
+        print("DEBUG: didUpdateWidget() - syncing selectedItems from parent");
+      }
       _selected = List.from(widget.selectedItems);
+      // Don't trigger rebuild here if we're already rebuilding
+      // Parent change will be reflected in the current rebuild cycle
+      if (!_rebuildScheduled) {
+        _requestRebuild();
+      }
     }
     
     // Invalidate filter cache if items list changed
@@ -469,9 +575,11 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         !_areItemsEqual(widget.items, oldWidget.items)) {
       _filterUtils.initializeItems(widget.items);
       _invalidateOverlayCache();
-      _safeSetState(() {
-        _filterUtils.clearCache();
-      });
+      // Use central rebuild mechanism instead of direct setState
+      // But only if not already rebuilding
+      if (!_rebuildScheduled) {
+        _requestRebuild();
+      }
     }
   }
   
@@ -495,7 +603,12 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
 
   @override
   Widget build(BuildContext context) {
-    print("build() called - _selected.length=${_selected.length}");
+    if (_debugSelectionChange) {
+      _debugBuildCount++;
+      final String stackTrace = StackTrace.current.toString().split('\n').take(5).join('\n');
+      print("DEBUG: build() called #$_debugBuildCount - _needsRebuild=$_needsRebuild, _rebuildScheduled=$_rebuildScheduled");
+      print("DEBUG: build() stack trace:\n$stackTrace");
+    }
     return ItemDropperWithOverlay(
       layerLink: _layerLink,
       overlayController: _overlayController,
@@ -503,7 +616,6 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       onDismiss: () {
         _focusNode.unfocus();
         if (_overlayController.isShowing) {
-          print("3");
           _overlayController.hide();
         }
       },
@@ -513,9 +625,25 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   }
 
   Widget _buildInputField({InputDecoration? previewDecoration}) {
+    // Debug: Only print when tracking selection changes
+    if (_debugSelectionChange) {
+      _debugBuildCount++;
+      // Check if this is a new build or same build
+      if (_debugBuildCount == 2) {
+        final String stackTrace = StackTrace.current.toString().split('\n').take(10).join('\n');
+        print("DEBUG: _buildInputField called #$_debugBuildCount (selection change tracking active)");
+        print("DEBUG: _buildInputField stack trace:\n$stackTrace");
+      } else {
+        print("DEBUG: _buildInputField called #$_debugBuildCount (selection change tracking active)");
+      }
+    }
+    
     // Cache decoration and only recreate when focus state changes
     final bool hasFocus = _focusNode.hasFocus;
     if (_cachedDecoration == null || _lastFocusState != hasFocus) {
+      if (_debugSelectionChange) {
+        print("DEBUG: _buildInputField #$_debugBuildCount - recreating decoration (focus changed or first time)");
+      }
       _lastFocusState = hasFocus;
       _cachedDecoration = BoxDecoration(
         gradient: LinearGradient(
@@ -555,6 +683,9 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
                 // Only measure if contexts are available (after first frame)
                 final wrapContext = _measurements.wrapKey.currentContext;
                 if (wrapContext != null) {
+                  if (_debugSelectionChange) {
+                    print("DEBUG: _buildInputField #$_debugBuildCount - calling measureWrapAndTextField");
+                  }
                   _measurements.measureWrapAndTextField(
                     wrapContext: wrapContext,
                     textFieldContext: _measurements.textFieldKey.currentContext,
@@ -562,10 +693,12 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
                     selectedCount: _selected.length,
                     chipSpacing: _chipSpacing,
                     minTextFieldWidth: _minTextFieldWidth,
-                    safeSetState: _safeSetState,
+                    requestRebuild: _requestRebuild,
                   );
                 }
-
+                if (_debugSelectionChange) {
+                  print("DEBUG: _buildInputField #$_debugBuildCount - building Wrap widget");
+                }
                 return Wrap(
                   key: _measurements.wrapKey,
                   spacing: _chipSpacing,
@@ -588,6 +721,9 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
                     if (_selected.isNotEmpty)
                       Builder(
                         builder: (context) {
+                          if (_debugSelectionChange) {
+                            print("DEBUG: _buildInputField #$_debugBuildCount - building TextField Builder");
+                          }
                           // Use measured remaining width if available (from previous render)
                           // Otherwise use a simple calculation as initial estimate
                           final double actualRemaining = _measurements.remainingWidth ?? 
@@ -649,14 +785,15 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     return LayoutBuilder(
       key: valueKey, // Use stable ValueKey for widget preservation
       builder: (context, constraints) {
-        // Measure chip dimensions after first render (only for first chip)
-        if (isFirstChip && rowKey != null) {
+        // Measure chip dimensions after first render (only for first chip, only once)
+        // Chip measurements don't change, so we only need to measure once
+        if (isFirstChip && rowKey != null && _measurements.chipHeight == null) {
           _measurements.measureChip(
             context: context,
             rowKey: rowKey,
             textSize: widget.fieldTextStyle?.fontSize ?? 10.0,
             chipVerticalPadding: _chipVerticalPadding,
-            safeSetState: _safeSetState,
+            requestRebuild: _requestRebuild,
           );
         }
         
@@ -736,15 +873,10 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       // Same adjustment as measured case
       textFieldPaddingTop = chipTextCenter - (textLineHeight / 2.0) - 6.0;
       textFieldPaddingBottom = chipHeight - textLineHeight - textFieldPaddingTop;
-      
-      debugPrint('TEXTFIELD ALIGNMENT (fallback):');
-      debugPrint('  Calculated chip text center: $chipTextCenter');
-      debugPrint('  TextField padding top: $textFieldPaddingTop');
-      debugPrint('  TextField padding bottom: $textFieldPaddingBottom');
     }
     
     // Use Container with exact width - Wrap will use this for layout
-    return Container(
+    return SizedBox(
       key: _measurements.textFieldKey, // Key to measure TextField position
       width: width, // Exact width - Wrap will use this
       height: chipHeight, // Use measured chip height
@@ -789,20 +921,15 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     if (_cachedOverlayWidget != null && 
         _overlayCacheKey == currentKey && 
         hasValidContext) {
-      print("_getOverlay: returning cached overlay, key=$currentKey");
       return _cachedOverlayWidget!;
     }
-    
-    print("_getOverlay: building new overlay, key=$currentKey, hasValidContext=$hasValidContext");
+
     final Widget overlay = _buildOverlay();
     
     // Only cache if we have a valid context
     if (hasValidContext) {
       _cachedOverlayWidget = overlay;
       _overlayCacheKey = currentKey;
-    } else {
-      // Don't cache empty overlays - they'll be rebuilt when context is available
-      print("_getOverlay: not caching overlay (no valid context)");
     }
     
     return overlay;
@@ -810,13 +937,11 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
 
   Widget _buildOverlay() {
     final List<ItemDropperItem<T>> filteredItems = _filtered;
-    print("_buildOverlay called: filteredItems.length=${filteredItems.length}");
     
     // Get the input field's context for proper positioning
     final BuildContext? inputContext = (widget.inputKey ?? _fieldKey)
         .currentContext;
     if (inputContext == null) {
-      print("_buildOverlay: inputContext is null, returning cached or SizedBox.shrink");
       // Return cached overlay if available, otherwise empty
       return _cachedOverlayWidget ?? const SizedBox.shrink();
     }
@@ -824,7 +949,6 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     // Get current input field size for dynamic positioning
     final RenderBox? inputBox = inputContext.findRenderObject() as RenderBox?;
     final Size inputSize = inputBox?.size ?? Size.zero;
-    print("_buildOverlay: inputSize=$inputSize");
 
     // Show empty state if user is searching but no results found
     if (filteredItems.isEmpty) {
@@ -833,11 +957,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         return _buildEmptyStateOverlay(inputContext);
       }
       // No search text and no items - hide overlay
-      print("_buildOverlay: filteredItems is EMPTY - returning SizedBox.shrink");
       return const SizedBox.shrink();
     }
-    
-    print("_buildOverlay: building overlay with ${filteredItems.length} items");
 
     // Use custom builder if provided, otherwise use default with style parameters
     // We'll create a wrapper that passes separator info to the default builder
@@ -953,13 +1074,14 @@ class _ChipMeasurementHelper {
   final GlobalKey wrapKey = GlobalKey();
   
   bool _isMeasuring = false;
+  int _lastMeasuredSelectedCount = -1;
   
   void measureChip({
     required BuildContext context,
     required GlobalKey rowKey,
     required double textSize,
     required double chipVerticalPadding,
-    required void Function(void Function()) safeSetState,
+    required void Function() requestRebuild, // Changed from safeSetState
   }) {
     if (_isMeasuring) return;
     _isMeasuring = true;
@@ -977,16 +1099,12 @@ class _ChipMeasurementHelper {
         final double rowTop = chipVerticalPadding;
         final double textCenter = rowTop + (rowHeight / 2.0);
         
-        if (chipHeight != newChipHeight ||
-            chipTextTop != textCenter ||
-            chipTextHeight != rowHeight ||
-            chipWidth != newChipWidth) {
-          safeSetState(() {
-            chipHeight = newChipHeight;
-            chipTextTop = textCenter;
-            chipTextHeight = rowHeight;
-            chipWidth = newChipWidth;
-          });
+        // Chip measurements only need to be done once - they don't change
+        if (chipHeight == null) {
+          chipHeight = newChipHeight;
+          chipTextTop = textCenter;
+          chipTextHeight = rowHeight;
+          chipWidth = newChipWidth;
           
           debugPrint('CHIP MEASUREMENTS:');
           debugPrint('  Font size: $textSize');
@@ -995,6 +1113,10 @@ class _ChipMeasurementHelper {
           debugPrint('  Row top: $rowTop');
           debugPrint('  Row height: $rowHeight');
           debugPrint('  Text center: $textCenter');
+          
+          // Don't request rebuild from measurements - measurements just update state
+          // The rebuild will happen naturally on the next frame if state changed
+          // Requesting rebuild here causes cascading rebuilds
         }
       }
     });
@@ -1007,9 +1129,15 @@ class _ChipMeasurementHelper {
     required int selectedCount,
     required double chipSpacing,
     required double minTextFieldWidth,
-    required void Function(void Function()) safeSetState,
+    required void Function() requestRebuild, // Changed from safeSetState
   }) {
-    if (_isMeasuring || wrapContext == null || selectedCount == 0) return;
+    // Only measure if selection count changed or we haven't measured yet
+    if (wrapContext == null || selectedCount == 0) return;
+    if (_lastMeasuredSelectedCount == selectedCount) return;
+    if (_isMeasuring) return; // Already measuring, skip
+    
+    // Set immediately to prevent duplicate calls during the same build cycle
+    _lastMeasuredSelectedCount = selectedCount;
     _isMeasuring = true;
     
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1021,10 +1149,11 @@ class _ChipMeasurementHelper {
       final double newWrapHeight = wrapBox.size.height;
       final double wrapWidth = wrapBox.size.width;
       
+      bool needsUpdate = false;
+      
       if (newWrapHeight != wrapHeight) {
-        safeSetState(() {
-          wrapHeight = newWrapHeight;
-        });
+        wrapHeight = newWrapHeight;
+        needsUpdate = true;
       }
       
       final RenderBox? textFieldBox = textFieldContext?.findRenderObject() as RenderBox?;
@@ -1046,22 +1175,24 @@ class _ChipMeasurementHelper {
             
             if (actualRemaining > 0 && (remainingWidth == null ||
                 (remainingWidth! - actualRemaining).abs() > 1.0)) {
-              safeSetState(() {
-                remainingWidth = actualRemaining.clamp(minTextFieldWidth, wrapWidth);
-              });
+              remainingWidth = actualRemaining.clamp(minTextFieldWidth, wrapWidth);
+              needsUpdate = true;
             }
           } else {
             final double lastChipRight = lastChipPos.dx - wrapPos.dx + lastChipBox.size.width;
             final double firstLineRemaining = wrapWidth - lastChipRight - chipSpacing;
             
             if (firstLineRemaining > minTextFieldWidth) {
-              safeSetState(() {
-                remainingWidth = firstLineRemaining;
-              });
+              remainingWidth = firstLineRemaining;
+              needsUpdate = true;
             }
           }
         }
       }
+      
+      // Don't request rebuild from measurements - measurements just update state
+      // The rebuild will happen naturally on the next frame if state changed
+      // Requesting rebuild here causes cascading rebuilds
     });
   }
 }

@@ -324,7 +324,6 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
 
   void _removeOverlay() {
     if (_overlayController.isShowing) {
-      print("4");
       _overlayController.hide();
     }
     _hoverIndex = ItemDropperConstants.kNoHighlight;
@@ -508,7 +507,6 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
             if (item.isGroupHeader) {
               return;
             }
-            debugPrint("single buildDropdownItem onTap called!");
             _withSquelch(() {
               _controller.text = item.label;
               _controller.selection =
