@@ -99,9 +99,6 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   int _keyboardHighlightIndex = ItemDropperConstants.kNoHighlight;
   int _hoverIndex = ItemDropperConstants.kNoHighlight;
   
-  // Overlay cache tracking
-  Widget? _cachedOverlayWidget;
-  _OverlayCacheKey? _overlayCacheKey;
   
   // Measurement helper
   final _ChipMeasurementHelper _measurements = _ChipMeasurementHelper();
@@ -215,7 +212,6 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         
         final filtered = _filtered;
         if (!_overlayController.isShowing && filtered.isNotEmpty) {
-          _invalidateOverlayCache();
           _clearHighlights();
           _overlayController.show();
         }
@@ -308,7 +304,6 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
             _isInternalSelectionChange = false;
             // Invalidate overlay cache if showing (will rebuild on next natural build)
             if (_overlayController.isShowing) {
-              _invalidateOverlayCache();
             }
           }
         });
@@ -380,7 +375,6 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
             _manualFocusState) {
           final filtered = _filtered;
           if (!_overlayController.isShowing && filtered.isNotEmpty) {
-            _invalidateOverlayCache();
             _clearHighlights();
             _overlayController.show();
           }
@@ -431,7 +425,6 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
             _isInternalSelectionChange = false;
             // Invalidate overlay cache if showing (will rebuild on next natural build)
             if (_overlayController.isShowing) {
-              _invalidateOverlayCache();
             }
             // Ensure focus is maintained (manual focus management)
             if (_manualFocusState && !_focusNode.hasFocus) {
@@ -444,7 +437,6 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
                 (widget.maxSelected == null || _selected.length < widget.maxSelected!)) {
               final filtered = _filtered;
               if (!_overlayController.isShowing && filtered.isNotEmpty) {
-                _invalidateOverlayCache();
                 _clearHighlights();
                 _overlayController.show();
               }
@@ -553,7 +545,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       return;
     }
     
-    _invalidateOverlayCache(); // Invalidate cache when search changes
+    // Cache removed - overlay rebuilds automatically
     _debugRebuildFromActiveCode = true;
     _safeSetState(() {
       _filterUtils.clearCache();
@@ -637,11 +629,6 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     });
   }
 
-  // Invalidate overlay cache - call this whenever overlay needs to rebuild
-  void _invalidateOverlayCache() {
-    _cachedOverlayWidget = null;
-    _overlayCacheKey = null;
-  }
 
 
   @override
@@ -671,7 +658,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         (widget.items.length != oldWidget.items.length ||
          !_areItemsEqual(widget.items, oldWidget.items))) {
       _filterUtils.initializeItems(widget.items);
-      _invalidateOverlayCache();
+      // Cache removed - overlay rebuilds automatically
       // Use central rebuild mechanism instead of direct setState
       // But only if not already rebuilding
       if (!_rebuildScheduled) {
@@ -749,7 +736,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
           _overlayController.hide();
         }
       },
-      overlay: _getOverlay(),
+      overlay: _buildDropdownOverlay(),
       inputField: _buildInputField(),
     );
   }
@@ -1041,53 +1028,14 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     );
   }
 
-  Widget _getOverlay() {
-    final List<ItemDropperItem<T>> filteredItems = _filtered;
-    final _OverlayCacheKey currentKey = _OverlayCacheKey(
-      filteredLength: filteredItems.length,
-      selectedCount: _selected.length,
-      hoverIndex: _hoverIndex,
-      keyboardHighlightIndex: _keyboardHighlightIndex,
-    );
-    
-    // Check if input context is available - don't cache if it's not
-    final BuildContext? inputContext = (widget.inputKey ?? _fieldKey).currentContext;
-    final bool hasValidContext = inputContext != null;
-    
-    // Include hover and keyboard highlight in cache key so overlay rebuilds when they change
-    // This ensures hover state is current, while stable keys prevent flicker
-    // Only use cache if we have a valid context (otherwise overlay will be empty)
-    if (_cachedOverlayWidget != null && 
-        _overlayCacheKey == currentKey && 
-        hasValidContext) {
-      return _cachedOverlayWidget!;
-    }
 
-    final Widget overlay = _buildOverlay();
-    
-    // Only cache if we have a valid context
-    if (hasValidContext) {
-      _cachedOverlayWidget = overlay;
-      _overlayCacheKey = currentKey;
-    }
-    
-    return overlay;
-  }
-
-  Widget _buildOverlay() {
+  Widget _buildDropdownOverlay() {
     final List<ItemDropperItem<T>> filteredItems = _filtered;
-    
+
     // Get the input field's context for proper positioning
     final BuildContext? inputContext = (widget.inputKey ?? _fieldKey)
         .currentContext;
-    if (inputContext == null) {
-      // Return cached overlay if available, otherwise empty
-      return _cachedOverlayWidget ?? const SizedBox.shrink();
-    }
-
-    // Get current input field size for dynamic positioning
-    final RenderBox? inputBox = inputContext.findRenderObject() as RenderBox?;
-    final Size inputSize = inputBox?.size ?? Size.zero;
+    if (inputContext == null) return const SizedBox.shrink();
 
     // Show empty state if user is searching but no results found
     if (filteredItems.isEmpty) {
@@ -1100,12 +1048,10 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     }
 
     // Use custom builder if provided, otherwise use default with style parameters
-    // We'll create a wrapper that passes separator info to the default builder
     final Widget Function(BuildContext, ItemDropperItem<T>, bool) itemBuilder;
     if (widget.popupItemBuilder != null) {
       itemBuilder = widget.popupItemBuilder!;
     } else {
-      // Create a builder that tracks previous items for separator logic
       itemBuilder = (context, item, isSelected) {
         final int itemIndex = filteredItems.indexWhere((x) => x.value == item.value);
         final bool hasPrevious = itemIndex > 0;
@@ -1123,53 +1069,35 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       };
     }
 
-    // Use RepaintBoundary with stable key to prevent unnecessary rebuilds
-    // The overlay content will update via the items list, but the widget tree structure stays stable
-    return RepaintBoundary(
-      key: const ValueKey<String>('overlay_stable'),
-      child: Container(
-        child: ItemDropperRenderUtils.buildDropdownOverlay(
-          context: inputContext,
-          items: filteredItems,
-          maxDropdownHeight: widget.maxDropdownHeight ?? 200.0,
-          width: widget.width,
-          controller: _overlayController,
-          scrollController: _scrollController,
-          layerLink: _layerLink,
-          isSelected: (ItemDropperItem<T> item) =>
-              _selected.any((x) => x.value == item.value),
-          builder: (BuildContext builderContext, ItemDropperItem<T> item,
-              bool isSelected) {
-            // DEBUG: Track last item in builder
-            final bool isLastItem = filteredItems.isNotEmpty && filteredItems.last.value == item.value;
-            final int itemIndex = filteredItems.indexWhere((i) => i.value == item.value);
-            if (isLastItem) {
-              print("DEBUG LAST ITEM: Building last item in overlay - index=$itemIndex, label=${item.label}, isSelected=$isSelected, filteredItems.length=${filteredItems.length}");
-            }
-            
-            return ItemDropperRenderUtils.buildDropdownItemWithHover<T>(
-              context: builderContext,
-              item: item,
-              isSelected: isSelected,
-              filteredItems: filteredItems,
-              hoverIndex: _hoverIndex,
-              keyboardHighlightIndex: _keyboardHighlightIndex,
-              safeSetState: _safeSetState,
-              setHoverIndex: (index) => _hoverIndex = index,
-              onTap: () {
-                if (isLastItem) {
-                  print("DEBUG LAST ITEM: onTap called for last item: ${item.label} - ABOUT TO CALL _toggleItem");
-                }
-                _toggleItem(item);
-                if (isLastItem) {
-                  print("DEBUG LAST ITEM: _toggleItem COMPLETED for last item");
-                }
-              },
-              customBuilder: itemBuilder,
-            );
+    return ItemDropperRenderUtils.buildDropdownOverlay(
+      context: inputContext,
+      items: filteredItems,
+      maxDropdownHeight: widget.maxDropdownHeight ?? 200.0,
+      width: widget.width,
+      controller: _overlayController,
+      scrollController: _scrollController,
+      layerLink: _layerLink,
+      isSelected: (ItemDropperItem<T> item) =>
+          _selected.any((x) => x.value == item.value),
+      builder: (BuildContext builderContext, ItemDropperItem<T> item,
+          bool isSelected) {
+        return ItemDropperRenderUtils.buildDropdownItemWithHover<T>(
+          context: builderContext,
+          item: item,
+          isSelected: isSelected,
+          filteredItems: filteredItems,
+          hoverIndex: _hoverIndex,
+          keyboardHighlightIndex: _keyboardHighlightIndex,
+          safeSetState: _safeSetState,
+          setHoverIndex: (index) => _hoverIndex = index,
+          onTap: () {
+            _toggleItem(item);
           },
-        ),
-      ),
+          customBuilder: itemBuilder,
+          itemHeight: widget.itemHeight,
+        );
+      },
+      itemHeight: widget.itemHeight,
     );
   }
 
@@ -1375,38 +1303,4 @@ class _ChipMeasurementHelper {
   }
 }
 
-/// Cache key for overlay widget to determine when to rebuild
-class _OverlayCacheKey {
-  final int filteredLength;
-  final int selectedCount;
-  final int hoverIndex;
-  final int keyboardHighlightIndex;
-
-  const _OverlayCacheKey({
-    required this.filteredLength,
-    required this.selectedCount,
-    required this.hoverIndex,
-    required this.keyboardHighlightIndex,
-  });
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is _OverlayCacheKey &&
-          runtimeType == other.runtimeType &&
-          filteredLength == other.filteredLength &&
-          selectedCount == other.selectedCount &&
-          hoverIndex == other.hoverIndex &&
-          keyboardHighlightIndex == other.keyboardHighlightIndex;
-
-  @override
-  int get hashCode =>
-      filteredLength.hashCode ^
-      selectedCount.hashCode ^
-      hoverIndex.hashCode ^
-      keyboardHighlightIndex.hashCode;
-
-  @override
-  String toString() =>
-      'OverlayCacheKey(fl=$filteredLength, sc=$selectedCount, hi=$hoverIndex, khi=$keyboardHighlightIndex)';
-}
+// Removed _OverlayCacheKey - no longer using overlay caching
