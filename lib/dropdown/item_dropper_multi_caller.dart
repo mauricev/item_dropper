@@ -29,6 +29,7 @@ Widget multiDropDown<T>({
   TextStyle? popupTextStyle,
   TextStyle? popupGroupHeaderStyle,
   Widget Function(BuildContext, ItemDropperItem<T>, bool)? popupItemBuilder,
+  String? debugId, // Temporary debug identifier
 }) {
   return MultiItemDropper<T>(
     width: width,
@@ -42,5 +43,6 @@ Widget multiDropDown<T>({
     maxDropdownHeight: maxDropdownHeight ?? 200,
     maxSelected: maxSelected,
     enabled: enabled,
+    debugId: debugId, // Pass through debug ID
   );
 }
