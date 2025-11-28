@@ -326,6 +326,9 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         
         debugPrint('DEBUG OVERLAY POS: Item added - count: $selectedCountBefore -> $selectedCountAfter, label: ${item.label}');
         
+        // Reset totalChipWidth when selection count changes - will be remeasured correctly
+        _measurements.totalChipWidth = null;
+        
         // Clear search text after selection for continued searching
         _searchController.clear();
         
@@ -338,6 +341,9 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       } else {
         // Item is already selected, remove it (toggle off)
         _selected.removeWhere((selected) => selected.value == item.value);
+        
+        // Reset totalChipWidth when selection count changes - will be remeasured correctly
+        _measurements.totalChipWidth = null;
         
         // FIX: Show overlay again if we're below maxSelected after removal
         // This handles the case where user removes an item after reaching max
@@ -365,6 +371,10 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     
     // Update selection immediately (synchronous)
     _selected.removeWhere((selected) => selected.value == item.value);
+    
+    // Reset totalChipWidth when selection count changes - will be remeasured correctly
+    _measurements.totalChipWidth = null;
+    
     _clearHighlights();
     
     // Mark that this is an internal selection change
@@ -703,6 +713,13 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
                   // Reset measurement state when selection is cleared
                   _measurements.resetMeasurementState();
                 }
+                debugPrint('DEBUG FIELD HEIGHT: Building Wrap widget');
+                debugPrint('DEBUG FIELD HEIGHT:   - availableWidth: $availableWidth');
+                debugPrint('DEBUG FIELD HEIGHT:   - textFieldWidth: $textFieldWidth');
+                debugPrint('DEBUG FIELD HEIGHT:   - selectedCount: ${_selected.length}');
+                debugPrint('DEBUG FIELD HEIGHT:   - constraints.maxWidth: ${constraints.maxWidth}');
+                debugPrint('DEBUG FIELD HEIGHT:   - constraints.maxHeight: ${constraints.maxHeight}');
+                
                 return Wrap(
                   key: _measurements.wrapKey,
                   spacing: _chipSpacing,
@@ -722,17 +739,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
                       );
                     }),
                     // TextField with proper width based on available space
-                    if (_selected.isNotEmpty)
-                      Builder(
-                        builder: (context) {
-                          // Use measured remaining width if available (from previous render)
-                          // Otherwise use a simple calculation as initial estimate
-                          final double actualRemaining = _measurements.remainingWidth ?? 
-                              (availableWidth * 0.5).clamp(_minTextFieldWidth, availableWidth);
-
-                          return _buildTextFieldChip(actualRemaining);
-                        },
-                      )
+                    if (_selected.isNotEmpty && textFieldWidth > 0)
+                      _buildTextFieldChip(textFieldWidth)
                     else
                       SizedBox(
                         width: textFieldWidth,
@@ -750,26 +758,40 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
 
   double _calculateTextFieldWidth(double availableWidth) {
     if (_selected.isEmpty) {
-      // No chips, TextField takes full available space for maximum click area
-      return availableWidth; // Take 100% of available space
+      return availableWidth;
     }
 
-    // Estimate chip widths more accurately
-    const double estimatedChipWidth = 90.0; // Better estimate for actual chip width
-    final double totalChipWidth = _selected.length * estimatedChipWidth;
-    final double totalSpacing = (_selected.length - 1) * _chipSpacing;
-    final double usedWidth = totalChipWidth + totalSpacing;
+    // Use measured chip widths - no estimates, no fallbacks
+    final double? measuredTotalChipWidth = _measurements.totalChipWidth;
+    if (measuredTotalChipWidth == null) {
+      debugPrint('DEBUG FIELD HEIGHT: _calculateTextFieldWidth - no measurement yet, returning 0.0');
+      return 0.0; // No measurement yet - don't render
+    }
 
-    // TextField gets remaining space, minimum 100px (will wrap if less)
-    final double remainingWidth = availableWidth - usedWidth;
-    final double textFieldWidth = remainingWidth.clamp(100.0, double.infinity);
+    // Calculate spacing:
+    // - Between chips: (chipCount - 1) * spacing
+    // - Between last chip and TextField: 1 * spacing (ALWAYS needed if we have chips)
+    final double spacingBetweenChips = (_selected.length - 1) * _chipSpacing;
+    final double spacingBeforeTextField = _chipSpacing; // Always need spacing before TextField if chips exist
+    final double totalSpacing = spacingBetweenChips + spacingBeforeTextField;
     
-    // Check if this will cause wrapping
-    if (remainingWidth < 100.0) {
-      debugPrint('DEBUG OVERLAY POS: WARNING - remainingWidth < 100.0 (${remainingWidth.toStringAsFixed(1)}), TextField will wrap! This may cause Wrap to wrap to multiple rows!');
-    }
+    final double usedWidth = measuredTotalChipWidth + totalSpacing;
+    final double remainingWidth = availableWidth - usedWidth;
+    final double textFieldWidth = remainingWidth.clamp(100.0, availableWidth);
 
-    return textFieldWidth; // Min 100px, no max cap
+    debugPrint('DEBUG FIELD HEIGHT: _calculateTextFieldWidth:');
+    debugPrint('DEBUG FIELD HEIGHT:   - availableWidth: $availableWidth');
+    debugPrint('DEBUG FIELD HEIGHT:   - measuredTotalChipWidth: $measuredTotalChipWidth');
+    debugPrint('DEBUG FIELD HEIGHT:   - spacingBetweenChips: $spacingBetweenChips');
+    debugPrint('DEBUG FIELD HEIGHT:   - spacingBeforeTextField: $spacingBeforeTextField');
+    debugPrint('DEBUG FIELD HEIGHT:   - totalSpacing: $totalSpacing');
+    debugPrint('DEBUG FIELD HEIGHT:   - usedWidth: $usedWidth');
+    debugPrint('DEBUG FIELD HEIGHT:   - remainingWidth: $remainingWidth');
+    debugPrint('DEBUG FIELD HEIGHT:   - textFieldWidth: $textFieldWidth');
+    debugPrint('DEBUG FIELD HEIGHT:   - Total needed: ${usedWidth + textFieldWidth}');
+    debugPrint('DEBUG FIELD HEIGHT:   - Will fit: ${usedWidth + textFieldWidth <= availableWidth}');
+
+    return textFieldWidth;
   }
 
   double _calculateTextFieldHeight() {
@@ -927,7 +949,93 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       const double borderWidth = 2.0; // top + bottom border
       final double expectedHeight = _measurements.wrapHeight! + verticalPadding + borderWidth;
       if ((fieldBox.size.height - expectedHeight).abs() > 1.0) {
-        debugPrint('DEBUG OVERLAY POS: WARNING - Field height mismatch! Actual: ${fieldBox.size.height}, Expected: $expectedHeight (wrapHeight: ${_measurements.wrapHeight}), Difference: ${fieldBox.size.height - expectedHeight}');
+        debugPrint('DEBUG FIELD HEIGHT: ==========================================');
+        debugPrint('DEBUG FIELD HEIGHT: Field height mismatch detected!');
+        debugPrint('DEBUG FIELD HEIGHT: Actual field height: ${fieldBox.size.height}');
+        debugPrint('DEBUG FIELD HEIGHT: Expected height: $expectedHeight');
+        debugPrint('DEBUG FIELD HEIGHT:   - wrapHeight: ${_measurements.wrapHeight}');
+        debugPrint('DEBUG FIELD HEIGHT:   - verticalPadding: $verticalPadding (5.0 top + 3.0 bottom)');
+        debugPrint('DEBUG FIELD HEIGHT:   - borderWidth: $borderWidth (1.0 top + 1.0 bottom)');
+        debugPrint('DEBUG FIELD HEIGHT: Difference: ${fieldBox.size.height - expectedHeight}');
+        
+        // Debug: Check actual Wrap height and inspect children
+        final RenderBox? wrapBox = _measurements.wrapKey.currentContext?.findRenderObject() as RenderBox?;
+        if (wrapBox != null) {
+          final double actualWrapHeight = wrapBox.size.height;
+          debugPrint('DEBUG FIELD HEIGHT: Actual Wrap height: $actualWrapHeight');
+          debugPrint('DEBUG FIELD HEIGHT: Wrap constraints: ${wrapBox.constraints}');
+          
+          // If Wrap wrapped, inspect children to see why
+          if (actualWrapHeight > 40.0) {
+            debugPrint('DEBUG FIELD HEIGHT: ⚠️⚠️⚠️ Wrap wrapped to $actualWrapHeight (expected ~36.0) ⚠️⚠️⚠️');
+            debugPrint('DEBUG FIELD HEIGHT: Inspecting ALL children in Wrap...');
+            double totalChildrenWidth = 0.0;
+            double chipWidthSum = 0.0;
+            double textFieldWidth = 0.0;
+            int childIndex = 0;
+            wrapBox.visitChildren((child) {
+              if (child is RenderBox) {
+                final String typeName = child.runtimeType.toString();
+                final double childWidth = child.size.width;
+                final double childHeight = child.size.height;
+                totalChildrenWidth += childWidth;
+                
+                if (typeName.contains('LayoutBuilder')) {
+                  chipWidthSum += childWidth;
+                  debugPrint('DEBUG FIELD HEIGHT:   Child[$childIndex] CHIP ($typeName): width=$childWidth, height=$childHeight');
+                } else if (typeName.contains('ConstrainedBox') || typeName.contains('TextField') || typeName.contains('SizedBox')) {
+                  textFieldWidth = childWidth;
+                  debugPrint('DEBUG FIELD HEIGHT:   Child[$childIndex] TEXTFIELD ($typeName): width=$childWidth, height=$childHeight');
+                } else {
+                  debugPrint('DEBUG FIELD HEIGHT:   Child[$childIndex] OTHER ($typeName): width=$childWidth, height=$childHeight');
+                }
+                childIndex++;
+              }
+            });
+            debugPrint('DEBUG FIELD HEIGHT: SUMMARY:');
+            debugPrint('DEBUG FIELD HEIGHT:   - Total children width: $totalChildrenWidth');
+            debugPrint('DEBUG FIELD HEIGHT:   - Chip width sum: $chipWidthSum');
+            debugPrint('DEBUG FIELD HEIGHT:   - TextField width: $textFieldWidth');
+            debugPrint('DEBUG FIELD HEIGHT:   - Wrap width: ${wrapBox.size.width}');
+            debugPrint('DEBUG FIELD HEIGHT:   - Will wrap: ${totalChildrenWidth > wrapBox.size.width}');
+            debugPrint('DEBUG FIELD HEIGHT:   - Current totalChipWidth: ${_measurements.totalChipWidth}');
+            debugPrint('DEBUG FIELD HEIGHT:   - Selected count: ${_selected.length}');
+            debugPrint('DEBUG FIELD HEIGHT:   - Spacing needed: ${_selected.length > 0 ? (_selected.length - 1) * _chipSpacing : 0.0}');
+            debugPrint('DEBUG FIELD HEIGHT:   - Expected total: ${chipWidthSum + textFieldWidth + (_selected.length > 0 ? (_selected.length - 1) * _chipSpacing : 0.0)}');
+          }
+        } else {
+          debugPrint('DEBUG FIELD HEIGHT: Wrap context is null!');
+        }
+        
+        // Debug: Check Padding widget (by checking runtime type)
+        RenderBox? current = fieldBox;
+        while (current != null) {
+          final String typeName = current.runtimeType.toString();
+          if (typeName.contains('Padding')) {
+            debugPrint('DEBUG FIELD HEIGHT: Found Padding render object: $typeName');
+            debugPrint('DEBUG FIELD HEIGHT:   - size: ${current.size}');
+            debugPrint('DEBUG FIELD HEIGHT:   - constraints: ${current.constraints}');
+            break;
+          }
+          current = current.parent as RenderBox?;
+        }
+        
+        // Debug: Check Column widget (by checking runtime type)
+        current = fieldBox;
+        while (current != null) {
+          final String typeName = current.runtimeType.toString();
+          if (typeName.contains('Flex') || typeName.contains('Column')) {
+            debugPrint('DEBUG FIELD HEIGHT: Found Column/Flex render object: $typeName');
+            debugPrint('DEBUG FIELD HEIGHT:   - size: ${current.size}');
+            debugPrint('DEBUG FIELD HEIGHT:   - constraints: ${current.constraints}');
+            break;
+          }
+          current = current.parent as RenderBox?;
+        }
+        
+        // Debug: Check Container/field constraints
+        debugPrint('DEBUG FIELD HEIGHT: Field box constraints: ${fieldBox.constraints}');
+        debugPrint('DEBUG FIELD HEIGHT: ==========================================');
       }
     }
 
@@ -1039,6 +1147,7 @@ class _ChipMeasurementHelper {
   double? chipTextTop;
   double? chipTextHeight;
   double? chipWidth;
+  double? totalChipWidth; // Sum of all chip widths (measured)
   double? remainingWidth;
   double? wrapHeight; // Measured, no hardcoded initial value
   
@@ -1053,6 +1162,7 @@ class _ChipMeasurementHelper {
   // Reset measurement state - call when selection is cleared
   void resetMeasurementState() {
     _lastMeasuredSelectedCount = -1;
+    totalChipWidth = null;
     remainingWidth = null;
     _isMeasuring = false;
   }
@@ -1132,6 +1242,12 @@ class _ChipMeasurementHelper {
       final double newWrapHeight = wrapBox.size.height;
       final double wrapWidth = wrapBox.size.width;
       
+      debugPrint('DEBUG FIELD HEIGHT: measureWrapAndTextField - measuring Wrap');
+      debugPrint('DEBUG FIELD HEIGHT:   - wrapBox.size.height: $newWrapHeight');
+      debugPrint('DEBUG FIELD HEIGHT:   - wrapBox.size.width: $wrapWidth');
+      debugPrint('DEBUG FIELD HEIGHT:   - wrapBox.constraints: ${wrapBox.constraints}');
+      debugPrint('DEBUG FIELD HEIGHT:   - selectedCount: $selectedCount');
+      
       // DEBUG: Check if Wrap wrapped to multiple rows (this is the bug)
       // Detect wrapping by comparing to previous height or chip height
       final double? previousWrapHeight = wrapHeight;
@@ -1146,17 +1262,122 @@ class _ChipMeasurementHelper {
         debugPrint('DEBUG OVERLAY POS: BUG DETECTED - Wrap wrapped to multiple rows! Height: $newWrapHeight (previous: $previousWrapHeight, chipHeight: $singleRowHeight)');
         debugPrint('DEBUG OVERLAY POS: Wrap width: $wrapWidth, selectedCount: $selectedCount, constraints maxWidth: ${wrapBox.constraints.maxWidth}');
         
-        // Calculate total width needed and inspect children
+          // Calculate total width needed and inspect children
         double totalWidthNeeded = 0.0;
+        double measuredChipWidth = 0.0; // Sum of chip widths only (exclude TextField)
         int childIndex = 0;
         wrapBox.visitChildren((child) {
           if (child is RenderBox) {
             totalWidthNeeded += child.size.width;
+            // Only count chips (RenderLayoutBuilder), not TextField (RenderConstrainedBox)
+            if (child.runtimeType.toString().contains('LayoutBuilder')) {
+              measuredChipWidth += child.size.width;
+            }
             debugPrint('DEBUG OVERLAY POS:   Child[$childIndex] ${child.runtimeType}: width=${child.size.width.toStringAsFixed(1)}, total=${totalWidthNeeded.toStringAsFixed(1)}');
             childIndex++;
           }
         });
         debugPrint('DEBUG OVERLAY POS: Total width needed: ${totalWidthNeeded.toStringAsFixed(1)}, Wrap width: $wrapWidth, Will wrap: ${totalWidthNeeded > wrapWidth}');
+        
+        // Store measured chip width for use in _calculateTextFieldWidth
+        if (measuredChipWidth > 0) {
+          totalChipWidth = measuredChipWidth;
+        }
+      }
+      
+      // ALWAYS measure chip widths when selection count changes for accurate TextField width calculation
+      // This ensures totalChipWidth is updated whenever chips are added/removed
+      double measuredChipWidth = 0.0;
+      int chipCount = 0;
+      wrapBox.visitChildren((child) {
+        if (child is RenderBox && child.runtimeType.toString().contains('LayoutBuilder')) {
+          measuredChipWidth += child.size.width;
+          chipCount++;
+          debugPrint('DEBUG FIELD HEIGHT: Measuring chip $chipCount: width=${child.size.width}');
+        }
+      });
+      if (measuredChipWidth > 0) {
+        // Always update with actual measurement - this ensures we have correct width for TextField calculation
+        totalChipWidth = measuredChipWidth;
+        debugPrint('DEBUG FIELD HEIGHT: Total chip width measured: $measuredChipWidth (from $chipCount chips, selectedCount: $selectedCount)');
+      }
+      
+      // Debug: ALWAYS check children widths when Wrap height > 40 (wrapped)
+      if (newWrapHeight > 40.0) {
+        debugPrint('DEBUG FIELD HEIGHT: ⚠️⚠️⚠️ Wrap wrapped to $newWrapHeight (expected ~36.0) ⚠️⚠️⚠️');
+        debugPrint('DEBUG FIELD HEIGHT: Checking ALL children widths...');
+        double totalChildrenWidth = 0.0;
+        double chipWidthSum = 0.0;
+        double textFieldWidth = 0.0;
+        int childIndex = 0;
+        wrapBox.visitChildren((child) {
+          if (child is RenderBox) {
+            final String typeName = child.runtimeType.toString();
+            final double childWidth = child.size.width;
+            final double childHeight = child.size.height;
+            totalChildrenWidth += childWidth;
+            
+            if (typeName.contains('LayoutBuilder')) {
+              chipWidthSum += childWidth;
+              debugPrint('DEBUG FIELD HEIGHT:   Child[$childIndex] CHIP ($typeName): width=$childWidth, height=$childHeight');
+            } else if (typeName.contains('ConstrainedBox') || typeName.contains('TextField')) {
+              textFieldWidth = childWidth;
+              debugPrint('DEBUG FIELD HEIGHT:   Child[$childIndex] TEXTFIELD ($typeName): width=$childWidth, height=$childHeight');
+            } else {
+              debugPrint('DEBUG FIELD HEIGHT:   Child[$childIndex] OTHER ($typeName): width=$childWidth, height=$childHeight');
+            }
+            childIndex++;
+          }
+        });
+        debugPrint('DEBUG FIELD HEIGHT: SUMMARY:');
+        debugPrint('DEBUG FIELD HEIGHT:   - Total children width: $totalChildrenWidth');
+        debugPrint('DEBUG FIELD HEIGHT:   - Chip width sum: $chipWidthSum');
+        debugPrint('DEBUG FIELD HEIGHT:   - TextField width: $textFieldWidth');
+        debugPrint('DEBUG FIELD HEIGHT:   - Wrap width: $wrapWidth');
+        debugPrint('DEBUG FIELD HEIGHT:   - Will wrap: ${totalChildrenWidth > wrapWidth}');
+        debugPrint('DEBUG FIELD HEIGHT:   - Current totalChipWidth: $totalChipWidth');
+        debugPrint('DEBUG FIELD HEIGHT:   - Spacing needed: ${selectedCount > 0 ? (selectedCount - 1) * chipSpacing : 0.0}');
+        debugPrint('DEBUG FIELD HEIGHT:   - Expected total: ${chipWidthSum + textFieldWidth + (selectedCount > 0 ? (selectedCount - 1) * chipSpacing : 0.0)}');
+      }
+      
+      // Debug: ALWAYS check children widths when Wrap height suggests wrapping
+      if (newWrapHeight > 40.0 || (previousWrapHeight != null && newWrapHeight > previousWrapHeight! + 5.0)) {
+        debugPrint('DEBUG FIELD HEIGHT: ⚠️⚠️⚠️ Wrap height changed significantly! ⚠️⚠️⚠️');
+        debugPrint('DEBUG FIELD HEIGHT:   - Previous height: $previousWrapHeight');
+        debugPrint('DEBUG FIELD HEIGHT:   - New height: $newWrapHeight');
+        debugPrint('DEBUG FIELD HEIGHT:   - Checking ALL children widths...');
+        double totalChildrenWidth = 0.0;
+        double chipWidthSum = 0.0;
+        double textFieldWidth = 0.0;
+        int childIndex = 0;
+        wrapBox.visitChildren((child) {
+          if (child is RenderBox) {
+            final String typeName = child.runtimeType.toString();
+            final double childWidth = child.size.width;
+            final double childHeight = child.size.height;
+            totalChildrenWidth += childWidth;
+            
+            if (typeName.contains('LayoutBuilder')) {
+              chipWidthSum += childWidth;
+              debugPrint('DEBUG FIELD HEIGHT:   Child[$childIndex] CHIP ($typeName): width=$childWidth, height=$childHeight');
+            } else if (typeName.contains('ConstrainedBox') || typeName.contains('TextField')) {
+              textFieldWidth = childWidth;
+              debugPrint('DEBUG FIELD HEIGHT:   Child[$childIndex] TEXTFIELD ($typeName): width=$childWidth, height=$childHeight');
+            } else {
+              debugPrint('DEBUG FIELD HEIGHT:   Child[$childIndex] OTHER ($typeName): width=$childWidth, height=$childHeight');
+            }
+            childIndex++;
+          }
+        });
+        debugPrint('DEBUG FIELD HEIGHT: SUMMARY:');
+        debugPrint('DEBUG FIELD HEIGHT:   - Total children width: $totalChildrenWidth');
+        debugPrint('DEBUG FIELD HEIGHT:   - Chip width sum: $chipWidthSum');
+        debugPrint('DEBUG FIELD HEIGHT:   - TextField width: $textFieldWidth');
+        debugPrint('DEBUG FIELD HEIGHT:   - Wrap width: $wrapWidth');
+        debugPrint('DEBUG FIELD HEIGHT:   - Will wrap: ${totalChildrenWidth > wrapWidth}');
+        debugPrint('DEBUG FIELD HEIGHT:   - Current totalChipWidth: $totalChipWidth');
+        debugPrint('DEBUG FIELD HEIGHT:   - Spacing needed: ${selectedCount > 0 ? (selectedCount - 1) * chipSpacing : 0.0}');
+        debugPrint('DEBUG FIELD HEIGHT:   - Expected total: ${chipWidthSum + textFieldWidth + (selectedCount > 0 ? (selectedCount - 1) * chipSpacing : 0.0)}');
       }
       
       bool needsUpdate = false;
