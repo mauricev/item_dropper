@@ -258,6 +258,7 @@ class ItemDropperRenderUtils {
     if (inputBox == null) return const SizedBox.shrink();
 
     final double inputFieldHeight = inputBox.size.height;
+    
     final DropdownPositionResult position = calculateDropdownPosition(
       context: context,
       inputBox: inputBox,

@@ -320,7 +320,12 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
           _selected.length >= widget.maxSelected!;
       
       if (!isCurrentlySelected) {
+        final int selectedCountBefore = _selected.length;
         _selected.add(item);
+        final int selectedCountAfter = _selected.length;
+        
+        debugPrint('DEBUG OVERLAY POS: Item added - count: $selectedCountBefore -> $selectedCountAfter, label: ${item.label}');
+        
         // Clear search text after selection for continued searching
         _searchController.clear();
         
@@ -757,9 +762,14 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
 
     // TextField gets remaining space, minimum 100px (will wrap if less)
     final double remainingWidth = availableWidth - usedWidth;
+    final double textFieldWidth = remainingWidth.clamp(100.0, double.infinity);
+    
+    // Check if this will cause wrapping
+    if (remainingWidth < 100.0) {
+      debugPrint('DEBUG OVERLAY POS: WARNING - remainingWidth < 100.0 (${remainingWidth.toStringAsFixed(1)}), TextField will wrap! This may cause Wrap to wrap to multiple rows!');
+    }
 
-    return remainingWidth.clamp(
-        100.0, double.infinity); // Min 100px, no max cap
+    return textFieldWidth; // Min 100px, no max cap
   }
 
   double _calculateTextFieldHeight() {
@@ -906,6 +916,15 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     final BuildContext? inputContext = (widget.inputKey ?? _fieldKey)
         .currentContext;
     if (inputContext == null) return const SizedBox.shrink();
+    
+    // Check for field height mismatch (indicates Wrap wrapped when it shouldn't)
+    final RenderBox? fieldBox = inputContext.findRenderObject() as RenderBox?;
+    if (fieldBox != null) {
+      final double expectedHeight = _measurements.wrapHeight + 8.0 + 2.0;
+      if ((fieldBox.size.height - expectedHeight).abs() > 1.0) {
+        debugPrint('DEBUG OVERLAY POS: WARNING - Field height mismatch! Actual: ${fieldBox.size.height}, Expected: $expectedHeight (wrapHeight: ${_measurements.wrapHeight}), Difference: ${fieldBox.size.height - expectedHeight}');
+      }
+    }
 
     // Show empty state if user is searching but no results found
     if (filteredItems.isEmpty) {
@@ -1108,9 +1127,30 @@ class _ChipMeasurementHelper {
       final double newWrapHeight = wrapBox.size.height;
       final double wrapWidth = wrapBox.size.width;
       
+      // DEBUG: Check if Wrap wrapped to multiple rows (this is the bug)
+      // Expected single row height: ~36px (chip height + spacing)
+      // If newWrapHeight > 40px, it wrapped to multiple rows
+      if (newWrapHeight > 40.0) {
+        debugPrint('DEBUG OVERLAY POS: BUG DETECTED - Wrap wrapped to multiple rows! Height: $newWrapHeight (expected ~36px for single row)');
+        debugPrint('DEBUG OVERLAY POS: Wrap width: $wrapWidth, selectedCount: $selectedCount, constraints maxWidth: ${wrapBox.constraints.maxWidth}');
+        
+        // Calculate total width needed and inspect children
+        double totalWidthNeeded = 0.0;
+        int childIndex = 0;
+        wrapBox.visitChildren((child) {
+          if (child is RenderBox) {
+            totalWidthNeeded += child.size.width;
+            debugPrint('DEBUG OVERLAY POS:   Child[$childIndex] ${child.runtimeType}: width=${child.size.width.toStringAsFixed(1)}, total=${totalWidthNeeded.toStringAsFixed(1)}');
+            childIndex++;
+          }
+        });
+        debugPrint('DEBUG OVERLAY POS: Total width needed: ${totalWidthNeeded.toStringAsFixed(1)}, Wrap width: $wrapWidth, Will wrap: ${totalWidthNeeded > wrapWidth}');
+      }
+      
       bool needsUpdate = false;
       
       if (newWrapHeight != wrapHeight) {
+        debugPrint('DEBUG OVERLAY POS: wrapHeight changed: $wrapHeight -> $newWrapHeight (BUG - should stay ~36.0)');
         wrapHeight = newWrapHeight;
         needsUpdate = true;
       }
