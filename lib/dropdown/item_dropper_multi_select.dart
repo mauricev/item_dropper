@@ -919,8 +919,13 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     
     // Check for field height mismatch (indicates Wrap wrapped when it shouldn't)
     final RenderBox? fieldBox = inputContext.findRenderObject() as RenderBox?;
-    if (fieldBox != null) {
-      final double expectedHeight = _measurements.wrapHeight + 8.0 + 2.0;
+    if (fieldBox != null && _measurements.wrapHeight != null) {
+      // Calculate expected height from measured wrapHeight + padding + border
+      // Padding: EdgeInsets.fromLTRB(12.0, 5.0, 12.0, 3.0) = 5.0 + 3.0 = 8.0 vertical
+      // Border: 1.0 top + 1.0 bottom = 2.0
+      const double verticalPadding = 5.0 + 3.0; // top + bottom padding
+      const double borderWidth = 2.0; // top + bottom border
+      final double expectedHeight = _measurements.wrapHeight! + verticalPadding + borderWidth;
       if ((fieldBox.size.height - expectedHeight).abs() > 1.0) {
         debugPrint('DEBUG OVERLAY POS: WARNING - Field height mismatch! Actual: ${fieldBox.size.height}, Expected: $expectedHeight (wrapHeight: ${_measurements.wrapHeight}), Difference: ${fieldBox.size.height - expectedHeight}');
       }
@@ -1035,7 +1040,7 @@ class _ChipMeasurementHelper {
   double? chipTextHeight;
   double? chipWidth;
   double? remainingWidth;
-  double wrapHeight = 34.0;
+  double? wrapHeight; // Measured, no hardcoded initial value
   
   final GlobalKey chipRowKey = GlobalKey();
   final GlobalKey lastChipKey = GlobalKey();
@@ -1128,10 +1133,17 @@ class _ChipMeasurementHelper {
       final double wrapWidth = wrapBox.size.width;
       
       // DEBUG: Check if Wrap wrapped to multiple rows (this is the bug)
-      // Expected single row height: ~36px (chip height + spacing)
-      // If newWrapHeight > 40px, it wrapped to multiple rows
-      if (newWrapHeight > 40.0) {
-        debugPrint('DEBUG OVERLAY POS: BUG DETECTED - Wrap wrapped to multiple rows! Height: $newWrapHeight (expected ~36px for single row)');
+      // Detect wrapping by comparing to previous height or chip height
+      final double? previousWrapHeight = wrapHeight;
+      final double? singleRowHeight = chipHeight; // Single row should be approximately chip height
+      
+      // If we have a previous measurement and height increased significantly, it wrapped
+      // Or if height is much larger than chip height, it wrapped
+      final bool likelyWrapped = (previousWrapHeight != null && newWrapHeight > previousWrapHeight * 1.5) ||
+          (singleRowHeight != null && newWrapHeight > singleRowHeight * 1.5);
+      
+      if (likelyWrapped) {
+        debugPrint('DEBUG OVERLAY POS: BUG DETECTED - Wrap wrapped to multiple rows! Height: $newWrapHeight (previous: $previousWrapHeight, chipHeight: $singleRowHeight)');
         debugPrint('DEBUG OVERLAY POS: Wrap width: $wrapWidth, selectedCount: $selectedCount, constraints maxWidth: ${wrapBox.constraints.maxWidth}');
         
         // Calculate total width needed and inspect children
@@ -1150,7 +1162,7 @@ class _ChipMeasurementHelper {
       bool needsUpdate = false;
       
       if (newWrapHeight != wrapHeight) {
-        debugPrint('DEBUG OVERLAY POS: wrapHeight changed: $wrapHeight -> $newWrapHeight (BUG - should stay ~36.0)');
+        debugPrint('DEBUG OVERLAY POS: wrapHeight changed: $wrapHeight -> $newWrapHeight');
         wrapHeight = newWrapHeight;
         needsUpdate = true;
       }
