@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'item_dropper_common.dart';
 import 'chip_measurement_helper.dart';
+import 'multi_select_constants.dart';
+import 'multi_select_layout_calculator.dart';
 
 /// Multi-select dropdown widget
 /// Allows selecting multiple items with chip-based display
@@ -78,15 +80,6 @@ class MultiItemDropper<T> extends StatefulWidget {
 }
 
 class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
-  // UI Layout Constants
-  static const double _containerBorderRadius = 8.0;
-  static const double _chipHorizontalPadding = 8.0;
-  static const double _chipVerticalPadding = 6;
-  static const double _chipSpacing = 4.0;
-  static const double _chipDeleteIconSize = 18.0;
-  static const double _chipBorderRadius = 6.0;
-  static const double _chipMarginRight = 4.0;
-  static const double _minTextFieldWidth = 100.0;
 
   final GlobalKey _fieldKey = GlobalKey();
   late final TextEditingController _searchController;
@@ -666,7 +659,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
           color: _manualFocusState ? Colors.blue : Colors.grey.shade400,
           width: 1.0,
         ),
-        borderRadius: BorderRadius.circular(_containerBorderRadius),
+        borderRadius: BorderRadius.circular(MultiSelectConstants.containerBorderRadius),
       );
     }
     
@@ -687,8 +680,12 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
               key: const ValueKey<String>('layout_builder_stable'),
               builder: (context, constraints) {
                 final double availableWidth = constraints.maxWidth;
-                final double textFieldWidth = _calculateTextFieldWidth(
-                    availableWidth);
+                final double textFieldWidth = MultiSelectLayoutCalculator.calculateTextFieldWidth(
+                  availableWidth: availableWidth,
+                  selectedCount: _selected.length,
+                  chipSpacing: MultiSelectConstants.chipSpacing,
+                  measurements: _measurements,
+                );
 
                 // Measure Wrap after render to detect wrapping and get actual remaining width
                 // Only measure if contexts are available (after first frame)
@@ -700,8 +697,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
                     textFieldContext: _measurements.textFieldKey.currentContext,
                     lastChipContext: _measurements.lastChipKey.currentContext,
                     selectedCount: _selected.length,
-                    chipSpacing: _chipSpacing,
-                    minTextFieldWidth: _minTextFieldWidth,
+                    chipSpacing: MultiSelectConstants.chipSpacing,
+                    minTextFieldWidth: MultiSelectConstants.minTextFieldWidth,
                     requestRebuild: _requestRebuild,
                   );
                 } else if (_selected.isEmpty) {
@@ -710,8 +707,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
                 }
                 return Wrap(
                   key: _measurements.wrapKey,
-                  spacing: _chipSpacing,
-                  runSpacing: _chipSpacing,
+                  spacing: MultiSelectConstants.chipSpacing,
+                  runSpacing: MultiSelectConstants.chipSpacing,
                   alignment: WrapAlignment.start,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
@@ -744,41 +741,6 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     );
   }
 
-  double _calculateTextFieldWidth(double availableWidth) {
-    if (_selected.isEmpty) {
-      return availableWidth;
-    }
-
-    // Use measured chip widths - no estimates, no fallbacks
-    final double? measuredTotalChipWidth = _measurements.totalChipWidth;
-    if (measuredTotalChipWidth == null) {
-      return 0.0; // No measurement yet - don't render
-    }
-
-    // Calculate spacing:
-    // - Between chips: (chipCount - 1) * spacing
-    // - Between last chip and TextField: 1 * spacing (ALWAYS needed if we have chips)
-    final double spacingBetweenChips = (_selected.length - 1) * _chipSpacing;
-    final double spacingBeforeTextField = _chipSpacing; // Always need spacing before TextField if chips exist
-    final double totalSpacing = spacingBetweenChips + spacingBeforeTextField;
-    
-    final double usedWidth = measuredTotalChipWidth + totalSpacing;
-    final double remainingWidth = availableWidth - usedWidth;
-    final double textFieldWidth = remainingWidth.clamp(100.0, availableWidth);
-
-    return textFieldWidth;
-  }
-
-  double _calculateTextFieldHeight() {
-    // Calculate height to match chip: max(textLineHeight, 24px icon) + 12px padding
-    // This matches the chip structure exactly
-    final double fontSize = widget.fieldTextStyle?.fontSize ?? 10.0;
-    final double textLineHeight = fontSize * 1.2;
-    const double iconHeight = 24.0;
-    final double rowContentHeight = textLineHeight > iconHeight ? textLineHeight : iconHeight;
-    final double verticalPadding = _chipVerticalPadding * 2; // 6px top + 6px bottom = 12px
-    return rowContentHeight + verticalPadding;
-  }
 
   Widget _buildChip(ItemDropperItem<T> item, [GlobalKey? chipKey, Key? valueKey]) {
     // Only measure the first chip (index 0) to avoid GlobalKey conflicts
@@ -795,7 +757,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
             context: context,
             rowKey: rowKey,
             textSize: widget.fieldTextStyle?.fontSize ?? 10.0,
-            chipVerticalPadding: _chipVerticalPadding,
+            chipVerticalPadding: MultiSelectConstants.chipVerticalPadding,
             requestRebuild: _requestRebuild,
           );
         }
@@ -811,13 +773,13 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
             ),
-            borderRadius: BorderRadius.circular(_chipBorderRadius),
+            borderRadius: BorderRadius.circular(MultiSelectConstants.chipBorderRadius),
           ),
           padding: const EdgeInsets.symmetric(
-            horizontal: _chipHorizontalPadding,
-            vertical: _chipVerticalPadding,
+            horizontal: MultiSelectConstants.chipHorizontalPadding,
+            vertical: MultiSelectConstants.chipVerticalPadding,
           ),
-          margin: const EdgeInsets.only(right: _chipMarginRight,),
+          margin: const EdgeInsets.only(right: MultiSelectConstants.chipMarginRight,),
           child: Row(
             key: rowKey, // Only first chip gets the key
             mainAxisSize: MainAxisSize.min,
@@ -838,7 +800,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
                   alignment: Alignment.center,
                   child: GestureDetector(
                     onTap: () => _removeChip(item),
-                    child: Icon(Icons.close, size: _chipDeleteIconSize,
+                    child: Icon(Icons.close, size: MultiSelectConstants.chipDeleteIconSize,
                         color: Colors.grey.shade700),
                   ),
                 ),
@@ -851,7 +813,10 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
 
   Widget _buildTextFieldChip(double width) {
     // Use measured chip dimensions if available, otherwise fall back to calculation
-    final double chipHeight = _measurements.chipHeight ?? _calculateTextFieldHeight();
+    final double chipHeight = _measurements.chipHeight ?? MultiSelectLayoutCalculator.calculateTextFieldHeight(
+      fontSize: widget.fieldTextStyle?.fontSize,
+      chipVerticalPadding: MultiSelectConstants.chipVerticalPadding,
+    );
     final double fontSize = widget.fieldTextStyle?.fontSize ?? 10.0;
     final double textLineHeight = fontSize * 1.2; // Approximate
     
@@ -866,12 +831,12 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       textFieldPaddingTop = chipTextCenter - (textLineHeight / 2.0) - 6.0;
       textFieldPaddingBottom = chipHeight - textLineHeight - textFieldPaddingTop;
     } else {
-      // Fallback: calculate same as chip structure (matches _calculateTextFieldHeight)
+      // Fallback: calculate same as chip structure
       // Chip text center = chipVerticalPadding (6px) + rowHeight/2
       // For fontSize 10: rowHeight = max(12, 24) = 24, so text center = 6 + 12 = 18
       const double iconHeight = 24.0;
       final double rowContentHeight = textLineHeight > iconHeight ? textLineHeight : iconHeight;
-      final double chipTextCenter = _chipVerticalPadding + (rowContentHeight / 2.0);
+      final double chipTextCenter = MultiSelectConstants.chipVerticalPadding + (rowContentHeight / 2.0);
       
       // Same adjustment as measured case
       textFieldPaddingTop = chipTextCenter - (textLineHeight / 2.0) - 6.0;
