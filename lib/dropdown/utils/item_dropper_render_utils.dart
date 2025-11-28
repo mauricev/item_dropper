@@ -104,20 +104,11 @@ class ItemDropperRenderUtils {
       );
     }
     
-    // DEBUG: Track last item AND track all items for debugging
-    final bool isLastItem = filteredItems.isNotEmpty && filteredItems.last.value == item.value;
-    
     return MouseRegion(
       onEnter: (event) {
-        debugPrint("DEBUG: MouseRegion onEnter - itemIndex=$itemIndex, label=${item.label}, isLastItem=$isLastItem, position=${event.position}");
-        if (isLastItem) {
-          debugPrint("DEBUG LAST ITEM: MouseRegion onEnter for last item - itemIndex=$itemIndex, label=${item.label}");
-        }
+        final int itemIndex = filteredItems.indexWhere((i) => i.value == item.value);
         if (keyboardHighlightIndex == ItemDropperConstants.kNoHighlight) {
-          debugPrint("DEBUG: MouseRegion onEnter - setting hoverIndex to $itemIndex");
           safeSetState(() => setHoverIndex(itemIndex));
-        } else {
-          debugPrint("DEBUG: MouseRegion onEnter - keyboard highlight active (index=$keyboardHighlightIndex), not setting hover");
         }
       },
       onExit: (_) =>
@@ -176,10 +167,7 @@ class ItemDropperRenderUtils {
     return InkWell(
       hoverColor: Colors.transparent,
       onTap: isGroupHeader ? null : () {
-        debugPrint("DEBUG: InkWell onTap called for item: ${item.label}, isGroupHeader=$isGroupHeader");
-        debugPrint("DEBUG: InkWell onTap - ABOUT TO CALL onTap callback");
         onTap();
-        debugPrint("DEBUG: InkWell onTap - CALLBACK COMPLETED");
       }, // Group headers are not clickable
       child: Container(
         height: itemHeight ?? ItemDropperConstants.kDropdownItemHeight,
@@ -315,38 +303,12 @@ class ItemDropperRenderUtils {
                       final hasPrevious = i > 0;
                       final previousIsGroupHeader = hasPrevious && items[i - 1].isGroupHeader;
                       
-                      // DEBUG: Track which item is being built
-                      debugPrint("DEBUG: ListView.builder building item index=$i, label=${item.label}");
                       
                       // Call builder - if it's the default builder, it will use the separator info
                       // We need to wrap the builder call to pass separator info
                       // Since we can't modify the builder signature, we'll handle separators
                       // by wrapping the result for group headers
-                      Widget itemWidget = builder(context, item, isSelected(item));
-                      
-                      // DEBUG: Check if itemWidget contains MouseRegion/InkWell
-                      debugPrint("DEBUG: Item widget built for index=$i, type=${itemWidget.runtimeType}");
-                      
-                      // DEBUG: Wrap item to track its bounds and visibility
-                      return Builder(
-                        builder: (itemContext) {
-                          // Use a post-frame callback to measure item bounds after it's laid out
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            final RenderBox? itemBox = itemContext.findRenderObject() as RenderBox?;
-                            if (itemBox != null) {
-                              final Offset itemGlobalPos = itemBox.localToGlobal(Offset.zero);
-                              final Size itemSize = itemBox.size;
-                              final Rect itemRect = itemGlobalPos & itemSize;
-                              debugPrint("DEBUG: Item $i bounds - globalPos=$itemGlobalPos, size=$itemSize, rect=$itemRect");
-                              debugPrint("DEBUG: Item $i - is visible in viewport? ${itemBox.attached}");
-                            } else {
-                              debugPrint("DEBUG: Item $i - RenderBox is null (not laid out yet)");
-                            }
-                          });
-                          
-                          return itemWidget;
-                        },
-                      );
+                      return builder(context, item, isSelected(item));
                     },
                   ),
                 ),
