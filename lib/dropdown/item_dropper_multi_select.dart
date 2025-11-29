@@ -150,6 +150,89 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     _hoverIndex = ItemDropperConstants.kNoHighlight;
   }
 
+  // Focus management helpers
+  void _gainFocus() {
+    if (!_manualFocusState) {
+      _manualFocusState = true;
+      _focusNode.requestFocus();
+      _updateFocusVisualState();
+    }
+  }
+
+  void _ensureFocusMaintained() {
+    if (_manualFocusState && !_focusNode.hasFocus) {
+      _focusNode.requestFocus();
+    }
+  }
+
+  void _loseFocus() {
+    _manualFocusState = false;
+    _updateFocusVisualState();
+    _focusNode.unfocus();
+  }
+
+  // Overlay management helpers
+  void _showOverlayIfNeeded() {
+    if (!_overlayController.isShowing) {
+      _clearHighlights();
+      _overlayController.show();
+    }
+  }
+
+  void _hideOverlayIfNeeded() {
+    if (_overlayController.isShowing) {
+      _overlayController.hide();
+    }
+  }
+
+  void _showOverlayIfFocusedAndBelowMax() {
+    if (_manualFocusState && 
+        (widget.maxSelected == null || _selected.length < widget.maxSelected!)) {
+      final filtered = _filtered;
+      if (!_overlayController.isShowing && filtered.isNotEmpty) {
+        _clearHighlights();
+        _overlayController.show();
+      }
+    }
+  }
+
+  // Rebuild check helper
+  void _requestRebuildIfNotScheduled() {
+    if (!_rebuildScheduled) {
+      _requestRebuild();
+    }
+  }
+
+  // TextField padding calculation
+  ({double top, double bottom}) _calculateTextFieldPadding({
+    required double chipHeight,
+    required double fontSize,
+  }) {
+    final double textLineHeight = fontSize * 1.2;
+    
+    if (_measurements.chipTextTop != null) {
+      // Use measured chip text center position to align TextField text
+      // chipTextTop is already the text center (rowTop + rowHeight/2)
+      final double chipTextCenter = _measurements.chipTextTop!;
+      // Adjust for TextField's text rendering - needs 6px offset upward
+      final double top = chipTextCenter - (textLineHeight / 2.0) - 6.0;
+      final double bottom = chipHeight - textLineHeight - top;
+      return (top: top, bottom: bottom);
+    } else {
+      // Fallback: calculate same as chip structure
+      // Chip text center = chipVerticalPadding (6px) + rowHeight/2
+      // For fontSize 10: rowHeight = max(12, 24) = 24, so text center = 6 + 12 = 18
+      const double iconHeight = 24.0;
+      final double rowContentHeight = textLineHeight > iconHeight ? textLineHeight : iconHeight;
+      final double chipTextCenter = MultiSelectConstants.chipVerticalPadding + (rowContentHeight / 2.0);
+      
+      // Same adjustment as measured case
+      final double top = chipTextCenter - (textLineHeight / 2.0) - 6.0;
+      final double bottom = chipHeight - textLineHeight - top;
+      return (top: top, bottom: bottom);
+    }
+  }
+
   void _handleFocusChange() {
     // Manual focus management - only update our manual state when Flutter's focus changes
     // But we control the visual state (border color) based on our manual state
@@ -189,8 +272,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         
         final filtered = _filtered;
         if (!_overlayController.isShowing && filtered.isNotEmpty) {
-          _clearHighlights();
-          _overlayController.show();
+          _showOverlayIfNeeded();
         }
       });
     }
@@ -245,7 +327,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         }
       } else {
         _clearHighlights();
-        _overlayController.hide();
+        _hideOverlayIfNeeded();
       }
     });
     
@@ -316,7 +398,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         if (widget.maxSelected != null && 
             _selected.length >= widget.maxSelected! &&
             _overlayController.isShowing) {
-          _overlayController.hide();
+          _hideOverlayIfNeeded();
         }
       } else {
         // Item is already selected, remove it (toggle off)
@@ -331,11 +413,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
             widget.maxSelected != null && 
             _selected.length < widget.maxSelected! &&
             _manualFocusState) {
-          final filtered = _filtered;
-          if (!_overlayController.isShowing && filtered.isNotEmpty) {
-            _clearHighlights();
-            _overlayController.show();
-          }
+          _showOverlayIfFocusedAndBelowMax();
         }
       }
       // After selection change, clear highlights
@@ -347,6 +425,10 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     // Mark that we're the source of this selection change
     _isInternalSelectionChange = true;
     
+    // Focus the field and set manual focus state when removing a chip (even if unfocused)
+    // This allows users to remove chips and immediately see the dropdown
+    _gainFocus();
+    
     // Update selection immediately (synchronous)
     _selected.removeWhere((selected) => selected.value == item.value);
     
@@ -355,38 +437,19 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     
     _clearHighlights();
     
-    // Mark that this is an internal selection change
-    _isInternalSelectionChange = true;
-    
     // Request rebuild through central mechanism
     _requestRebuild();
     
-    // Notify parent of change after rebuild completes
+    // Notify parent of change and handle post-removal state
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         widget.onChanged(List.from(_selected));
-        // Clear the internal change flag after parent has been notified
+        // Clear the internal change flag and handle focus/overlay after parent has been notified
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
             _isInternalSelectionChange = false;
-            // Invalidate overlay cache if showing (will rebuild on next natural build)
-            if (_overlayController.isShowing) {
-            }
-            // Ensure focus is maintained (manual focus management)
-            if (_manualFocusState && !_focusNode.hasFocus) {
-              _focusNode.requestFocus();
-            }
-            
-            // FIX: Show overlay again if we're below maxSelected and still focused
-            // This handles the case where user removes an item after reaching max
-            if (_manualFocusState && 
-                (widget.maxSelected == null || _selected.length < widget.maxSelected!)) {
-              final filtered = _filtered;
-              if (!_overlayController.isShowing && filtered.isNotEmpty) {
-                _clearHighlights();
-                _overlayController.show();
-              }
-            }
+            _ensureFocusMaintained();
+            _showOverlayIfFocusedAndBelowMax();
           }
         });
       }
@@ -406,23 +469,22 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       return KeyEventResult.handled;
     } else if (event.logicalKey == LogicalKeyboardKey.escape) {
       // Manual focus management - user explicitly unfocused with Escape
-      final String stackTrace = StackTrace.current.toString().split('\n').take(10).join('\n');
-      _manualFocusState = false;
-      _updateFocusVisualState();
-      _focusNode.unfocus();
+      _loseFocus();
       return KeyEventResult.handled;
     }
 
     return KeyEventResult.ignored;
   }
 
-  void _handleArrowDown() {
+  void _handleArrowKeyNavigation(
+    int Function(int, int, int, List<ItemDropperItem<T>>) navigationHandler,
+  ) {
     final filtered = _filtered;
-    _keyboardHighlightIndex = ItemDropperKeyboardNavigation.handleArrowDown<T>(
-      currentIndex: _keyboardHighlightIndex,
-      hoverIndex: _hoverIndex,
-      itemCount: filtered.length,
-      items: filtered,
+    _keyboardHighlightIndex = navigationHandler(
+      _keyboardHighlightIndex,
+      _hoverIndex,
+      filtered.length,
+      filtered,
     );
     _safeSetState(() {
       _hoverIndex = ItemDropperConstants.kNoHighlight;
@@ -434,22 +496,12 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     );
   }
 
+  void _handleArrowDown() {
+    _handleArrowKeyNavigation(ItemDropperKeyboardNavigation.handleArrowDown<T>);
+  }
+
   void _handleArrowUp() {
-    final filtered = _filtered;
-    _keyboardHighlightIndex = ItemDropperKeyboardNavigation.handleArrowUp<T>(
-      currentIndex: _keyboardHighlightIndex,
-      hoverIndex: _hoverIndex,
-      itemCount: filtered.length,
-      items: filtered,
-    );
-    _safeSetState(() {
-      _hoverIndex = ItemDropperConstants.kNoHighlight;
-    });
-    ItemDropperKeyboardNavigation.scrollToHighlight(
-      highlightIndex: _keyboardHighlightIndex,
-      scrollController: _scrollController,
-      mounted: mounted,
-    );
+    _handleArrowKeyNavigation(ItemDropperKeyboardNavigation.handleArrowUp<T>);
   }
 
   void _handleEnter() {
@@ -478,10 +530,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     // Don't show overlay if maxSelected is reached
     if (widget.maxSelected != null && 
         _selected.length >= widget.maxSelected!) {
-      // Hide overlay if it's showing
-      if (_overlayController.isShowing) {
-        _overlayController.hide();
-      }
+      _hideOverlayIfNeeded();
       return;
     }
     
@@ -494,11 +543,9 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     // Show overlay if there are filtered items OR if user is searching (to show empty state)
     // Use manual focus state
     if (_manualFocusState) {
-      if (!_overlayController.isShowing) {
-        _overlayController.show();
-      }
+      _showOverlayIfNeeded();
     } else if (_filtered.isEmpty && _overlayController.isShowing) {
-      _overlayController.hide();
+      _hideOverlayIfNeeded();
     }
   }
 
@@ -507,11 +554,6 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     if (mounted) {
       setState(() {
         fn();
-        // Reset flag after setState callback completes (rebuild will happen after this)
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-          }
-        });
       });
     }
   }
@@ -558,9 +600,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       _selected = List.from(widget.selectedItems);
       // Don't trigger rebuild here if we're already rebuilding
       // Parent change will be reflected in the current rebuild cycle
-      if (!_rebuildScheduled) {
-        _requestRebuild();
-      }
+      _requestRebuildIfNotScheduled();
     }
     
     // Invalidate filter cache if items list changed
@@ -572,9 +612,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       // Cache removed - overlay rebuilds automatically
       // Use central rebuild mechanism instead of direct setState
       // But only if not already rebuilding
-      if (!_rebuildScheduled) {
-        _requestRebuild();
-      }
+      _requestRebuildIfNotScheduled();
     }
   }
   
@@ -624,13 +662,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       fieldKey: widget.inputKey ?? _fieldKey,
       onDismiss: () {
         // Manual focus management - user clicked outside, unfocus
-        final String stackTrace = StackTrace.current.toString().split('\n').take(10).join('\n');
-        _manualFocusState = false;
-        _updateFocusVisualState();
-        _focusNode.unfocus();
-        if (_overlayController.isShowing) {
-          _overlayController.hide();
-        }
+        _loseFocus();
+        _hideOverlayIfNeeded();
       },
       overlay: _buildDropdownOverlay(),
       inputField: _buildInputField(),
@@ -811,30 +844,12 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       chipVerticalPadding: MultiSelectConstants.chipVerticalPadding,
     );
     final double fontSize = widget.fieldTextStyle?.fontSize ?? 10.0;
-    final double textLineHeight = fontSize * 1.2; // Approximate
-    
-    double textFieldPaddingTop;
-    double textFieldPaddingBottom;
-    
-    if (_measurements.chipTextTop != null) {
-      // Use measured chip text center position to align TextField text
-      // chipTextTop is already the text center (rowTop + rowHeight/2)
-      final double chipTextCenter = _measurements.chipTextTop!;
-      // Adjust for TextField's text rendering - needs 6px offset upward
-      textFieldPaddingTop = chipTextCenter - (textLineHeight / 2.0) - 6.0;
-      textFieldPaddingBottom = chipHeight - textLineHeight - textFieldPaddingTop;
-    } else {
-      // Fallback: calculate same as chip structure
-      // Chip text center = chipVerticalPadding (6px) + rowHeight/2
-      // For fontSize 10: rowHeight = max(12, 24) = 24, so text center = 6 + 12 = 18
-      const double iconHeight = 24.0;
-      final double rowContentHeight = textLineHeight > iconHeight ? textLineHeight : iconHeight;
-      final double chipTextCenter = MultiSelectConstants.chipVerticalPadding + (rowContentHeight / 2.0);
-      
-      // Same adjustment as measured case
-      textFieldPaddingTop = chipTextCenter - (textLineHeight / 2.0) - 6.0;
-      textFieldPaddingBottom = chipHeight - textLineHeight - textFieldPaddingTop;
-    }
+    final padding = _calculateTextFieldPadding(
+      chipHeight: chipHeight,
+      fontSize: fontSize,
+    );
+    final double textFieldPaddingTop = padding.top;
+    final double textFieldPaddingBottom = padding.bottom;
     
     // Use Container with exact width - Wrap will use this for layout
     return SizedBox(
