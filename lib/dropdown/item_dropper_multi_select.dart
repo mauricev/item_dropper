@@ -167,50 +167,18 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     final bool flutterHasFocus = _focusNode.hasFocus;
     
     // Only update manual focus state if Flutter gained focus (user clicked TextField)
-    // Don't update if Flutter lost focus - we manage that manually
     if (flutterHasFocus && !_manualFocusState) {
       debugPrint('DEBUG FREEZE: [$id]   -> Flutter gained focus, updating manual state');
       _manualFocusState = true;
       _updateFocusVisualState();
       debugPrint('DEBUG FREEZE: [$id]   -> After _updateFocusVisualState()');
     }
-    // If Flutter lost focus but we want to keep it (overlay tap), restore it
-    // BUT: only if no other widget has focus (to prevent focus fights between dropdowns)
+    // If Flutter lost focus, clear manual state - no restoration attempts
     else if (!flutterHasFocus && _manualFocusState) {
-      debugPrint('DEBUG FREEZE: [$id]   -> Flutter lost focus but manual state is true');
-      // Check if another widget has focus - if so, clear our manual state instead of fighting
-      final FocusNode? focusedChild = FocusScope.of(context).focusedChild;
-      final bool anotherWidgetHasFocus = focusedChild != null && focusedChild != _focusNode;
-      debugPrint('DEBUG FREEZE: [$id]     - focusedChild: ${focusedChild?.debugLabel ?? "null"}');
-      debugPrint('DEBUG FREEZE: [$id]     - anotherWidgetHasFocus: $anotherWidgetHasFocus');
-      
-      if (anotherWidgetHasFocus) {
-        // Another widget has focus - user intentionally clicked elsewhere, clear our manual state
-        debugPrint('DEBUG FREEZE: [$id]     -> Another widget has focus, clearing manual state');
-        _manualFocusState = false;
-        _updateFocusVisualState();
-        debugPrint('DEBUG FREEZE: [$id]     -> Manual state cleared');
-      } else {
-        // No other widget has focus - likely lost due to overlay tap or similar, restore it
-        debugPrint('DEBUG FREEZE: [$id]     -> No other widget has focus, scheduling restore');
-        scheduleMicrotask(() {
-          debugPrint('DEBUG FREEZE: [$id]   -> scheduleMicrotask callback executing');
-          debugPrint('DEBUG FREEZE: [$id]     - mounted: $mounted');
-          debugPrint('DEBUG FREEZE: [$id]     - _manualFocusState: $_manualFocusState');
-          debugPrint('DEBUG FREEZE: [$id]     - _focusNode.hasFocus: ${_focusNode.hasFocus}');
-          // Check again if another widget has focus before restoring
-          final FocusNode? currentFocusedChild = mounted ? FocusScope.of(context).focusedChild : null;
-          final bool stillNoOtherFocus = currentFocusedChild == null || currentFocusedChild == _focusNode;
-          debugPrint('DEBUG FREEZE: [$id]     - stillNoOtherFocus: $stillNoOtherFocus');
-          if (mounted && _manualFocusState && !_focusNode.hasFocus && stillNoOtherFocus) {
-            debugPrint('DEBUG FREEZE: [$id]     -> Requesting focus restore');
-            _focusNode.requestFocus();
-            debugPrint('DEBUG FREEZE: [$id]     -> After requestFocus()');
-          } else {
-            debugPrint('DEBUG FREEZE: [$id]     -> Not restoring focus (conditions not met)');
-          }
-        });
-      }
+      debugPrint('DEBUG FREEZE: [$id]   -> Flutter lost focus, clearing manual state');
+      _manualFocusState = false;
+      _updateFocusVisualState();
+      debugPrint('DEBUG FREEZE: [$id]   -> Manual state cleared');
     }
     
     // Use manual focus state for overlay logic
