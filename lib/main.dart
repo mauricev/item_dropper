@@ -333,7 +333,6 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
                               },
                               hintText: 'Select fruits...',
                               maxDropdownHeight: 250,
-                              debugId: 'FRUITS',
                             ),
                           ),
                         ],
@@ -364,7 +363,6 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
                               hintText: 'Select up to 4 items...',
                               maxDropdownHeight: 250,
                               maxSelected: 4,
-                              debugId: 'MAX_ITEMS',
                             ),
                           ),
 

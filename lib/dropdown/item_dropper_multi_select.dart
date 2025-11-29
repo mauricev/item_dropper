@@ -53,7 +53,6 @@ class MultiItemDropper<T> extends StatefulWidget {
   final bool showScrollbar;
   final double scrollbarThickness;
   final double? elevation;
-  final String? debugId; // Temporary debug identifier to distinguish dropdowns
 
   const MultiItemDropper({
     super.key,
@@ -73,7 +72,6 @@ class MultiItemDropper<T> extends StatefulWidget {
     this.itemHeight, // Optional item height
     this.popupItemBuilder,
     this.elevation,
-    this.debugId, // Temporary debug identifier
   }) : assert(maxSelected == null ||
       maxSelected >= 2, 'maxSelected must be null or >= 2');
 
@@ -153,130 +151,77 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   }
 
   void _handleFocusChange() {
-    final String id = widget.debugId ?? 'UNKNOWN';
-    debugPrint('DEBUG FREEZE: ==========================================');
-    debugPrint('DEBUG FREEZE: [$id] _handleFocusChange() called');
-    debugPrint('DEBUG FREEZE: [$id]   - flutterHasFocus: ${_focusNode.hasFocus}');
-    debugPrint('DEBUG FREEZE: [$id]   - _manualFocusState: $_manualFocusState');
-    debugPrint('DEBUG FREEZE: [$id]   - mounted: $mounted');
-    debugPrint('DEBUG FREEZE: [$id]   - maxSelected: ${widget.maxSelected}');
-    debugPrint('DEBUG FREEZE: [$id]   - selected.length: ${_selected.length}');
-    
     // Manual focus management - only update our manual state when Flutter's focus changes
     // But we control the visual state (border color) based on our manual state
     final bool flutterHasFocus = _focusNode.hasFocus;
     
     // Only update manual focus state if Flutter gained focus (user clicked TextField)
     if (flutterHasFocus && !_manualFocusState) {
-      debugPrint('DEBUG FREEZE: [$id]   -> Flutter gained focus, updating manual state');
       _manualFocusState = true;
       _updateFocusVisualState();
-      debugPrint('DEBUG FREEZE: [$id]   -> After _updateFocusVisualState()');
     }
     // If Flutter lost focus, clear manual state - no restoration attempts
     else if (!flutterHasFocus && _manualFocusState) {
-      debugPrint('DEBUG FREEZE: [$id]   -> Flutter lost focus, clearing manual state');
       _manualFocusState = false;
       _updateFocusVisualState();
-      debugPrint('DEBUG FREEZE: [$id]   -> Manual state cleared');
     }
     
     // Use manual focus state for overlay logic
     if (_manualFocusState) {
-      debugPrint('DEBUG FREEZE: [$id]   -> Manual focus state is true, checking overlay');
       // Don't show overlay if maxSelected is reached
       if (widget.maxSelected != null && 
           _selected.length >= widget.maxSelected!) {
-        debugPrint('DEBUG FREEZE: [$id]   -> maxSelected reached, not showing overlay');
         return;
       }
       
-      debugPrint('DEBUG FREEZE: [$id]   -> Scheduling post-frame callback to show overlay');
       // Show overlay when focused if there are any filtered items available
       // Use a post-frame callback to ensure input context is available
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        debugPrint('DEBUG FREEZE: [$id]   -> Post-frame callback executing');
-        debugPrint('DEBUG FREEZE: [$id]     - mounted: $mounted');
-        debugPrint('DEBUG FREEZE: [$id]     - _manualFocusState: $_manualFocusState');
         if (!mounted || !_manualFocusState) {
-          debugPrint('DEBUG FREEZE: [$id]     -> Early return (not mounted or no manual focus)');
           return;
         }
         
         // Check again if maxSelected is reached (might have changed)
         if (widget.maxSelected != null && 
             _selected.length >= widget.maxSelected!) {
-          debugPrint('DEBUG FREEZE: [$id]     -> maxSelected reached in callback, not showing overlay');
           return;
         }
         
-        debugPrint('DEBUG FREEZE: [$id]     -> Getting filtered items');
         final filtered = _filtered;
-        debugPrint('DEBUG FREEZE: [$id]     - filtered.length: ${filtered.length}');
-        debugPrint('DEBUG FREEZE: [$id]     - _overlayController.isShowing: ${_overlayController.isShowing}');
         if (!_overlayController.isShowing && filtered.isNotEmpty) {
-          debugPrint('DEBUG FREEZE: [$id]     -> Showing overlay');
           _clearHighlights();
           _overlayController.show();
-          debugPrint('DEBUG FREEZE: [$id]     -> After overlayController.show()');
-        } else {
-          debugPrint('DEBUG FREEZE: [$id]     -> Not showing overlay (already showing or no items)');
         }
-        debugPrint('DEBUG FREEZE: [$id]   -> Post-frame callback complete');
       });
-      debugPrint('DEBUG FREEZE: [$id]   -> Post-frame callback scheduled');
     }
-    debugPrint('DEBUG FREEZE: [$id] _handleFocusChange() complete');
-    debugPrint('DEBUG FREEZE: [$id] ==========================================');
   }
   
   // Update visual state (border color) based on manual focus state
   void _updateFocusVisualState() {
-    final String id = widget.debugId ?? 'UNKNOWN';
-    debugPrint('DEBUG FREEZE: [$id] _updateFocusVisualState() called');
-    debugPrint('DEBUG FREEZE: [$id]   - _rebuildScheduled: $_rebuildScheduled');
-    debugPrint('DEBUG FREEZE: [$id]   - _isInternalSelectionChange: $_isInternalSelectionChange');
     if (_rebuildScheduled) {
-      debugPrint('DEBUG FREEZE: [$id]   -> Early return (rebuild scheduled)');
       return;
     }
     if (_isInternalSelectionChange) {
-      debugPrint('DEBUG FREEZE: [$id]   -> Early return (internal selection change)');
       return;
     }
-    debugPrint('DEBUG FREEZE: [$id]   -> Calling _safeSetState()');
     _safeSetState(() {
       // Invalidate decoration cache so it rebuilds with new focus state
       _cachedDecoration = null;
-      debugPrint('DEBUG FREEZE: [$id]   -> Inside _safeSetState callback, cache cleared');
     });
-    debugPrint('DEBUG FREEZE: [$id] _updateFocusVisualState() complete');
   }
 
   void _updateSelection(void Function() selectionUpdate) {
-    final String id = widget.debugId ?? 'UNKNOWN';
-    debugPrint('DEBUG FREEZE: [$id] _updateSelection() called');
-    // Store focus state before selection update
-    final bool hadFocusBeforeUpdate = _focusNode.hasFocus;
-    debugPrint('DEBUG FREEZE: [$id]   - hadFocusBeforeUpdate: $hadFocusBeforeUpdate');
-    debugPrint('DEBUG FREEZE: [$id]   - _isInternalSelectionChange: $_isInternalSelectionChange');
-    
     // Mark that we're the source of this selection change
     _isInternalSelectionChange = true;
-    debugPrint('DEBUG FREEZE: [$id]   -> Set _isInternalSelectionChange = true');
     
     // Preserve keyboard highlight state - only reset if keyboard navigation was active
     final bool wasKeyboardActive = _keyboardHighlightIndex != ItemDropperConstants.kNoHighlight;
     final int previousHoverIndex = _hoverIndex;
     
     // Update selection and all related state inside setState to ensure single rebuild
-    debugPrint('DEBUG FREEZE: [$id]   -> Calling _requestRebuild()');
     _requestRebuild(() {
-      debugPrint('DEBUG FREEZE: [$id]   -> Inside _requestRebuild callback in _updateSelection');
       // Update selection inside the rebuild callback
-      debugPrint('DEBUG FREEZE: [$id]     -> Calling selectionUpdate()');
       selectionUpdate();
-      debugPrint('DEBUG FREEZE: [$id]     -> selectionUpdate() complete');
       
       // Update highlights based on filtered items
       final List<ItemDropperItem<T>> remainingFilteredItems = _filtered;
@@ -331,14 +276,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   }
 
   void _toggleItem(ItemDropperItem<T> item) {
-    final String id = widget.debugId ?? 'UNKNOWN';
-    debugPrint('DEBUG FREEZE: [$id] _toggleItem() called');
-    debugPrint('DEBUG FREEZE: [$id]   - item.label: "${item.label}"');
-    debugPrint('DEBUG FREEZE: [$id]   - item.isGroupHeader: ${item.isGroupHeader}');
-    
     // Group headers cannot be selected
     if (item.isGroupHeader) {
-      debugPrint('DEBUG FREEZE: [$id]   -> Early return (group header)');
       return;
     }
     
@@ -346,65 +285,45 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     // Don't let Flutter lose focus - we control it manually
     
     final bool isCurrentlySelected = _isSelected(item);
-    debugPrint('DEBUG FREEZE: [$id]   - isCurrentlySelected: $isCurrentlySelected');
     
     // If maxSelected is set and already reached, only allow removal (toggle off)
     if (widget.maxSelected != null && 
         _selected.length >= widget.maxSelected! && 
         !isCurrentlySelected) {
-      debugPrint('DEBUG FREEZE: [$id]   -> maxSelected reached, blocking add');
       // Block adding new items when max is reached
       // Close the overlay and keep it closed
       if (_overlayController.isShowing) {
-        debugPrint('DEBUG FREEZE: [$id]     -> Hiding overlay');
         _overlayController.hide();
       }
-      debugPrint('DEBUG FREEZE: [$id]   -> Early return');
       return;
     }
     // Allow removing items even when max is reached (toggle behavior)
     
-    debugPrint('DEBUG FREEZE: [$id]   -> Calling _updateSelection()');
     _updateSelection(() {
-      debugPrint('DEBUG FREEZE: [$id]   -> Inside _updateSelection callback in _toggleItem');
       final bool wasAtMax = widget.maxSelected != null && 
           _selected.length >= widget.maxSelected!;
       
       if (!isCurrentlySelected) {
-        final String id = widget.debugId ?? 'UNKNOWN';
-        final int selectedCountBefore = _selected.length;
-        debugPrint('DEBUG FREEZE: [$id]     -> Adding item (count: $selectedCountBefore)');
         _selected.add(item);
-        final int selectedCountAfter = _selected.length;
-        debugPrint('DEBUG FREEZE: [$id]     -> Item added (count: $selectedCountBefore -> $selectedCountAfter)');
         
         // Reset totalChipWidth when selection count changes - will be remeasured correctly
         _measurements.totalChipWidth = null;
-        debugPrint('DEBUG FREEZE: [$id]     -> totalChipWidth reset to null');
         
         // Clear search text after selection for continued searching
-        debugPrint('DEBUG FREEZE: [$id]     -> Clearing search text');
         _searchController.clear();
-        debugPrint('DEBUG FREEZE: [$id]     -> Search text cleared');
         
         // If we just reached the max, close the overlay
         if (widget.maxSelected != null && 
             _selected.length >= widget.maxSelected! &&
             _overlayController.isShowing) {
-          final String id = widget.debugId ?? 'UNKNOWN';
-          debugPrint('DEBUG FREEZE: [$id]     -> Max reached, hiding overlay');
           _overlayController.hide();
         }
       } else {
-        final String id = widget.debugId ?? 'UNKNOWN';
-        debugPrint('DEBUG FREEZE: [$id]     -> Removing item (toggle off)');
         // Item is already selected, remove it (toggle off)
         _selected.removeWhere((selected) => selected.value == item.value);
-        debugPrint('DEBUG FREEZE: [$id]     -> Item removed, new count: ${_selected.length}');
         
         // Reset totalChipWidth when selection count changes - will be remeasured correctly
         _measurements.totalChipWidth = null;
-        debugPrint('DEBUG FREEZE: [$id]     -> totalChipWidth reset to null');
         
         // FIX: Show overlay again if we're below maxSelected after removal
         // This handles the case where user removes an item after reaching max
@@ -556,51 +475,31 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   }
 
   void _handleTextChanged(String value) {
-    final String id = widget.debugId ?? 'UNKNOWN';
-    debugPrint('DEBUG FREEZE: [$id] _handleTextChanged() called');
-    debugPrint('DEBUG FREEZE: [$id]   - value: "$value"');
-    debugPrint('DEBUG FREEZE: [$id]   - maxSelected: ${widget.maxSelected}');
-    debugPrint('DEBUG FREEZE: [$id]   - selected.length: ${_selected.length}');
-    debugPrint('DEBUG FREEZE: [$id]   - _manualFocusState: $_manualFocusState');
-    
     // Don't show overlay if maxSelected is reached
     if (widget.maxSelected != null && 
         _selected.length >= widget.maxSelected!) {
-      debugPrint('DEBUG FREEZE: [$id]   -> maxSelected reached, hiding overlay');
       // Hide overlay if it's showing
       if (_overlayController.isShowing) {
         _overlayController.hide();
-        debugPrint('DEBUG FREEZE: [$id]     -> Overlay hidden');
       }
-      debugPrint('DEBUG FREEZE: [$id]   -> Early return');
       return;
     }
     
-    debugPrint('DEBUG FREEZE: [$id]   -> Calling _safeSetState() to clear cache');
     // Cache removed - overlay rebuilds automatically
     _safeSetState(() {
-      debugPrint('DEBUG FREEZE: [$id]   -> Inside _safeSetState callback in _handleTextChanged');
       _filterUtils.clearCache();
       _clearHighlights();
-      debugPrint('DEBUG FREEZE: [$id]   -> Cache cleared, highlights cleared');
     });
-    debugPrint('DEBUG FREEZE: [$id]   -> After _safeSetState() in _handleTextChanged');
     
     // Show overlay if there are filtered items OR if user is searching (to show empty state)
     // Use manual focus state
     if (_manualFocusState) {
-      debugPrint('DEBUG FREEZE: [$id]   -> Manual focus state is true');
-      debugPrint('DEBUG FREEZE: [$id]     - _overlayController.isShowing: ${_overlayController.isShowing}');
       if (!_overlayController.isShowing) {
-        debugPrint('DEBUG FREEZE: [$id]     -> Showing overlay');
         _overlayController.show();
-        debugPrint('DEBUG FREEZE: [$id]     -> After overlayController.show()');
       }
     } else if (_filtered.isEmpty && _overlayController.isShowing) {
-      debugPrint('DEBUG FREEZE: [$id]   -> Manual focus false and filtered empty, hiding overlay');
       _overlayController.hide();
     }
-    debugPrint('DEBUG FREEZE: [$id] _handleTextChanged() complete');
   }
 
   // Helper method to safely call setState
@@ -620,53 +519,32 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   // Central rebuild mechanism - prevents cascading rebuilds
   // Only allows one rebuild at a time - ignores further requests until rebuild completes
   void _requestRebuild([void Function()? stateUpdate]) {
-    final String id = widget.debugId ?? 'UNKNOWN';
-    debugPrint('DEBUG FREEZE: [$id] _requestRebuild() called');
-    debugPrint('DEBUG FREEZE: [$id]   - mounted: $mounted');
-    debugPrint('DEBUG FREEZE: [$id]   - _rebuildScheduled: $_rebuildScheduled');
-    debugPrint('DEBUG FREEZE: [$id]   - stateUpdate: ${stateUpdate != null ? "provided" : "null"}');
     if (!mounted) {
-      debugPrint('DEBUG FREEZE: [$id]   -> Early return (not mounted)');
       return;
     }
     
-    // Mark that this rebuild is from active code (not commented out)
-    
     // If rebuild already in progress, ignore this request
     if (_rebuildScheduled) {
-      debugPrint('DEBUG FREEZE: [$id]   -> Early return (rebuild already scheduled)');
       return;
     }
     
     // Mark that rebuild is scheduled and trigger it immediately
     _rebuildScheduled = true;
-    debugPrint('DEBUG FREEZE: [$id]   -> Setting _rebuildScheduled = true');
-    debugPrint('DEBUG FREEZE: [$id]   -> Calling _safeSetState()');
     
     // Trigger immediate rebuild - state updates happen inside setState callback
     _safeSetState(() {
-      debugPrint('DEBUG FREEZE: [$id]   -> Inside _safeSetState callback in _requestRebuild');
       // Execute state update callback if provided
       if (stateUpdate != null) {
-        debugPrint('DEBUG FREEZE: [$id]     -> Calling stateUpdate callback');
         stateUpdate.call();
-        debugPrint('DEBUG FREEZE: [$id]     -> stateUpdate callback complete');
       }
     });
-    debugPrint('DEBUG FREEZE: [$id]   -> After _safeSetState() in _requestRebuild');
     
     // After rebuild completes, reset flag to allow future rebuilds
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      debugPrint('DEBUG FREEZE: [$id]   -> Post-frame callback from _requestRebuild executing');
-      debugPrint('DEBUG FREEZE: [$id]     - mounted: $mounted');
       if (mounted) {
-        debugPrint('DEBUG FREEZE: [$id]     -> Resetting _rebuildScheduled = false');
         _rebuildScheduled = false;
-        debugPrint('DEBUG FREEZE: [$id]     -> _rebuildScheduled reset complete');
       }
-      debugPrint('DEBUG FREEZE: [$id]   -> Post-frame callback from _requestRebuild complete');
     });
-    debugPrint('DEBUG FREEZE: [$id] _requestRebuild() complete');
   }
 
 
