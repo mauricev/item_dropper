@@ -6,6 +6,7 @@ import 'chip_measurement_helper.dart';
 import 'multi/multi_select_constants.dart';
 import 'multi/multi_select_layout_calculator.dart';
 import 'utils/item_dropper_add_item_utils.dart';
+import 'utils/dropdown_position_calculator.dart';
 
 /// Multi-select dropdown widget
 /// Allows selecting multiple items with chip-based display
@@ -1032,7 +1033,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     final double inputFieldHeight = inputBox.size.height;
     final double maxDropdownHeight = widget.maxDropdownHeight ?? MultiSelectConstants.defaultMaxDropdownHeight;
     
-    final position = ItemDropperRenderUtils.calculateDropdownPosition(
+    final position = DropdownPositionCalculator.calculate(
       context: inputContext,
       inputBox: inputBox,
       inputFieldHeight: inputFieldHeight,

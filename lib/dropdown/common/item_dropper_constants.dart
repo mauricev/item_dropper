@@ -5,7 +5,6 @@ class ItemDropperConstants {
   static const double kDropdownMargin = 4.0;
   static const double kDropdownElevation = 4.0;
   static const double kDropdownFontSize = 12.0;
-  static const double kDropdownMaxHeightDivisor = 2.0;
   static const double kSelectedItemBackgroundAlpha = 0.12;
   static const int kNoHighlight = -1;
 
