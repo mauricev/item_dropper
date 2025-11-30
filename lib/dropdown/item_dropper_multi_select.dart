@@ -65,7 +65,7 @@ class MultiItemDropper<T> extends StatefulWidget {
     this.fieldTextStyle,
     this.popupTextStyle,
     this.popupGroupHeaderStyle,
-    this.maxDropdownHeight = 300, // Change back to maxDropdownHeight
+    this.maxDropdownHeight = 300.0,
     this.maxSelected,
     this.showScrollbar = true,
     this.scrollbarThickness = 6.0,
@@ -208,26 +208,26 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     required double chipHeight,
     required double fontSize,
   }) {
-    final double textLineHeight = fontSize * 1.2;
+    final double textLineHeight = fontSize * MultiSelectConstants.textLineHeightMultiplier;
     
     if (_measurements.chipTextTop != null) {
       // Use measured chip text center position to align TextField text
       // chipTextTop is already the text center (rowTop + rowHeight/2)
       final double chipTextCenter = _measurements.chipTextTop!;
-      // Adjust for TextField's text rendering - needs 6px offset upward
-      final double top = chipTextCenter - (textLineHeight / 2.0) - 6.0;
+      // Adjust for TextField's text rendering - needs offset upward
+      final double top = chipTextCenter - (textLineHeight / 2.0) - MultiSelectConstants.textFieldPaddingOffset;
       final double bottom = chipHeight - textLineHeight - top;
       return (top: top, bottom: bottom);
     } else {
       // Fallback: calculate same as chip structure
-      // Chip text center = chipVerticalPadding (6px) + rowHeight/2
-      // For fontSize 10: rowHeight = max(12, 24) = 24, so text center = 6 + 12 = 18
-      const double iconHeight = 24.0;
-      final double rowContentHeight = textLineHeight > iconHeight ? textLineHeight : iconHeight;
+      // Chip text center = chipVerticalPadding + rowHeight/2
+      final double rowContentHeight = textLineHeight > MultiSelectConstants.iconHeight 
+          ? textLineHeight 
+          : MultiSelectConstants.iconHeight;
       final double chipTextCenter = MultiSelectConstants.chipVerticalPadding + (rowContentHeight / 2.0);
       
       // Same adjustment as measured case
-      final double top = chipTextCenter - (textLineHeight / 2.0) - 6.0;
+      final double top = chipTextCenter - (textLineHeight / 2.0) - MultiSelectConstants.textFieldPaddingOffset;
       final double bottom = chipHeight - textLineHeight - top;
       return (top: top, bottom: bottom);
     }
@@ -589,8 +589,6 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     });
   }
 
-
-
   @override
   void didUpdateWidget(covariant MultiItemDropper<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -630,7 +628,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     if (a.isEmpty) return true;
     
     // For small lists, use simple iteration (more cache-friendly)
-    if (a.length <= 10) {
+    if (a.length <= MultiSelectConstants.listComparisonThreshold) {
       final Set<T> bValues = b.map((item) => item.value).toSet();
       return a.every((item) => bValues.contains(item.value));
     }
@@ -683,7 +681,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         ),
         border: Border.all(
           color: _manualFocusState ? Colors.blue : Colors.grey.shade400,
-          width: 1.0,
+          width: MultiSelectConstants.containerBorderWidth,
         ),
         borderRadius: BorderRadius.circular(MultiSelectConstants.containerBorderRadius),
       );
@@ -701,7 +699,12 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         children: [
           // Integrated chips and text field area
           Padding(
-            padding: const EdgeInsets.fromLTRB(12.0, 5.0, 12.0, 3.0),
+            padding: const EdgeInsets.fromLTRB(
+              MultiSelectConstants.containerPaddingLeft,
+              MultiSelectConstants.containerPaddingTop,
+              MultiSelectConstants.containerPaddingRight,
+              MultiSelectConstants.containerPaddingBottom,
+            ),
             child: LayoutBuilder(
               key: const ValueKey<String>('layout_builder_stable'),
               builder: (context, constraints) {
@@ -782,7 +785,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
           _measurements.measureChip(
             context: context,
             rowKey: rowKey,
-            textSize: widget.fieldTextStyle?.fontSize ?? 10.0,
+            textSize: widget.fieldTextStyle?.fontSize ?? MultiSelectConstants.defaultFontSize,
             chipVerticalPadding: MultiSelectConstants.chipVerticalPadding,
             requestRebuild: _requestRebuild,
           );
@@ -813,7 +816,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
             children: [
               Text(
                 item.label,
-                style: (widget.fieldTextStyle ?? const TextStyle(fontSize: 10.0)).copyWith(
+                style: (widget.fieldTextStyle ?? const TextStyle(fontSize: MultiSelectConstants.defaultFontSize)).copyWith(
                   color: widget.enabled 
                       ? (widget.fieldTextStyle?.color ?? Colors.black)
                       : Colors.grey.shade500,
@@ -821,8 +824,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
               ),
               if (widget.enabled)
                 Container(
-                  width: 24.0, // Touch target width
-                  height: 24.0, // Touch target height
+                  width: MultiSelectConstants.chipDeleteButtonSize,
+                  height: MultiSelectConstants.chipDeleteButtonSize,
                   alignment: Alignment.center,
                   child: GestureDetector(
                     onTap: () => _removeChip(item),
@@ -843,7 +846,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       fontSize: widget.fieldTextStyle?.fontSize,
       chipVerticalPadding: MultiSelectConstants.chipVerticalPadding,
     );
-    final double fontSize = widget.fieldTextStyle?.fontSize ?? 10.0;
+    final double fontSize = widget.fieldTextStyle?.fontSize ?? MultiSelectConstants.defaultFontSize;
     final padding = _calculateTextFieldPadding(
       chipHeight: chipHeight,
       fontSize: fontSize,
@@ -859,10 +862,10 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       child: TextField(
         controller: _searchController,
         focusNode: _focusNode,
-        style: widget.fieldTextStyle ?? const TextStyle(fontSize: 10.0),
+        style: widget.fieldTextStyle ?? const TextStyle(fontSize: MultiSelectConstants.defaultFontSize),
         decoration: InputDecoration(
           contentPadding: EdgeInsets.only(
-            right: fontSize * 1.2,
+            right: fontSize * MultiSelectConstants.textLineHeightMultiplier,
             top: textFieldPaddingTop,
             bottom: textFieldPaddingBottom,
           ),
@@ -891,10 +894,9 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     final RenderBox? fieldBox = inputContext.findRenderObject() as RenderBox?;
     if (fieldBox != null && _measurements.wrapHeight != null) {
       // Calculate expected height from measured wrapHeight + padding + border
-      // Padding: EdgeInsets.fromLTRB(12.0, 5.0, 12.0, 3.0) = 5.0 + 3.0 = 8.0 vertical
-      // Border: 1.0 top + 1.0 bottom = 2.0
-      const double verticalPadding = 5.0 + 3.0; // top + bottom padding
-      const double borderWidth = 2.0; // top + bottom border
+      final double verticalPadding = MultiSelectConstants.containerPaddingTop + 
+          MultiSelectConstants.containerPaddingBottom;
+      final double borderWidth = MultiSelectConstants.containerBorderWidth * 2.0; // top + bottom border
       final double expectedHeight = _measurements.wrapHeight! + verticalPadding + borderWidth;
     }
 
@@ -933,7 +935,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     return ItemDropperRenderUtils.buildDropdownOverlay(
       context: inputContext,
       items: filteredItems,
-      maxDropdownHeight: widget.maxDropdownHeight ?? 200.0,
+      maxDropdownHeight: widget.maxDropdownHeight ?? MultiSelectConstants.defaultMaxDropdownHeight,
       width: widget.width,
       controller: _overlayController,
       scrollController: _scrollController,
@@ -968,7 +970,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     if (inputBox == null) return const SizedBox.shrink();
 
     final double inputFieldHeight = inputBox.size.height;
-    final double maxDropdownHeight = widget.maxDropdownHeight ?? 200.0;
+    final double maxDropdownHeight = widget.maxDropdownHeight ?? MultiSelectConstants.defaultMaxDropdownHeight;
     
     final position = ItemDropperRenderUtils.calculateDropdownPosition(
       context: inputContext,
@@ -986,10 +988,13 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         child: Material(
           elevation: ItemDropperConstants.kDropdownElevation,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+            padding: const EdgeInsets.symmetric(
+              horizontal: MultiSelectConstants.emptyStatePaddingHorizontal,
+              vertical: MultiSelectConstants.emptyStatePaddingVertical,
+            ),
             child: Text(
-              'No results found',
-              style: (widget.fieldTextStyle ?? const TextStyle(fontSize: 10.0)).copyWith(
+              MultiSelectConstants.emptyStateMessage,
+              style: (widget.popupTextStyle ?? widget.fieldTextStyle ?? const TextStyle(fontSize: MultiSelectConstants.defaultFontSize)).copyWith(
                 color: Colors.grey.shade600,
               ),
             ),
