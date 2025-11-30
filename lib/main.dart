@@ -1,7 +1,7 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
-import 'dropdown/item_dropper_common.dart';
+import 'dropdown/common/item_dropper_common.dart';
 import 'dropdown/item_dropper_caller.dart';
 import 'dropdown/item_dropper_multi_caller.dart';
 
@@ -74,9 +74,17 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
   List<ItemDropperItem<String>> selectedFruits = [];
   List<ItemDropperItem<String>> selectedMaxItems = [];
   ItemDropperItem<String>? selectedCity;
+  
+  // Add-enabled dropdown (example)
+  List<ItemDropperItem<String>> addEnabledItems = [];
+  ItemDropperItem<String>? selectedAddItem;
+  
+  // Separate state for dropdown 9 (add-enabled multi-select fruits)
+  late List<ItemDropperItem<String>> fruitsWithAdd;
+  List<ItemDropperItem<String>> selectedFruitsWithAdd = [];
 
   // Generate dummy data
-  late final List<ItemDropperItem<String>> fruits;
+  late List<ItemDropperItem<String>> fruits;
   late final List<ItemDropperItem<int>> numbers;
   late final List<ItemDropperItem<String>> countries;
   late final List<ItemDropperItem<int>> largeItemsList;
@@ -89,6 +97,18 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
 
     // Dropdown 1: Small list of fruits
     fruits = const [
+      ItemDropperItem(value: 'apple', label: 'Apple'),
+      ItemDropperItem(value: 'banana', label: 'Banana'),
+      ItemDropperItem(value: 'cherry', label: 'Cherry'),
+      ItemDropperItem(value: 'date', label: 'Date'),
+      ItemDropperItem(value: 'elderberry', label: 'Elderberry'),
+      ItemDropperItem(value: 'fig', label: 'Fig'),
+      ItemDropperItem(value: 'grape', label: 'Grape'),
+      ItemDropperItem(value: 'honeydew', label: 'Honeydew'),
+    ];
+    
+    // Separate copy for dropdown 9 (add-enabled multi-select)
+    fruitsWithAdd = [
       ItemDropperItem(value: 'apple', label: 'Apple'),
       ItemDropperItem(value: 'banana', label: 'Banana'),
       ItemDropperItem(value: 'cherry', label: 'Cherry'),
@@ -176,6 +196,13 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
       ItemDropperItem(value: 'paterson', label: 'Paterson'),
       ItemDropperItem(value: 'edison', label: 'Edison'),
       ItemDropperItem(value: 'trenton', label: 'Trenton'),
+    ];
+    
+    // Initialize add-enabled dropdown with a few items
+    addEnabledItems = const [
+      ItemDropperItem(value: 'task1', label: 'Task 1'),
+      ItemDropperItem(value: 'task2', label: 'Task 2'),
+      ItemDropperItem(value: 'task3', label: 'Task 3'),
     ];
   }
 
@@ -387,6 +414,73 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
                               maxDropdownHeight: 300,
                             ),
                           ),
+                          
+                          const SizedBox(height: 32),
+
+                          // Dropdown 8: Add-Enabled Dropdown (Single Select)
+                          _buildDropdownSection(
+                            title: '8. Add-Enabled Dropdown (Single Select)',
+                            description: 'Type a new item name to add it to the list and auto-select it',
+                            selectedValue: selectedAddItem?.label,
+                            dropdown: dropDown<String>(
+                              width: 400,
+                              listItems: addEnabledItems,
+                              initiallySelected: selectedAddItem,
+                              onChanged: (item) {
+                                setState(() {
+                                  selectedAddItem = item;
+                                });
+                              },
+                              hintText: 'Select or type to add...',
+                              showKeyboard: true,
+                              maxDropdownHeight: 300,
+                              onAddItem: (String searchText) {
+                                // Create a new item and add it to the list
+                                final newItem = ItemDropperItem<String>(
+                                  value: searchText.toLowerCase().replaceAll(' ', '_'),
+                                  label: searchText,
+                                );
+                                setState(() {
+                                  addEnabledItems = [...addEnabledItems, newItem];
+                                  selectedAddItem = newItem;
+                                });
+                                return newItem;
+                              },
+                            ),
+                          ),
+                          
+                          const SizedBox(height: 32),
+
+                          // Dropdown 9: Add-Enabled Multi-Select
+                          _buildMultiDropdownSection(
+                            title: '9. Add-Enabled Multi-Select',
+                            description: 'Type a new item name to add it to the list and auto-select it',
+                            selectedValues: selectedFruitsWithAdd.map((e) => e.label).join(', '),
+                            dropdown: multiDropDown<String>(
+                              width: 500,
+                              listItems: fruitsWithAdd,
+                              initiallySelected: selectedFruitsWithAdd,
+                              onChanged: (items) {
+                                setState(() {
+                                  selectedFruitsWithAdd = items;
+                                });
+                              },
+                              hintText: 'Select fruits or type to add...',
+                              maxDropdownHeight: 250,
+                              onAddItem: (String searchText) {
+                                // Create a new item and add it to the fruitsWithAdd list
+                                final newItem = ItemDropperItem<String>(
+                                  value: searchText.toLowerCase().replaceAll(' ', '_'),
+                                  label: searchText,
+                                );
+                                setState(() {
+                                  fruitsWithAdd = [...fruitsWithAdd, newItem];
+                                  selectedFruitsWithAdd = [...selectedFruitsWithAdd, newItem];
+                                });
+                                return newItem;
+                              },
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -430,6 +524,8 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
                           : selectedMaxItems.map((e) => e.label).join(', ')),
                       _buildSelectionRow(
                           'City:', selectedCity?.label ?? 'None'),
+                      _buildSelectionRow(
+                          'Add-Enabled Item:', selectedAddItem?.label ?? 'None'),
                     ],
                   ),
                 ),

@@ -1,10 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'item_dropper_common.dart';
+import 'common/item_dropper_common.dart';
 import 'chip_measurement_helper.dart';
-import 'multi_select_constants.dart';
-import 'multi_select_layout_calculator.dart';
+import 'multi/multi_select_constants.dart';
+import 'multi/multi_select_layout_calculator.dart';
+import 'utils/item_dropper_add_item_utils.dart';
 
 /// Multi-select dropdown widget
 /// Allows selecting multiple items with chip-based display
@@ -53,6 +54,10 @@ class MultiItemDropper<T> extends StatefulWidget {
   final bool showScrollbar;
   final double scrollbarThickness;
   final double? elevation;
+  /// Callback invoked when user wants to add a new item.
+  /// Receives the search text and should return a new ItemDropperItem to add to the list.
+  /// If null, the add row will not appear.
+  final ItemDropperItem<T>? Function(String searchText)? onAddItem;
 
   const MultiItemDropper({
     super.key,
@@ -72,6 +77,7 @@ class MultiItemDropper<T> extends StatefulWidget {
     this.itemHeight, // Optional item height
     this.popupItemBuilder,
     this.elevation,
+    this.onAddItem,
   }) : assert(maxSelected == null ||
       maxSelected >= 2, 'maxSelected must be null or >= 2');
 
@@ -138,7 +144,13 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       excludeValues: excludeValues,
     );
 
-    return result;
+    // Add "add item" row if no matches, search text exists, and callback is provided
+    return ItemDropperAddItemUtils.addAddItemIfNeeded<T>(
+      filteredItems: result,
+      searchText: _searchController.text,
+      originalItems: widget.items,
+      hasOnAddItemCallback: () => widget.onAddItem != null,
+    );
   }
 
   bool _isSelected(ItemDropperItem<T> item) {
@@ -360,6 +372,32 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   void _toggleItem(ItemDropperItem<T> item) {
     // Group headers cannot be selected
     if (item.isGroupHeader) {
+      return;
+    }
+    
+    // Handle add item selection
+    if (ItemDropperAddItemUtils.isAddItem(item, widget.items)) {
+      final String searchText = ItemDropperAddItemUtils.extractSearchTextFromAddItem(item);
+      if (searchText.isNotEmpty && widget.onAddItem != null) {
+        final ItemDropperItem<T>? newItem = widget.onAddItem!(searchText);
+        if (newItem != null) {
+          // Add the new item to the list and select it
+          // Note: The parent should update widget.items to include the new item
+          // For now, we'll just select it and let the parent handle adding to the list
+          _updateSelection(() {
+            _selected.add(newItem);
+            _measurements.totalChipWidth = null;
+            _searchController.clear();
+            
+            // If we just reached the max, close the overlay
+            if (widget.maxSelected != null && 
+                _selected.length >= widget.maxSelected! &&
+                _overlayController.isShowing) {
+              _hideOverlayIfNeeded();
+            }
+          });
+        }
+      }
       return;
     }
     

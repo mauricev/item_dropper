@@ -1,4 +1,4 @@
-import 'chip_measurement_helper.dart';
+import '../chip_measurement_helper.dart';
 
 /// Helper class for calculating layout dimensions in multi-select dropdown
 class MultiSelectLayoutCalculator {

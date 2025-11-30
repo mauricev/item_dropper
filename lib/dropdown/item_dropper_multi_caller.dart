@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'item_dropper_common.dart';
+import 'common/item_dropper_common.dart';
 import 'item_dropper_multi_select.dart';
 
 Widget popupItemBuilderMulti<T>(BuildContext context, ItemDropperItem<T> item,
@@ -29,6 +29,7 @@ Widget multiDropDown<T>({
   TextStyle? popupTextStyle,
   TextStyle? popupGroupHeaderStyle,
   Widget Function(BuildContext, ItemDropperItem<T>, bool)? popupItemBuilder,
+  ItemDropperItem<T>? Function(String searchText)? onAddItem,
 }) {
   return MultiItemDropper<T>(
     width: width,
@@ -42,5 +43,6 @@ Widget multiDropDown<T>({
     maxDropdownHeight: maxDropdownHeight ?? 200,
     maxSelected: maxSelected,
     enabled: enabled,
+    onAddItem: onAddItem,
   );
 }

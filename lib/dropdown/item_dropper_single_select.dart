@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'item_dropper_common.dart';
+import 'common/item_dropper_common.dart';
+import 'utils/item_dropper_add_item_utils.dart';
 
 /// Single-select dropdown widget
 /// Allows selecting a single item from a searchable list
@@ -48,6 +49,10 @@ class SingleItemDropper<T> extends StatefulWidget {
   final TextStyle? popupGroupHeaderStyle;
   final double? itemHeight;
   final bool enabled;
+  /// Callback invoked when user wants to add a new item.
+  /// Receives the search text and should return a new ItemDropperItem to add to the list.
+  /// If null, the add row will not appear.
+  final ItemDropperItem<T>? Function(String searchText)? onAddItem;
 
   const SingleItemDropper({
     super.key,
@@ -65,6 +70,7 @@ class SingleItemDropper<T> extends StatefulWidget {
     this.popupGroupHeaderStyle,
     this.itemHeight,
     this.enabled = true,
+    this.onAddItem,
   });
 
   @override
@@ -127,11 +133,23 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
   String get _selectedLabelText => _selected?.label ?? '';
 
   List<ItemDropperItem<T>> get _filtered {
-    return _filterUtils.getFiltered(
+    final result = _filterUtils.getFiltered(
       widget.items,
       _controller.text,
       isUserEditing: _isUserEditing,
     );
+
+    // Add "add item" row if no matches, search text exists, and callback is provided
+    // Only show add item when user is actively editing
+    if (_isUserEditing) {
+      return ItemDropperAddItemUtils.addAddItemIfNeeded<T>(
+        filteredItems: result,
+        searchText: _controller.text,
+        originalItems: widget.items,
+        hasOnAddItemCallback: () => widget.onAddItem != null,
+      );
+    }
+    return result;
   }
 
   @override
@@ -150,6 +168,8 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
     _controller.addListener(() {
       if (_focusNode.hasFocus) {
         if (!_isUserEditing) _isUserEditing = true;
+        // Don't auto-select while user is actively typing - let them continue typing
+        // Only handle search for overlay display
         _handleSearch();
       }
     });
@@ -198,14 +218,11 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
 
     final String currentSelected = _selected?.label.trim().toLowerCase() ?? '';
 
-    // Case 1: Exact match → select
-    if (match != null) {
+    // Case 1: Exact match → select (but only if user is not actively editing)
+    // If user is editing, don't auto-select - let them continue typing
+    if (match != null && !_isUserEditing) {
       if (_selected?.value != match.value) {
         _setSelected(match);
-      }
-      if (_isUserEditing) {
-        _isUserEditing = false;
-        _safeSetState(() {});
       }
       return;
     }
@@ -227,7 +244,7 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
     }
 
     // Case 4: Invalid input while a selection exists → clear selection
-    if (_selected != null && trimmedInput.isNotEmpty) {
+    if (_selected != null && trimmedInput.isNotEmpty && !_isUserEditing) {
       _setSelected(null);
       return;
     }
@@ -375,6 +392,25 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
       if (selectedItem.isGroupHeader) {
         return;
       }
+      
+      // Handle add item selection
+      if (ItemDropperAddItemUtils.isAddItem(selectedItem, widget.items)) {
+        final String searchText = ItemDropperAddItemUtils.extractSearchTextFromAddItem(selectedItem);
+        if (searchText.isNotEmpty && widget.onAddItem != null) {
+          final ItemDropperItem<T>? newItem = widget.onAddItem!(searchText);
+          if (newItem != null) {
+            _withSquelch(() {
+              _controller.text = newItem.label;
+              _controller.selection = const TextSelection.collapsed(offset: 0);
+            });
+            _setSelected(newItem);
+            _isUserEditing = false;
+            _dismissDropdown();
+          }
+        }
+        return;
+      }
+      
       _withSquelch(() {
         _controller.text = selectedItem.label;
         _controller.selection = const TextSelection.collapsed(offset: 0);
@@ -447,6 +483,25 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
       final selectableItems = filteredList.where((item) => !item.isGroupHeader).toList();
       if (selectableItems.length == 1) {
         final item = selectableItems.first;
+        
+        // Handle add item selection
+        if (ItemDropperAddItemUtils.isAddItem(item, widget.items)) {
+          final String searchText = ItemDropperAddItemUtils.extractSearchTextFromAddItem(item);
+          if (searchText.isNotEmpty && widget.onAddItem != null) {
+            final ItemDropperItem<T>? newItem = widget.onAddItem!(searchText);
+            if (newItem != null) {
+              _withSquelch(() {
+                _controller.text = newItem.label;
+                _controller.selection = const TextSelection.collapsed(offset: 0);
+              });
+              _setSelected(newItem);
+              _isUserEditing = false;
+              _dismissDropdown();
+            }
+          }
+          return;
+        }
+        
         _withSquelch(() {
           _controller.text = item.label;
           _controller.selection = const TextSelection.collapsed(offset: 0);
@@ -507,6 +562,26 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
             if (item.isGroupHeader) {
               return;
             }
+            
+            // Handle add item selection
+            if (ItemDropperAddItemUtils.isAddItem(item, widget.items)) {
+              final String searchText = ItemDropperAddItemUtils.extractSearchTextFromAddItem(item);
+              if (searchText.isNotEmpty && widget.onAddItem != null) {
+                final ItemDropperItem<T>? newItem = widget.onAddItem!(searchText);
+                if (newItem != null) {
+                  // Select the new item
+                  _withSquelch(() {
+                    _controller.text = newItem.label;
+                    _controller.selection = const TextSelection.collapsed(offset: 0);
+                  });
+                  _setSelected(newItem);
+                  _isUserEditing = false;
+                  _dismissDropdown();
+                }
+              }
+              return;
+            }
+            
             _withSquelch(() {
               _controller.text = item.label;
               _controller.selection =

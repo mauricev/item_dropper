@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'item_dropper_common.dart';
+import 'common/item_dropper_common.dart';
 import 'item_dropper_single_select.dart';
 
 Widget popupItemBuilder<T>(BuildContext context, ItemDropperItem<T> item,
@@ -33,6 +33,7 @@ Widget dropDown<T>({
   TextStyle? popupTextStyle,
   TextStyle? popupGroupHeaderStyle,
   Widget Function(BuildContext, ItemDropperItem<T>, bool)? popupItemBuilder,
+  ItemDropperItem<T>? Function(String searchText)? onAddItem,
 }) {
   return SingleItemDropper<T>(
     width: width,
@@ -46,5 +47,6 @@ Widget dropDown<T>({
     popupGroupHeaderStyle: popupGroupHeaderStyle,
     maxDropdownHeight: maxDropdownHeight ?? 200,
     enabled: enabled,
+    onAddItem: onAddItem,
   );
 }
