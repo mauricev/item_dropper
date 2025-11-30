@@ -477,14 +477,19 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   }
 
   void _handleArrowKeyNavigation(
-    int Function(int, int, int, List<ItemDropperItem<T>>) navigationHandler,
+    int Function({
+      required int currentIndex,
+      required int hoverIndex,
+      required int itemCount,
+      List<ItemDropperItem<T>>? items,
+    }) navigationHandler,
   ) {
     final filtered = _filtered;
     _keyboardHighlightIndex = navigationHandler(
-      _keyboardHighlightIndex,
-      _hoverIndex,
-      filtered.length,
-      filtered,
+      currentIndex: _keyboardHighlightIndex,
+      hoverIndex: _hoverIndex,
+      itemCount: filtered.length,
+      items: filtered,
     );
     _safeSetState(() {
       _hoverIndex = ItemDropperConstants.kNoHighlight;
