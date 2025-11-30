@@ -530,6 +530,9 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
   }
 
   Widget _buildDropdownOverlay() {
+    // Don't build overlay if disabled
+    if (!widget.enabled) return const SizedBox.shrink();
+    
     final List<ItemDropperItem<T>> filteredItems = _filtered;
 
     // Get the input field's context for proper positioning

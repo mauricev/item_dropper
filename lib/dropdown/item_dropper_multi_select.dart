@@ -926,6 +926,9 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
 
 
   Widget _buildDropdownOverlay() {
+    // Don't build overlay if disabled
+    if (!widget.enabled) return const SizedBox.shrink();
+    
     final List<ItemDropperItem<T>> filteredItems = _filtered;
 
     // Get the input field's context for proper positioning
@@ -1020,6 +1023,9 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
 
   /// Builds an empty state overlay when search returns no results
   Widget _buildEmptyStateOverlay(BuildContext inputContext) {
+    // Don't build overlay if disabled
+    if (!widget.enabled) return const SizedBox.shrink();
+    
     final RenderBox? inputBox = inputContext.findRenderObject() as RenderBox?;
     if (inputBox == null) return const SizedBox.shrink();
 

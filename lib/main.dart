@@ -274,6 +274,7 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
                     },
                     hintText: 'Select a fruit...',
                     showKeyboard: true,
+                    enabled: false, // Disabled for debugging
                   ),
                 ),
 
@@ -295,6 +296,7 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
                     },
                     hintText: 'Select a number...',
                     showKeyboard: true,
+                    enabled: false, // Disabled for debugging
                   ),
                 ),
 
@@ -317,6 +319,7 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
                     hintText: 'Select a country...',
                     showKeyboard: true,
                     maxDropdownHeight: 250,
+                    enabled: false, // Disabled for debugging
                   ),
                 ),
 
@@ -339,6 +342,7 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
                     hintText: 'Search through 5000 items...',
                     showKeyboard: true,
                     maxDropdownHeight: 300,
+                    enabled: false, // Disabled for debugging
                   ),
                 ),
 
@@ -390,6 +394,7 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
                               hintText: 'Select up to 4 items...',
                               maxDropdownHeight: 250,
                               maxSelected: 4,
+                              enabled: false, // Disabled for debugging
                             ),
                           ),
 
@@ -412,6 +417,7 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
                               hintText: 'Select a city...',
                               showKeyboard: true,
                               maxDropdownHeight: 300,
+                              enabled: false, // Disabled for debugging
                             ),
                           ),
                           
@@ -434,6 +440,7 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
                               hintText: 'Select or type to add...',
                               showKeyboard: true,
                               maxDropdownHeight: 300,
+                              enabled: false, // Disabled for debugging
                               onAddItem: (String searchText) {
                                 // Create a new item and add it to the list
                                 final newItem = ItemDropperItem<String>(
@@ -467,6 +474,7 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
                               },
                               hintText: 'Select fruits or type to add...',
                               maxDropdownHeight: 250,
+                              enabled: false, // Disabled for debugging
                               onAddItem: (String searchText) {
                                 // Create a new item and add it to the fruitsWithAdd list
                                 final newItem = ItemDropperItem<String>(
