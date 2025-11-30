@@ -67,15 +67,6 @@ class DropdownPositionCalculator {
       // Convert to viewport coordinates for CompositedTransformFollower offset
       inputFieldViewportY = inputFieldScreenPos.dy - scrollScreenPos.dy + scrollOffset;
       
-      // Debug output
-      debugPrint('=== DROPDOWN POSITION CALCULATION ===');
-      debugPrint('Screen coordinates:');
-      debugPrint('  Input field bottom: ${inputFieldBottomScreen.toStringAsFixed(1)}');
-      debugPrint('  Scrollable bottom: ${scrollableBottomScreen.toStringAsFixed(1)}');
-      debugPrint('  Available space below: ${availableSpaceBelow.toStringAsFixed(1)}');
-      debugPrint('Viewport coordinates:');
-      debugPrint('  Input field Y: ${inputFieldViewportY.toStringAsFixed(1)}');
-      debugPrint('========================');
     } else {
       // Fallback: no Scrollable found
       inputFieldViewportY = inputFieldScreenPos.dy - padding.top;
