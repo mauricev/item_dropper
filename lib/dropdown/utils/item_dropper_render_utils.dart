@@ -249,6 +249,7 @@ class ItemDropperRenderUtils {
     bool showScrollbar = true,
     double scrollbarThickness = 6.0,
     double? itemHeight, // Optional item height parameter
+    double? preferredFieldHeight, // Use this height if provided (for accurate positioning during layout changes)
   }) {
     if (items.isEmpty) return const SizedBox.shrink();
 
@@ -257,7 +258,9 @@ class ItemDropperRenderUtils {
     final RenderBox? inputBox = context.findRenderObject() as RenderBox?;
     if (inputBox == null) return const SizedBox.shrink();
 
-    final double inputFieldHeight = inputBox.size.height;
+    // Use preferredFieldHeight if available (from measurements), otherwise use actual field height
+    // This prevents overlay flash when field height changes during chip removal
+    final double inputFieldHeight = preferredFieldHeight ?? inputBox.size.height;
     
     final DropdownPositionResult position = calculateDropdownPosition(
       context: context,

@@ -937,6 +937,16 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       };
     }
 
+    // Use measured wrapHeight to calculate expected field height for accurate positioning
+    // This prevents overlay flash when field height changes during chip removal
+    final double? measuredWrapHeight = _measurements.wrapHeight;
+    final double? expectedFieldHeight = measuredWrapHeight != null
+        ? measuredWrapHeight + 
+          MultiSelectConstants.containerPaddingTop + 
+          MultiSelectConstants.containerPaddingBottom +
+          (MultiSelectConstants.containerBorderWidth * 2.0)
+        : null;
+    
     return ItemDropperRenderUtils.buildDropdownOverlay(
       context: inputContext,
       items: filteredItems,
@@ -966,6 +976,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         );
       },
       itemHeight: widget.itemHeight,
+      preferredFieldHeight: expectedFieldHeight, // Pass measured height if available
     );
   }
 
