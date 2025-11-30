@@ -637,6 +637,17 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   void didUpdateWidget(covariant MultiItemDropper<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
     
+    // If widget became disabled, unfocus and hide overlay
+    if (oldWidget.enabled && !widget.enabled) {
+      if (_focusNode.hasFocus) {
+        _focusNode.unfocus();
+      }
+      _manualFocusState = false;
+      if (_overlayController.isShowing) {
+        _overlayController.hide();
+      }
+    }
+    
     // Sync selected items if parent changed them (and we didn't cause the change)
     if (!_isInternalSelectionChange && !_areItemsEqual(widget.selectedItems, _selected)) {
       _selected = List.from(widget.selectedItems);
@@ -903,24 +914,27 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       key: _measurements.textFieldKey, // Key to measure TextField position
       width: width, // Exact width - Wrap will use this
       height: chipHeight, // Use measured chip height
-      child: TextField(
-        controller: _searchController,
-        focusNode: _focusNode,
-        style: widget.fieldTextStyle ?? const TextStyle(fontSize: MultiSelectConstants.defaultFontSize),
-        decoration: InputDecoration(
-          contentPadding: EdgeInsets.only(
-            right: fontSize * MultiSelectConstants.textLineHeightMultiplier,
-            top: textFieldPaddingTop,
-            bottom: textFieldPaddingBottom,
+      child: IgnorePointer(
+        ignoring: !widget.enabled,
+        child: TextField(
+          controller: _searchController,
+          focusNode: _focusNode,
+          style: widget.fieldTextStyle ?? const TextStyle(fontSize: MultiSelectConstants.defaultFontSize),
+          decoration: InputDecoration(
+            contentPadding: EdgeInsets.only(
+              right: fontSize * MultiSelectConstants.textLineHeightMultiplier,
+              top: textFieldPaddingTop,
+              bottom: textFieldPaddingBottom,
+            ),
+            border: InputBorder.none,
+            hintText: 'Search',
           ),
-          border: InputBorder.none,
-          hintText: 'Search',
+          onChanged: (value) => _handleTextChanged(value),
+          onSubmitted: (value) => _handleEnter(),
+          enabled: widget.enabled,
+          // Ensure TextField can receive focus
+          autofocus: false,
         ),
-        onChanged: (value) => _handleTextChanged(value),
-        onSubmitted: (value) => _handleEnter(),
-        enabled: widget.enabled,
-        // Ensure TextField can receive focus
-        autofocus: false,
       ),
     );
   }

@@ -640,6 +640,16 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
   void didUpdateWidget(covariant SingleItemDropper<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
 
+    // If widget became disabled, unfocus and hide overlay
+    if (oldWidget.enabled && !widget.enabled) {
+      if (_focusNode.hasFocus) {
+        _focusNode.unfocus();
+      }
+      if (_overlayController.isShowing) {
+        _dismissDropdown();
+      }
+    }
+
     final T? newVal = widget.selectedItem?.value;
     final T? oldVal = _selected?.value;
 
@@ -691,27 +701,30 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
           ),
           child: SizedBox(
             width: widget.width,
-            child: TextField(
-              key: widget.inputKey ?? _internalFieldKey,
-              controller: _controller,
-              focusNode: _focusNode,
-              scrollController: _textScrollCtrl,
-              readOnly: !widget.showKeyboard,
-              showCursor: true,
-              enableInteractiveSelection: false,
-              style: (widget.fieldTextStyle ?? const TextStyle(fontSize: 12.0)).copyWith(
-                color: widget.enabled 
-                    ? (widget.fieldTextStyle?.color ?? Colors.black)
-                    : Colors.grey,
-              ),
-              onTap: () {
-                final textLength = _controller.text.length;
-                _controller.selection =
-                    TextSelection.collapsed(offset: textLength);
-                _showOverlay();
-              },
-              onSubmitted: _handleSubmit,
-              onChanged: (value) {
+            child: IgnorePointer(
+              ignoring: !widget.enabled,
+              child: TextField(
+                key: widget.inputKey ?? _internalFieldKey,
+                controller: _controller,
+                focusNode: _focusNode,
+                scrollController: _textScrollCtrl,
+                readOnly: !widget.showKeyboard,
+                showCursor: true,
+                enableInteractiveSelection: false,
+                style: (widget.fieldTextStyle ?? const TextStyle(fontSize: 12.0)).copyWith(
+                  color: widget.enabled 
+                      ? (widget.fieldTextStyle?.color ?? Colors.black)
+                      : Colors.grey,
+                ),
+                onTap: () {
+                  if (!widget.enabled) return;
+                  final textLength = _controller.text.length;
+                  _controller.selection =
+                      TextSelection.collapsed(offset: textLength);
+                  _showOverlay();
+                },
+                onSubmitted: _handleSubmit,
+                onChanged: (value) {
                 if (_squelchOnChanged) return;
 
                 final bool hadSelection = hasSelection;
@@ -793,6 +806,7 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
             ),
           ),
         ),
+      ),
     );
   }
 }

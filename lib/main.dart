@@ -82,6 +82,10 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
   // Separate state for dropdown 9 (add-enabled multi-select fruits)
   late List<ItemDropperItem<String>> fruitsWithAdd;
   List<ItemDropperItem<String>> selectedFruitsWithAdd = [];
+  
+  // Dropdown 10 state
+  ItemDropperItem<String>? selectedDropdown10;
+  bool dropdown10Enabled = true;
 
   // Generate dummy data
   late List<ItemDropperItem<String>> fruits;
@@ -249,7 +253,7 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
                 ),
                 const SizedBox(height: 32),
 
-                // Two-column layout
+                // Three-column layout
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -274,7 +278,6 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
                     },
                     hintText: 'Select a fruit...',
                     showKeyboard: true,
-                    enabled: false, // Disabled for debugging
                   ),
                 ),
 
@@ -296,7 +299,6 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
                     },
                     hintText: 'Select a number...',
                     showKeyboard: true,
-                    enabled: false, // Disabled for debugging
                   ),
                 ),
 
@@ -319,7 +321,6 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
                     hintText: 'Select a country...',
                     showKeyboard: true,
                     maxDropdownHeight: 250,
-                    enabled: false, // Disabled for debugging
                   ),
                 ),
 
@@ -342,7 +343,6 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
                     hintText: 'Search through 5000 items...',
                     showKeyboard: true,
                     maxDropdownHeight: 300,
-                    enabled: false, // Disabled for debugging
                   ),
                 ),
 
@@ -394,7 +394,6 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
                               hintText: 'Select up to 4 items...',
                               maxDropdownHeight: 250,
                               maxSelected: 4,
-                              enabled: false, // Disabled for debugging
                             ),
                           ),
 
@@ -417,7 +416,6 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
                               hintText: 'Select a city...',
                               showKeyboard: true,
                               maxDropdownHeight: 300,
-                              enabled: false, // Disabled for debugging
                             ),
                           ),
                           
@@ -440,7 +438,6 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
                               hintText: 'Select or type to add...',
                               showKeyboard: true,
                               maxDropdownHeight: 300,
-                              enabled: false, // Disabled for debugging
                               onAddItem: (String searchText) {
                                 // Create a new item and add it to the list
                                 final newItem = ItemDropperItem<String>(
@@ -474,7 +471,6 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
                               },
                               hintText: 'Select fruits or type to add...',
                               maxDropdownHeight: 250,
-                              enabled: false, // Disabled for debugging
                               onAddItem: (String searchText) {
                                 // Create a new item and add it to the fruitsWithAdd list
                                 final newItem = ItemDropperItem<String>(
@@ -487,6 +483,71 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
                                 });
                                 return newItem;
                               },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(width: 32),
+
+                    // Third column: Dropdown 10 with checkbox
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Checkbox for enabling/disabling dropdown 10
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey.shade300),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.grey.shade200,
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              children: [
+                                Checkbox(
+                                  value: dropdown10Enabled,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      dropdown10Enabled = value ?? true;
+                                    });
+                                  },
+                                ),
+                                const Text(
+                                  'Enable Dropdown 10',
+                                  style: TextStyle(fontSize: 14),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(height: 16),
+
+                          // Dropdown 10
+                          _buildDropdownSection(
+                            title: '10. Test Dropdown',
+                            description: 'Dropdown with enable/disable checkbox',
+                            selectedValue: selectedDropdown10?.label,
+                            dropdown: dropDown<String>(
+                              width: 300,
+                              listItems: fruits,
+                              initiallySelected: selectedDropdown10,
+                              onChanged: (item) {
+                                setState(() {
+                                  selectedDropdown10 = item;
+                                });
+                              },
+                              hintText: 'Select a fruit...',
+                              showKeyboard: true,
+                              enabled: dropdown10Enabled,
                             ),
                           ),
                         ],
