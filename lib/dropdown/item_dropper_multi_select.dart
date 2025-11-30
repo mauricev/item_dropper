@@ -349,23 +349,14 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         widget.onChanged(List.from(_selected));
-        // Clear the internal change flag after parent has been notified
-        // This allows didUpdateWidget to detect external changes in the next frame
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            _isInternalSelectionChange = false;
-            // Invalidate overlay cache if showing (will rebuild on next natural build)
-            if (_overlayController.isShowing) {
-            }
-          }
-        });
-      }
-    });
-    
-    // Manual focus management - ensure focus is maintained after selection update
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && _manualFocusState && !_focusNode.hasFocus) {
-        _focusNode.requestFocus();
+        // Clear the internal change flag after parent's didUpdateWidget has run
+        // (which happens synchronously when onChanged triggers parent rebuild)
+        _isInternalSelectionChange = false;
+        
+        // Manual focus management - ensure focus is maintained after selection update
+        if (_manualFocusState && !_focusNode.hasFocus) {
+          _focusNode.requestFocus();
+        }
       }
     });
   }
