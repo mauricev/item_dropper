@@ -43,6 +43,8 @@ class _ItemDropperWithOverlayState extends State<ItemDropperWithOverlay> {
                   child: Listener(
                     behavior: HitTestBehavior.translucent,
                     onPointerDown: (event) {
+                      debugPrint(
+                          "TAP: Dismiss listener fired at ${event.position}");
                       // CRITICAL FIX: Check if click is on overlay FIRST, before doing anything else
                       // If it's on the overlay, return early to allow event to propagate to items
                       final RenderBox? overlayRenderBox = 
@@ -56,10 +58,23 @@ class _ItemDropperWithOverlayState extends State<ItemDropperWithOverlay> {
                           final Offset estimatedOverlayPos = Offset(fieldGlobalPos.dx, fieldGlobalPos.dy + fieldHeight);
                           final Size overlaySize = overlayRenderBox.size;
                           final Rect estimatedOverlayRect = estimatedOverlayPos & overlaySize;
-                          
-                          // If click is on overlay, return early to allow event to propagate to items
+
+                          debugPrint(
+                              "TAP: Field pos: $fieldGlobalPos, height: $fieldHeight, overlay size: $overlaySize");
+                          debugPrint(
+                              "TAP: Estimated overlay rect: $estimatedOverlayRect");
+                          debugPrint("TAP: Tap position ${event
+                              .position} in overlay? ${estimatedOverlayRect
+                              .contains(event.position)}");
+
+                          // If click is on overlay, we should dismiss unless it's on an interactive item
+                          // For now, let's dismiss on overlay taps to see if this fixes the issue
                           if (estimatedOverlayRect.contains(event.position)) {
-                            return; // Don't handle - let items receive the event
+                            debugPrint(
+                                "TAP: Click is on overlay - dismissing instead of letting overlay handle it");
+                            widget
+                                .onDismiss(); // Dismiss when tapping on overlay
+                            return;
                           }
                         }
                       }
@@ -71,41 +86,17 @@ class _ItemDropperWithOverlayState extends State<ItemDropperWithOverlay> {
                         final Size fieldSize = renderBox.size;
                         final Rect fieldRect = fieldOffset & fieldSize;
                         final bool isOutsideField = !fieldRect.contains(event.position);
-                        
+
+                        debugPrint(
+                            "TAP: Field rect: $fieldRect, tap position: ${event
+                                .position}, isOutsideField: $isOutsideField");
+
                         if (isOutsideField) {
-                          // FIX: Defer dismiss check to allow overlay items to handle taps first
-                          // If an overlay item handles the tap, we shouldn't dismiss
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            // Check if overlay is still showing - if an item was tapped, it might have been handled
-                            // Also check overlay bounds to be sure
-                            final RenderBox? overlayRenderBox = 
-                                _overlayKey.currentContext?.findRenderObject() as RenderBox?;
-                            
-                            if (overlayRenderBox != null) {
-                              final Size overlaySize = overlayRenderBox.size;
-                              
-                              // CompositedTransformFollower uses LayerLink coordinate system
-                              // localToGlobal(Offset.zero) doesn't work correctly for RenderFollowerLayer
-                              // We need to get the field position and add the field height
-                              final RenderBox? fieldRenderBox = widget.fieldKey.currentContext?.findRenderObject() as RenderBox?;
-                              
-                              if (fieldRenderBox != null) {
-                                final Offset fieldGlobalPos = fieldRenderBox.localToGlobal(Offset.zero);
-                                final double fieldHeight = fieldRenderBox.size.height;
-                                final Offset estimatedOverlayPos = Offset(fieldGlobalPos.dx, fieldGlobalPos.dy + fieldHeight);
-                                final Rect estimatedOverlayRect = estimatedOverlayPos & overlaySize;
-                                
-                                // Check if click is within overlay bounds using estimated position
-                                if (estimatedOverlayRect.contains(event.position)) {
-                                  return; // Don't dismiss - click is on overlay
-                                }
-                              }
-                            }
-                            
-                            // If overlay is still showing after the tap, it means the tap wasn't handled by an item
-                            // But we should still check bounds first (above)
-                            widget.onDismiss();
-                          });
+                          debugPrint(
+                              "TAP: Outside field - dismissing immediately");
+                          widget
+                              .onDismiss(); // Dismiss immediately instead of deferring
+                          return; // Don't continue with post-frame logic
                         }
                       }
                     },
