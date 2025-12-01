@@ -43,8 +43,6 @@ class _ItemDropperWithOverlayState extends State<ItemDropperWithOverlay> {
                   child: Listener(
                     behavior: HitTestBehavior.translucent,
                     onPointerDown: (event) {
-                      debugPrint(
-                          "TAP: Dismiss listener fired at ${event.position}");
                       // CRITICAL FIX: Check if click is on overlay FIRST, before doing anything else
                       // If it's on the overlay, return early to allow event to propagate to items
                       final RenderBox? overlayRenderBox = 
@@ -59,19 +57,9 @@ class _ItemDropperWithOverlayState extends State<ItemDropperWithOverlay> {
                           final Size overlaySize = overlayRenderBox.size;
                           final Rect estimatedOverlayRect = estimatedOverlayPos & overlaySize;
 
-                          debugPrint(
-                              "TAP: Field pos: $fieldGlobalPos, height: $fieldHeight, overlay size: $overlaySize");
-                          debugPrint(
-                              "TAP: Estimated overlay rect: $estimatedOverlayRect");
-                          debugPrint("TAP: Tap position ${event
-                              .position} in overlay? ${estimatedOverlayRect
-                              .contains(event.position)}");
-
                           // If click is on overlay, we should dismiss unless it's on an interactive item
                           // For now, let's dismiss on overlay taps to see if this fixes the issue
                           if (estimatedOverlayRect.contains(event.position)) {
-                            debugPrint(
-                                "TAP: Click is on overlay - dismissing instead of letting overlay handle it");
                             widget
                                 .onDismiss(); // Dismiss when tapping on overlay
                             return;
@@ -87,13 +75,7 @@ class _ItemDropperWithOverlayState extends State<ItemDropperWithOverlay> {
                         final Rect fieldRect = fieldOffset & fieldSize;
                         final bool isOutsideField = !fieldRect.contains(event.position);
 
-                        debugPrint(
-                            "TAP: Field rect: $fieldRect, tap position: ${event
-                                .position}, isOutsideField: $isOutsideField");
-
                         if (isOutsideField) {
-                          debugPrint(
-                              "TAP: Outside field - dismissing immediately");
                           widget
                               .onDismiss(); // Dismiss immediately instead of deferring
                           return; // Don't continue with post-frame logic

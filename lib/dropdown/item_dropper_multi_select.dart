@@ -743,7 +743,6 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       overlayController: _overlayController,
       fieldKey: widget.inputKey ?? _fieldKey,
       onDismiss: () {
-        debugPrint("TAP: onDismiss triggered - should close overlay");
         // Manual focus management - user clicked outside, unfocus
         _loseFocus();
         _hideOverlayIfNeeded();
@@ -927,7 +926,6 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
                   alignment: Alignment.center,
                   child: GestureDetector(
                     onTap: () {
-                      debugPrint("TAP: Chip X for '${item.label}' clicked");
                       _removeChip(item);
                     },
                     child: Icon(Icons.close, size: MultiSelectConstants.chipDeleteIconSize,
@@ -1071,7 +1069,6 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
           safeSetState: _safeSetState,
           setHoverIndex: (index) => _hoverIndex = index,
           onTap: () {
-            debugPrint("TAP: Dropdown item '${item.label}' clicked");
             _toggleItem(item);
           },
           customBuilder: itemBuilder,
