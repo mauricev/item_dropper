@@ -471,17 +471,21 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     _requestRebuild();
     
     // Notify parent of change and handle post-removal state
+    // Single post-frame callback is sufficient - parent's didUpdateWidget runs synchronously
+    // during parent rebuild in the same frame, so we can clear the flag and handle focus/overlay
+    // in the same callback
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         widget.onChanged(List.from(_selected));
-        // Clear the internal change flag and handle focus/overlay after parent has been notified
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            _isInternalSelectionChange = false;
-            _ensureFocusMaintained();
-            _showOverlayIfFocusedAndBelowMax();
-          }
-        });
+        // Clear the internal change flag after parent's didUpdateWidget has run
+        // (which happens synchronously when onChanged triggers parent rebuild)
+        _isInternalSelectionChange = false;
+        
+        // Manual focus management - ensure focus is maintained after chip removal
+        _ensureFocusMaintained();
+        
+        // Show overlay if we're below maxSelected and focused
+        _showOverlayIfFocusedAndBelowMax();
       }
     });
   }
