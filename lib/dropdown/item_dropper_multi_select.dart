@@ -801,24 +801,29 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
                   measurements: _measurements,
                 );
 
-                // Measure Wrap after render to detect wrapping and get actual remaining width
-                // Only measure if contexts are available (after first frame)
-                // Only measure if we have selected items (prevents measurement issues when empty)
-                final wrapContext = _measurements.wrapKey.currentContext;
-                if (wrapContext != null && _selected.isNotEmpty) {
-                  _measurements.measureWrapAndTextField(
-                    wrapContext: wrapContext,
-                    textFieldContext: _measurements.textFieldKey.currentContext,
-                    lastChipContext: _measurements.lastChipKey.currentContext,
-                    selectedCount: _selected.length,
-                    chipSpacing: MultiSelectConstants.chipSpacing,
-                    minTextFieldWidth: MultiSelectConstants.minTextFieldWidth,
-                    requestRebuild: _requestRebuild,
-                  );
-                } else if (_selected.isEmpty) {
-                  // Reset measurement state when selection is cleared
-                  _measurements.resetMeasurementState();
-                }
+                // Schedule measurement after build completes - don't measure during build
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!mounted) return;
+                  
+                  // Measure Wrap after render to detect wrapping and get actual remaining width
+                  // Only measure if contexts are available (after first frame)
+                  // Only measure if we have selected items (prevents measurement issues when empty)
+                  final wrapContext = _measurements.wrapKey.currentContext;
+                  if (wrapContext != null && _selected.isNotEmpty) {
+                    _measurements.measureWrapAndTextField(
+                      wrapContext: wrapContext,
+                      textFieldContext: _measurements.textFieldKey.currentContext,
+                      lastChipContext: _measurements.lastChipKey.currentContext,
+                      selectedCount: _selected.length,
+                      chipSpacing: MultiSelectConstants.chipSpacing,
+                      minTextFieldWidth: MultiSelectConstants.minTextFieldWidth,
+                      requestRebuild: _requestRebuild,
+                    );
+                  } else if (_selected.isEmpty) {
+                    // Reset measurement state when selection is cleared
+                    _measurements.resetMeasurementState();
+                  }
+                });
                 return Wrap(
                   key: _measurements.wrapKey,
                   spacing: MultiSelectConstants.chipSpacing,
@@ -864,16 +869,24 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     return LayoutBuilder(
       key: valueKey, // Use stable ValueKey for widget preservation
       builder: (context, constraints) {
+        // Schedule chip measurement after build completes - don't measure during build
         // Measure chip dimensions after first render (only for first chip, only once)
         // Chip measurements don't change, so we only need to measure once
         if (isFirstChip && rowKey != null && _measurements.chipHeight == null) {
-          _measurements.measureChip(
-            context: context,
-            rowKey: rowKey,
-            textSize: widget.fieldTextStyle?.fontSize ?? MultiSelectConstants.defaultFontSize,
-            chipVerticalPadding: MultiSelectConstants.chipVerticalPadding,
-            requestRebuild: _requestRebuild,
-          );
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            
+            // Re-check conditions in case they changed
+            if (_measurements.chipHeight == null && rowKey.currentContext != null) {
+              _measurements.measureChip(
+                context: context,
+                rowKey: rowKey,
+                textSize: widget.fieldTextStyle?.fontSize ?? MultiSelectConstants.defaultFontSize,
+                chipVerticalPadding: MultiSelectConstants.chipVerticalPadding,
+                requestRebuild: _requestRebuild,
+              );
+            }
+          });
         }
         
         return Container(
