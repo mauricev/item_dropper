@@ -344,59 +344,48 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   }
 
   void _updateSelection(void Function() selectionUpdate) {
-    // Mark that we're the source of this selection change
-    _isInternalSelectionChange = true;
-    
     // Preserve keyboard highlight state - only reset if keyboard navigation was active
     final bool wasKeyboardActive = _keyboardHighlightIndex != ItemDropperConstants.kNoHighlight;
     final int previousHoverIndex = _hoverIndex;
     
-    // Update selection and all related state inside setState to ensure single rebuild
-    _requestRebuild(() {
-      // Update selection inside the rebuild callback
-      selectionUpdate();
-      
-      // Update highlights based on filtered items
-      final List<ItemDropperItem<T>> remainingFilteredItems = _filtered;
-      
-      if (remainingFilteredItems.isNotEmpty) {
-        // Only reset keyboard highlight if keyboard navigation was active
-        if (wasKeyboardActive) {
-          _keyboardHighlightIndex = 0;
-          _hoverIndex = ItemDropperConstants.kNoHighlight;
-        } else {
-          // Clear keyboard highlight so mouse hover can work
-          _keyboardHighlightIndex = ItemDropperConstants.kNoHighlight;
-          // Don't clear hover index - preserve it so highlighting continues to work
-          if (previousHoverIndex >= 0 && previousHoverIndex < remainingFilteredItems.length) {
-            // Hover index is still valid, keep it
-            _hoverIndex = previousHoverIndex;
-          } else {
-            // Hover index is invalid, clear it
-            _hoverIndex = ItemDropperConstants.kNoHighlight;
-          }
-        }
-      } else {
-        _clearHighlights();
-        _hideOverlayIfNeeded();
-      }
-    });
-    
-    // Defer parent notification until after our rebuild completes
-    // Single post-frame callback is sufficient - our rebuild completes in the current frame
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        widget.onChanged(List.from(_selected));
-        // Clear the internal change flag after parent's didUpdateWidget has run
-        // (which happens synchronously when onChanged triggers parent rebuild)
-        _isInternalSelectionChange = false;
+    // Use unified selection change handler
+    _handleSelectionChange(
+      stateUpdate: () {
+        // Update selection inside the rebuild callback
+        selectionUpdate();
         
+        // Update highlights based on filtered items
+        final List<ItemDropperItem<T>> remainingFilteredItems = _filtered;
+        
+        if (remainingFilteredItems.isNotEmpty) {
+          // Only reset keyboard highlight if keyboard navigation was active
+          if (wasKeyboardActive) {
+            _keyboardHighlightIndex = 0;
+            _hoverIndex = ItemDropperConstants.kNoHighlight;
+          } else {
+            // Clear keyboard highlight so mouse hover can work
+            _keyboardHighlightIndex = ItemDropperConstants.kNoHighlight;
+            // Don't clear hover index - preserve it so highlighting continues to work
+            if (previousHoverIndex >= 0 && previousHoverIndex < remainingFilteredItems.length) {
+              // Hover index is still valid, keep it
+              _hoverIndex = previousHoverIndex;
+            } else {
+              // Hover index is invalid, clear it
+              _hoverIndex = ItemDropperConstants.kNoHighlight;
+            }
+          }
+        } else {
+          _clearHighlights();
+          _hideOverlayIfNeeded();
+        }
+      },
+      postRebuildCallback: () {
         // Manual focus management - ensure focus is maintained after selection update
         if (_manualFocusState && !_focusNode.hasFocus) {
           _focusNode.requestFocus();
         }
-      }
-    });
+      },
+    );
   }
 
   void _toggleItem(ItemDropperItem<T> item) {
@@ -480,42 +469,29 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   }
 
   void _removeChip(ItemDropperItem<T> item) {
-    // Mark that we're the source of this selection change
-    _isInternalSelectionChange = true;
-    
     // Focus the field and set manual focus state when removing a chip (even if unfocused)
     // This allows users to remove chips and immediately see the dropdown
     _gainFocus();
     
-    // Update selection immediately (synchronous)
-    _removeSelectedItem(item.value);
-    
-    // Reset totalChipWidth when selection count changes - will be remeasured correctly
-    _measurements.totalChipWidth = null;
-    
-    _clearHighlights();
-    
-    // Request rebuild through central mechanism
-    _requestRebuild();
-    
-    // Notify parent of change and handle post-removal state
-    // Single post-frame callback is sufficient - parent's didUpdateWidget runs synchronously
-    // during parent rebuild in the same frame, so we can clear the flag and handle focus/overlay
-    // in the same callback
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        widget.onChanged(List.from(_selected));
-        // Clear the internal change flag after parent's didUpdateWidget has run
-        // (which happens synchronously when onChanged triggers parent rebuild)
-        _isInternalSelectionChange = false;
+    // Use unified selection change handler
+    _handleSelectionChange(
+      stateUpdate: () {
+        // Update selection inside the rebuild callback
+        _removeSelectedItem(item.value);
         
+        // Reset totalChipWidth when selection count changes - will be remeasured correctly
+        _measurements.totalChipWidth = null;
+        
+        _clearHighlights();
+      },
+      postRebuildCallback: () {
         // Manual focus management - ensure focus is maintained after chip removal
         _ensureFocusMaintained();
         
         // Show overlay if we're below maxSelected and focused
         _showOverlayIfFocusedAndBelowMax();
-      }
-    });
+      },
+    );
   }
 
   KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
@@ -651,6 +627,37 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _rebuildScheduled = false;
+      }
+    });
+  }
+
+  /// Unified method to handle selection changes: rebuild + notify parent + cleanup
+  /// Consolidates the common pattern of rebuilding, notifying parent, and clearing flags
+  void _handleSelectionChange({
+    required void Function() stateUpdate,
+    void Function()? postRebuildCallback,
+  }) {
+    // Mark that we're the source of this selection change
+    _isInternalSelectionChange = true;
+    
+    // Update selection and all related state inside rebuild
+    _requestRebuild(stateUpdate);
+    
+    // Single post-frame callback handles: parent notification, flag clearing, and optional callback
+    // This consolidates what was previously multiple separate callbacks
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        // Notify parent of change
+        widget.onChanged(List.from(_selected));
+        
+        // Clear the internal change flag after parent's didUpdateWidget has run
+        // (which happens synchronously when onChanged triggers parent rebuild)
+        _isInternalSelectionChange = false;
+        
+        // Execute optional post-rebuild callback (e.g., focus management, overlay updates)
+        if (postRebuildCallback != null) {
+          postRebuildCallback();
+        }
       }
     });
   }
