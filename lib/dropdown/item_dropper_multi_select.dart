@@ -97,6 +97,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   final OverlayPortalController _overlayController = OverlayPortalController();
 
   List<ItemDropperItem<T>> _selected = [];
+  // Set for O(1) lookups - kept in sync with _selected
+  Set<T> _selectedValues = {};
   int _keyboardHighlightIndex = ItemDropperConstants.kNoHighlight;
   int _hoverIndex = ItemDropperConstants.kNoHighlight;
   
@@ -130,19 +132,19 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       ..addListener(_handleFocusChange);
 
     _selected = List.from(widget.selectedItems);
+    _selectedValues = _selected.map((item) => item.value).toSet();
     _filterUtils.initializeItems(widget.items);
 
     _focusNode.onKeyEvent = _handleKeyEvent;
   }
 
   List<ItemDropperItem<T>> get _filtered {
-    // Filter out already selected items
-    final Set<T> excludeValues = _selected.map((item) => item.value).toSet();
+    // Filter out already selected items - use existing Set for O(1) lookups
     final result = _filterUtils.getFiltered(
       widget.items,
       _searchController.text,
       isUserEditing: true, // always filter in multi-select
-      excludeValues: excludeValues,
+      excludeValues: _selectedValues,
     );
 
     // Add "add item" row if no matches, search text exists, and callback is provided
@@ -155,7 +157,35 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   }
 
   bool _isSelected(ItemDropperItem<T> item) {
-    return _selected.any((selected) => selected.value == item.value);
+    return _selectedValues.contains(item.value);
+  }
+
+  /// Add an item to the selection (keeps both List and Set in sync)
+  void _addSelectedItem(ItemDropperItem<T> item) {
+    if (!_selectedValues.contains(item.value)) {
+      _selected.add(item);
+      _selectedValues.add(item.value);
+    }
+  }
+
+  /// Remove an item from the selection (keeps both List and Set in sync)
+  void _removeSelectedItem(T value) {
+    if (_selectedValues.contains(value)) {
+      _selected.removeWhere((item) => item.value == value);
+      _selectedValues.remove(value);
+    }
+  }
+
+  /// Clear all selected items (keeps both List and Set in sync)
+  void _clearSelectedItems() {
+    _selected.clear();
+    _selectedValues.clear();
+  }
+
+  /// Sync selected items from external source (keeps both List and Set in sync)
+  void _syncSelectedItems(List<ItemDropperItem<T>> items) {
+    _selected = List.from(items);
+    _selectedValues = _selected.map((item) => item.value).toSet();
   }
 
   /// Check if maxSelected limit has been reached
@@ -385,7 +415,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
           // Note: The parent should update widget.items to include the new item
           // For now, we'll just select it and let the parent handle adding to the list
           _updateSelection(() {
-            _selected.add(newItem);
+            _addSelectedItem(newItem);
             _measurements.totalChipWidth = null;
             _searchController.clear();
             
@@ -419,7 +449,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       final bool wasAtMax = _isMaxSelectedReached();
       
       if (!isCurrentlySelected) {
-        _selected.add(item);
+        _addSelectedItem(item);
         
         // Reset totalChipWidth when selection count changes - will be remeasured correctly
         _measurements.totalChipWidth = null;
@@ -433,7 +463,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         }
       } else {
         // Item is already selected, remove it (toggle off)
-        _selected.removeWhere((selected) => selected.value == item.value);
+        _removeSelectedItem(item.value);
         
         // Reset totalChipWidth when selection count changes - will be remeasured correctly
         _measurements.totalChipWidth = null;
@@ -458,7 +488,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     _gainFocus();
     
     // Update selection immediately (synchronous)
-    _selected.removeWhere((selected) => selected.value == item.value);
+    _removeSelectedItem(item.value);
     
     // Reset totalChipWidth when selection count changes - will be remeasured correctly
     _measurements.totalChipWidth = null;
@@ -642,7 +672,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     
     // Sync selected items if parent changed them (and we didn't cause the change)
     if (!_isInternalSelectionChange && !_areItemsEqual(widget.selectedItems, _selected)) {
-      _selected = List.from(widget.selectedItems);
+      _syncSelectedItems(widget.selectedItems);
       // Don't trigger rebuild here if we're already rebuilding
       // Parent change will be reflected in the current rebuild cycle
       _requestRebuildIfNotScheduled();
@@ -1009,7 +1039,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       scrollController: _scrollController,
       layerLink: _layerLink,
       isSelected: (ItemDropperItem<T> item) =>
-          _selected.any((x) => x.value == item.value),
+          _selectedValues.contains(item.value),
       builder: (BuildContext builderContext, ItemDropperItem<T> item,
           bool isSelected) {
         return ItemDropperRenderUtils.buildDropdownItemWithHover<T>(
