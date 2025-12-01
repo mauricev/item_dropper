@@ -1005,7 +1005,6 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       final double verticalPadding = MultiSelectConstants.containerPaddingTop + 
           MultiSelectConstants.containerPaddingBottom;
       final double borderWidth = MultiSelectConstants.containerBorderWidth * 2.0; // top + bottom border
-      final double expectedHeight = _measurements.wrapHeight! + verticalPadding + borderWidth;
     }
 
     // Show empty state if user is searching but no results found
