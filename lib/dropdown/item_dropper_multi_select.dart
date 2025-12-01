@@ -409,7 +409,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
             _searchController.clear();
             
             // If we just reached the max, close the overlay
-            if (_isMaxSelectedReached() && _overlayController.isShowing) {
+            if (_isMaxSelectedReached()) {
               _hideOverlayIfNeeded();
             }
           });
@@ -447,7 +447,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         _searchController.clear();
         
         // If we just reached the max, close the overlay
-        if (_isMaxSelectedReached() && _overlayController.isShowing) {
+        if (_isMaxSelectedReached()) {
           _hideOverlayIfNeeded();
         }
       } else {
@@ -586,7 +586,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     // Use manual focus state
     if (_manualFocusState) {
       _showOverlayIfNeeded();
-    } else if (_filtered.isEmpty && _overlayController.isShowing) {
+    } else if (_filtered.isEmpty) {
+      // Hide overlay if no filtered items and not focused
       _hideOverlayIfNeeded();
     }
   }
