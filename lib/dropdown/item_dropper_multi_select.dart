@@ -158,6 +158,17 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     return _selected.any((selected) => selected.value == item.value);
   }
 
+  /// Check if maxSelected limit has been reached
+  bool _isMaxSelectedReached() {
+    return widget.maxSelected != null && 
+           _selected.length >= widget.maxSelected!;
+  }
+
+  /// Check if below maxSelected limit (or no limit set)
+  bool _isBelowMaxSelected() {
+    return widget.maxSelected == null || _selected.length < widget.maxSelected!;
+  }
+
   void _clearHighlights() {
     _keyboardHighlightIndex = ItemDropperConstants.kNoHighlight;
     _hoverIndex = ItemDropperConstants.kNoHighlight;
@@ -199,8 +210,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   }
 
   void _showOverlayIfFocusedAndBelowMax() {
-    if (_manualFocusState && 
-        (widget.maxSelected == null || _selected.length < widget.maxSelected!)) {
+    if (_manualFocusState && _isBelowMaxSelected()) {
       final filtered = _filtered;
       if (!_overlayController.isShowing && filtered.isNotEmpty) {
         _clearHighlights();
@@ -265,8 +275,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     // Use manual focus state for overlay logic
     if (_manualFocusState) {
       // Don't show overlay if maxSelected is reached
-      if (widget.maxSelected != null && 
-          _selected.length >= widget.maxSelected!) {
+      if (_isMaxSelectedReached()) {
         return;
       }
       
@@ -278,8 +287,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         }
         
         // Check again if maxSelected is reached (might have changed)
-        if (widget.maxSelected != null && 
-            _selected.length >= widget.maxSelected!) {
+        if (_isMaxSelectedReached()) {
           return;
         }
         
@@ -382,9 +390,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
             _searchController.clear();
             
             // If we just reached the max, close the overlay
-            if (widget.maxSelected != null && 
-                _selected.length >= widget.maxSelected! &&
-                _overlayController.isShowing) {
+            if (_isMaxSelectedReached() && _overlayController.isShowing) {
               _hideOverlayIfNeeded();
             }
           });
@@ -399,9 +405,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     final bool isCurrentlySelected = _isSelected(item);
     
     // If maxSelected is set and already reached, only allow removal (toggle off)
-    if (widget.maxSelected != null && 
-        _selected.length >= widget.maxSelected! && 
-        !isCurrentlySelected) {
+    if (_isMaxSelectedReached() && !isCurrentlySelected) {
       // Block adding new items when max is reached
       // Close the overlay and keep it closed
       if (_overlayController.isShowing) {
@@ -412,8 +416,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     // Allow removing items even when max is reached (toggle behavior)
     
     _updateSelection(() {
-      final bool wasAtMax = widget.maxSelected != null && 
-          _selected.length >= widget.maxSelected!;
+      final bool wasAtMax = _isMaxSelectedReached();
       
       if (!isCurrentlySelected) {
         _selected.add(item);
@@ -425,9 +428,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         _searchController.clear();
         
         // If we just reached the max, close the overlay
-        if (widget.maxSelected != null && 
-            _selected.length >= widget.maxSelected! &&
-            _overlayController.isShowing) {
+        if (_isMaxSelectedReached() && _overlayController.isShowing) {
           _hideOverlayIfNeeded();
         }
       } else {
@@ -439,10 +440,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         
         // FIX: Show overlay again if we're below maxSelected after removal
         // This handles the case where user removes an item after reaching max
-        if (wasAtMax && 
-            widget.maxSelected != null && 
-            _selected.length < widget.maxSelected! &&
-            _manualFocusState) {
+        if (wasAtMax && _isBelowMaxSelected() && _manualFocusState) {
           _showOverlayIfFocusedAndBelowMax();
         }
       }
@@ -567,8 +565,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
 
   void _handleTextChanged(String value) {
     // Don't show overlay if maxSelected is reached
-    if (widget.maxSelected != null && 
-        _selected.length >= widget.maxSelected!) {
+    if (_isMaxSelectedReached()) {
       _hideOverlayIfNeeded();
       return;
     }
