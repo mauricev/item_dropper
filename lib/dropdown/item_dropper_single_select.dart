@@ -731,24 +731,12 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
                 final String selectedLabel = _selectedLabelText;
 
                 if (hadSelection) {
-                  // Allow ONLY backspace (prefix shrink) to clear; block all other edits
-                  final bool isPrefixShrink = selectedLabel.isNotEmpty &&
-                      selectedLabel.startsWith(value) &&
-                      value.length < selectedLabel.length;
-
-                  if (isPrefixShrink) {
-                    _withSquelch(() {
-                      _controller.clear();
-                    });
-                    _attemptSelectByInput(''); // clears selection
-                    if (mounted) setState(() {});
-                  } else {
-                    // Revert any other typing while selected
-                    _withSquelch(() {
-                      _controller.text = selectedLabel;
-                      _controller.selection =
-                          TextSelection.collapsed(offset: selectedLabel.length);
-                    });
+                  // User is typing - clear selection and allow them to continue typing
+                  // Don't revert the text - let them type freely
+                  if (value != selectedLabel) {
+                    // User typed something different - clear selection and let them type
+                    _setSelected(null);
+                    _isUserEditing = true;
                   }
                   return;
                 }
