@@ -107,8 +107,9 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   final ChipMeasurementHelper _measurements = ChipMeasurementHelper();
   
   // Cache decoration to prevent recreation on every build
+  // Only recreate when focus state actually changes
   BoxDecoration? _cachedDecoration;
-  bool? _lastFocusState;
+  bool? _cachedFocusState;
   
 
   // Single rebuild mechanism - prevents cascading rebuilds
@@ -341,10 +342,33 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     if (_isInternalSelectionChange) {
       return;
     }
+    // Invalidate decoration cache - will be recreated on next build with new focus state
+    _cachedDecoration = null;
+    _cachedFocusState = null;
     _safeSetState(() {
-      // Invalidate decoration cache so it rebuilds with new focus state
-      _cachedDecoration = null;
+      // Trigger rebuild to apply new decoration
     });
+  }
+
+  /// Get cached decoration, recreating only if focus state changed
+  BoxDecoration _getCachedDecoration() {
+    // Only recreate if cache is null or focus state changed
+    if (_cachedDecoration == null || _cachedFocusState != _manualFocusState) {
+      _cachedFocusState = _manualFocusState;
+      _cachedDecoration = BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.white, Colors.grey.shade200],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+        border: Border.all(
+          color: _manualFocusState ? Colors.blue : Colors.grey.shade400,
+          width: MultiSelectConstants.containerBorderWidth,
+        ),
+        borderRadius: BorderRadius.circular(MultiSelectConstants.containerBorderRadius),
+      );
+    }
+    return _cachedDecoration!;
   }
 
   void _updateSelection(void Function() selectionUpdate) {
@@ -756,29 +780,11 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   }
 
   Widget _buildInputField({InputDecoration? previewDecoration}) {
-    // Cache decoration and only recreate when manual focus state changes
-    // Use manual focus state instead of Flutter's focus state for border color
-    if (_cachedDecoration == null || _lastFocusState != _manualFocusState) {
-      _lastFocusState = _manualFocusState;
-      _cachedDecoration = BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.white, Colors.grey.shade200],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
-        border: Border.all(
-          color: _manualFocusState ? Colors.blue : Colors.grey.shade400,
-          width: MultiSelectConstants.containerBorderWidth,
-        ),
-        borderRadius: BorderRadius.circular(MultiSelectConstants.containerBorderRadius),
-      );
-    }
-    
     return Container(
       key: widget.inputKey ?? _fieldKey,
       width: widget.width, // Constrain to 500px
       // Let content determine height naturally to prevent overflow
-      decoration: _cachedDecoration,
+      decoration: _getCachedDecoration(),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         // Fill available space instead of min
