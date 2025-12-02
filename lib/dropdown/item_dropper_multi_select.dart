@@ -102,6 +102,11 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   int _keyboardHighlightIndex = ItemDropperConstants.kNoHighlight;
   int _hoverIndex = ItemDropperConstants.kNoHighlight;
   
+  // Memoized filtered items - invalidated when search text or selected items change
+  List<ItemDropperItem<T>>? _cachedFilteredItems;
+  String _lastFilteredSearchText = '';
+  int _lastFilteredSelectedCount = -1;
+  
   
   // Measurement helper
   final ChipMeasurementHelper _measurements = ChipMeasurementHelper();
@@ -140,21 +145,45 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   }
 
   List<ItemDropperItem<T>> get _filtered {
+    final String currentSearchText = _searchController.text;
+    final int currentSelectedCount = _selected.length;
+    
+    // Return cached result if search text and selected count haven't changed
+    if (_cachedFilteredItems != null &&
+        _lastFilteredSearchText == currentSearchText &&
+        _lastFilteredSelectedCount == currentSelectedCount) {
+      return _cachedFilteredItems!;
+    }
+    
     // Filter out already selected items - use existing Set for O(1) lookups
     final result = _filterUtils.getFiltered(
       widget.items,
-      _searchController.text,
+      currentSearchText,
       isUserEditing: true, // always filter in multi-select
       excludeValues: _selectedValues,
     );
 
     // Add "add item" row if no matches, search text exists, and callback is provided
-    return ItemDropperAddItemUtils.addAddItemIfNeeded<T>(
+    final filteredWithAdd = ItemDropperAddItemUtils.addAddItemIfNeeded<T>(
       filteredItems: result,
-      searchText: _searchController.text,
+      searchText: currentSearchText,
       originalItems: widget.items,
       hasOnAddItemCallback: () => widget.onAddItem != null,
     );
+    
+    // Cache the result
+    _cachedFilteredItems = filteredWithAdd;
+    _lastFilteredSearchText = currentSearchText;
+    _lastFilteredSelectedCount = currentSelectedCount;
+    
+    return filteredWithAdd;
+  }
+  
+  /// Invalidate filtered items cache - call when search text or selected items change
+  void _invalidateFilteredCache() {
+    _cachedFilteredItems = null;
+    _lastFilteredSearchText = '';
+    _lastFilteredSelectedCount = -1;
   }
 
   bool _isSelected(ItemDropperItem<T> item) {
@@ -166,8 +195,9 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     if (!_selectedValues.contains(item.value)) {
       _selected.add(item);
       _selectedValues.add(item.value);
-      // Clear filter cache since excludeValues changed
+      // Clear filter caches since excludeValues changed
       _filterUtils.clearCache();
+      _invalidateFilteredCache();
     }
   }
 
@@ -176,8 +206,9 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     if (_selectedValues.contains(value)) {
       _selected.removeWhere((item) => item.value == value);
       _selectedValues.remove(value);
-      // Clear filter cache since excludeValues changed
+      // Clear filter caches since excludeValues changed
       _filterUtils.clearCache();
+      _invalidateFilteredCache();
     }
   }
 
@@ -606,9 +637,11 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       return;
     }
     
+    // Invalidate filtered cache since search text changed
+    _invalidateFilteredCache();
+    
     // Filter utils already handles text-based cache invalidation automatically
     // Only need to clear highlights and trigger rebuild
-    // The _filtered getter will call getFiltered() which handles caching based on search text
     _safeSetState(() {
       _clearHighlights();
     });
@@ -719,14 +752,22 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     
     // Invalidate filter cache if items list changed
     // Fast path: check reference equality first (O(1))
-    if (!identical(widget.items, oldWidget.items) &&
-        (widget.items.length != oldWidget.items.length ||
-         !_areItemsEqual(widget.items, oldWidget.items))) {
-      _filterUtils.initializeItems(widget.items);
-      // Cache removed - overlay rebuilds automatically
-      // Use central rebuild mechanism instead of direct setState
-      // But only if not already rebuilding
-      _requestRebuildIfNotScheduled();
+    if (!identical(widget.items, oldWidget.items)) {
+      // Only do expensive comparison if lengths differ or we need to check content
+      bool itemsChanged = widget.items.length != oldWidget.items.length;
+      if (!itemsChanged) {
+        // Only do expensive comparison if reference changed but length is same
+        itemsChanged = !_areItemsEqual(widget.items, oldWidget.items);
+      }
+      
+      if (itemsChanged) {
+        _filterUtils.initializeItems(widget.items);
+        _invalidateFilteredCache();
+        // Cache removed - overlay rebuilds automatically
+        // Use central rebuild mechanism instead of direct setState
+        // But only if not already rebuilding
+        _requestRebuildIfNotScheduled();
+      }
     }
   }
   
