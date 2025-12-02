@@ -5,6 +5,7 @@ import 'common/item_dropper_common.dart';
 import 'multi/chip_measurement_helper.dart';
 import 'multi/multi_select_constants.dart';
 import 'multi/multi_select_layout_calculator.dart';
+import 'multi/smartwrap.dart' show SmartWrapWithFlexibleLast;
 import 'utils/item_dropper_add_item_utils.dart';
 import 'utils/dropdown_position_calculator.dart';
 
@@ -844,93 +845,19 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
               MultiSelectConstants.containerPaddingRight,
               MultiSelectConstants.containerPaddingBottom,
             ),
-            child: LayoutBuilder(
-              key: const ValueKey<String>('layout_builder_stable'),
-              builder: (context, constraints) {
-                final double availableWidth = constraints.maxWidth;
-                
-                // Use the row-specific calculated width if available (calculated after layout)
-                // Otherwise fall back to the standard calculation
-                final double textFieldWidth = _measurements.calculatedTextFieldWidthForRow ?? 
-                    MultiSelectLayoutCalculator.calculateTextFieldWidth(
-                      availableWidth: availableWidth,
-                      selectedCount: _selected.length,
-                      chipSpacing: MultiSelectConstants.chipSpacing,
-                      measurements: _measurements,
-                    );
-                
-                debugPrint("[TEXTFIELD_WIDTH] Calculated width: $textFieldWidth");
-                debugPrint("[TEXTFIELD_WIDTH] Available width: $availableWidth");
-                debugPrint("[TEXTFIELD_WIDTH] Selected count: ${_selected.length}");
-                debugPrint("[TEXTFIELD_WIDTH] Total chip width: ${_measurements.totalChipWidth}");
-
-                // Schedule measurement after build completes - don't measure during build
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (!mounted) return;
-                  
-                  // Measure Wrap after render to detect wrapping and get actual remaining width
-                  // Only measure if contexts are available (after first frame)
-                  // Only measure if we have selected items (prevents measurement issues when empty)
-                  final wrapContext = _measurements.wrapKey.currentContext;
-                  if (wrapContext != null && _selected.isNotEmpty) {
-                    // Get current available width from the wrap's RenderBox
-                    final RenderBox? wrapBox = wrapContext.findRenderObject() as RenderBox?;
-                    final double currentAvailableWidth = wrapBox?.size.width ?? constraints.maxWidth;
-                    
-                    // Recalculate width in the callback to ensure we have the latest value
-                    // This ensures we're using the current state, not a stale value from closure capture
-                    final double currentTextFieldWidth = MultiSelectLayoutCalculator.calculateTextFieldWidth(
-                      availableWidth: currentAvailableWidth,
-                      selectedCount: _selected.length,
-                      chipSpacing: MultiSelectConstants.chipSpacing,
-                      measurements: _measurements,
-                    );
-                    
-                    debugPrint("[TEXTFIELD_WIDTH] Passing to measurement: $currentTextFieldWidth (recalculated in callback, availableWidth=$currentAvailableWidth)");
-                    _measurements.measureWrapAndTextField(
-                      wrapContext: wrapContext,
-                      textFieldContext: _measurements.textFieldKey.currentContext,
-                      lastChipContext: _measurements.lastChipKey.currentContext,
-                      selectedCount: _selected.length,
-                      chipSpacing: MultiSelectConstants.chipSpacing,
-                      minTextFieldWidth: MultiSelectConstants.minTextFieldWidth,
-                      calculatedTextFieldWidth: currentTextFieldWidth, // Use recalculated width
-                      requestRebuild: _requestRebuild,
-                    );
-                  } else if (_selected.isEmpty) {
-                    // Reset measurement state when selection is cleared
-                    _measurements.resetMeasurementState();
-                  }
-                });
-                return Wrap(
-                  key: _measurements.wrapKey,
-                  spacing: MultiSelectConstants.chipSpacing,
-                  runSpacing: MultiSelectConstants.chipSpacing,
-                  alignment: WrapAlignment.start,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    // Selected chips
-                    ..._selected.asMap().entries.map((entry) {
-                      final int index = entry.key;
-                      final ItemDropperItem<T> item = entry.value;
-                      final bool isLastChip = index == _selected.length - 1;
-                      return _buildChip(
-                        item, 
-                        isLastChip ? _measurements.lastChipKey : null,
-                        ValueKey<T>(item.value), // Stable key based on item value
-                      );
-                    }),
-                    // TextField with proper width based on available space
-                    if (_selected.isNotEmpty && textFieldWidth > 0)
-                      _buildTextFieldChip(textFieldWidth)
-                    else
-                      SizedBox(
-                        width: textFieldWidth,
-                        child: _buildTextFieldChip(textFieldWidth),
-                      ),
-                  ],
-                );
-              },
+            child: SmartWrapWithFlexibleLast(
+              spacing: MultiSelectConstants.chipSpacing,
+              runSpacing: MultiSelectConstants.chipSpacing,
+              children: [
+                // Selected chips
+                ..._selected.map((item) =>
+                    Container(
+                      key: ValueKey('chip_${item.value}'),
+                      // Unique key for each chip
+                      child: _buildChip(item),
+                    )),
+                _buildTextFieldChip(double.infinity),
+              ],
             ),
           ),
         ],
@@ -1118,15 +1045,23 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       };
     }
 
-    // Use measured wrapHeight to calculate expected field height for accurate positioning
+    // Use measured wrapHeight directly for overlay positioning
     // This prevents overlay flash when field height changes during chip removal
+    _measurements.measureWrapAndTextField(
+      wrapContext: _measurements.wrapKey.currentContext,
+      textFieldContext: null,
+      // Not needed for simple height measurement
+      lastChipContext: null,
+      // Not needed for simple height measurement
+      selectedCount: _selected.length,
+      chipSpacing: MultiSelectConstants.chipSpacing,
+      minTextFieldWidth: MultiSelectConstants.minTextFieldWidth,
+      calculatedTextFieldWidth: null,
+      // Not needed for simple height measurement
+      requestRebuild: _requestRebuild,
+    );
+
     final double? measuredWrapHeight = _measurements.wrapHeight;
-    final double? expectedFieldHeight = measuredWrapHeight != null
-        ? measuredWrapHeight + 
-          MultiSelectConstants.containerPaddingTop + 
-          MultiSelectConstants.containerPaddingBottom +
-          (MultiSelectConstants.containerBorderWidth * 2.0)
-        : null;
     
     return ItemDropperRenderUtils.buildDropdownOverlay(
       context: inputContext,
@@ -1157,7 +1092,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         );
       },
       itemHeight: widget.itemHeight,
-      preferredFieldHeight: expectedFieldHeight, // Pass measured height if available
+      preferredFieldHeight: measuredWrapHeight, // Pass measured height directly
     );
   }
 
