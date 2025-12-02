@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'common/item_dropper_common.dart';
-import 'chip_measurement_helper.dart';
+import 'multi/chip_measurement_helper.dart';
 import 'multi/multi_select_constants.dart';
 import 'multi/multi_select_layout_calculator.dart';
 import 'utils/item_dropper_add_item_utils.dart';
