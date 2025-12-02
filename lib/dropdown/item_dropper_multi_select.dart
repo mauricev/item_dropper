@@ -848,12 +848,21 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
               key: const ValueKey<String>('layout_builder_stable'),
               builder: (context, constraints) {
                 final double availableWidth = constraints.maxWidth;
-                final double textFieldWidth = MultiSelectLayoutCalculator.calculateTextFieldWidth(
-                  availableWidth: availableWidth,
-                  selectedCount: _selected.length,
-                  chipSpacing: MultiSelectConstants.chipSpacing,
-                  measurements: _measurements,
-                );
+                
+                // Use the row-specific calculated width if available (calculated after layout)
+                // Otherwise fall back to the standard calculation
+                final double textFieldWidth = _measurements.calculatedTextFieldWidthForRow ?? 
+                    MultiSelectLayoutCalculator.calculateTextFieldWidth(
+                      availableWidth: availableWidth,
+                      selectedCount: _selected.length,
+                      chipSpacing: MultiSelectConstants.chipSpacing,
+                      measurements: _measurements,
+                    );
+                
+                debugPrint("[TEXTFIELD_WIDTH] Calculated width: $textFieldWidth");
+                debugPrint("[TEXTFIELD_WIDTH] Available width: $availableWidth");
+                debugPrint("[TEXTFIELD_WIDTH] Selected count: ${_selected.length}");
+                debugPrint("[TEXTFIELD_WIDTH] Total chip width: ${_measurements.totalChipWidth}");
 
                 // Schedule measurement after build completes - don't measure during build
                 WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -864,6 +873,20 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
                   // Only measure if we have selected items (prevents measurement issues when empty)
                   final wrapContext = _measurements.wrapKey.currentContext;
                   if (wrapContext != null && _selected.isNotEmpty) {
+                    // Get current available width from the wrap's RenderBox
+                    final RenderBox? wrapBox = wrapContext.findRenderObject() as RenderBox?;
+                    final double currentAvailableWidth = wrapBox?.size.width ?? constraints.maxWidth;
+                    
+                    // Recalculate width in the callback to ensure we have the latest value
+                    // This ensures we're using the current state, not a stale value from closure capture
+                    final double currentTextFieldWidth = MultiSelectLayoutCalculator.calculateTextFieldWidth(
+                      availableWidth: currentAvailableWidth,
+                      selectedCount: _selected.length,
+                      chipSpacing: MultiSelectConstants.chipSpacing,
+                      measurements: _measurements,
+                    );
+                    
+                    debugPrint("[TEXTFIELD_WIDTH] Passing to measurement: $currentTextFieldWidth (recalculated in callback, availableWidth=$currentAvailableWidth)");
                     _measurements.measureWrapAndTextField(
                       wrapContext: wrapContext,
                       textFieldContext: _measurements.textFieldKey.currentContext,
@@ -871,6 +894,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
                       selectedCount: _selected.length,
                       chipSpacing: MultiSelectConstants.chipSpacing,
                       minTextFieldWidth: MultiSelectConstants.minTextFieldWidth,
+                      calculatedTextFieldWidth: currentTextFieldWidth, // Use recalculated width
                       requestRebuild: _requestRebuild,
                     );
                   } else if (_selected.isEmpty) {
@@ -995,6 +1019,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   }
 
   Widget _buildTextFieldChip(double width) {
+    debugPrint("[TEXTFIELD_BUILD] Building text field with width: $width");
+    
     // Use measured chip dimensions if available, otherwise fall back to calculation
     final double chipHeight = _measurements.chipHeight ?? MultiSelectLayoutCalculator.calculateTextFieldHeight(
       fontSize: widget.fieldTextStyle?.fontSize,
