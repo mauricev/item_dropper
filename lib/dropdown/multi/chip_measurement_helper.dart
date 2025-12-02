@@ -140,11 +140,11 @@ class ChipMeasurementHelper {
         totalChipWidth = measuredChipWidth;
       }
       
-      bool needsUpdate = false;
+      // Track if wrapHeight changed (affects overlay positioning)
+      final bool wrapHeightChanged = newWrapHeight != wrapHeight;
       
-      if (newWrapHeight != wrapHeight) {
+      if (wrapHeightChanged) {
         wrapHeight = newWrapHeight;
-        needsUpdate = true;
       }
       
       final RenderBox? textFieldBox = textFieldContext?.findRenderObject() as RenderBox?;
@@ -167,7 +167,6 @@ class ChipMeasurementHelper {
             if (actualRemaining > 0 && (remainingWidth == null ||
                 (remainingWidth! - actualRemaining).abs() > 1.0)) {
               remainingWidth = actualRemaining.clamp(minTextFieldWidth, wrapWidth);
-              needsUpdate = true;
             }
           } else {
             // TextField wrapped to new line - calculate remaining width on first line
@@ -178,22 +177,27 @@ class ChipMeasurementHelper {
             if (firstLineRemaining > minTextFieldWidth && 
                 (remainingWidth == null || (remainingWidth! - firstLineRemaining).abs() > 1.0)) {
               remainingWidth = firstLineRemaining;
-              needsUpdate = true;
             } else if (firstLineRemaining <= minTextFieldWidth) {
               // Not enough space on first line - use minimum width
               // TextField will wrap to next line
               if (remainingWidth == null || remainingWidth != minTextFieldWidth) {
                 remainingWidth = minTextFieldWidth;
-                needsUpdate = true;
               }
             }
           }
         }
       }
       
-      // Don't request rebuild from measurements - measurements just update state
-      // The rebuild will happen naturally on the next frame if state changed
-      // Requesting rebuild here causes cascading rebuilds
+      // Request rebuild when wrapHeight changes (affects overlay positioning)
+      // Only rebuild when wrapHeight changes, not when remainingWidth changes
+      // This ensures overlay repositions immediately when chips wrap/unwrap
+      if (wrapHeightChanged) {
+        // Use a microtask to avoid rebuilding during the current frame
+        // This ensures the measurement is complete before rebuild
+        Future.microtask(() {
+          requestRebuild();
+        });
+      }
     });
   }
 }
