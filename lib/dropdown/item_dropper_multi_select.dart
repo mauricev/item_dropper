@@ -60,6 +60,9 @@ class MultiItemDropper<T> extends StatefulWidget {
   /// Receives the search text and should return a new ItemDropperItem to add to the list.
   /// If null, the add row will not appear.
   final ItemDropperItem<T>? Function(String searchText)? onAddItem;
+  final bool allowDelete; // Allow deleting items from the list
+  final void Function(ItemDropperItem<
+      T> item)? onDeleteItem; // Callback when item is deleted
 
   const MultiItemDropper({
     super.key,
@@ -80,6 +83,8 @@ class MultiItemDropper<T> extends StatefulWidget {
     this.popupItemBuilder,
     this.elevation,
     this.onAddItem,
+    this.allowDelete = false,
+    this.onDeleteItem,
   }) : assert(maxSelected == null ||
       maxSelected >= 2, 'maxSelected must be null or >= 2');
 
@@ -932,7 +937,12 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
                   alignment: Alignment.center,
                   child: GestureDetector(
                     onTap: () {
-                      _removeChip(item);
+                      if (widget.allowDelete) {
+                        _removeChip(item);
+                        if (widget.onDeleteItem != null) {
+                          widget.onDeleteItem!(item);
+                        }
+                      }
                     },
                     child: Icon(Icons.close, size: MultiSelectConstants.chipDeleteIconSize,
                         color: Colors.grey.shade700),

@@ -8,10 +8,12 @@ class ItemDropperItem<T> {
   /// Whether this item is a group header (non-selectable label).
   /// Group headers are displayed but cannot be selected.
   final bool isGroupHeader;
+  final bool isDeletable;
 
   const ItemDropperItem({
     required this.value, 
     required this.label,
     this.isGroupHeader = false,
+    this.isDeletable = false
   });
 }

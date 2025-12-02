@@ -49,6 +49,8 @@ class SingleItemDropper<T> extends StatefulWidget {
   final TextStyle? popupGroupHeaderStyle;
   final double? itemHeight;
   final bool enabled;
+  final bool allowDelete;
+  final void Function(ItemDropperItem<T> item)? onDeleteItem;
   /// Callback invoked when user wants to add a new item.
   /// Receives the search text and should return a new ItemDropperItem to add to the list.
   /// If null, the add row will not appear.
@@ -70,6 +72,8 @@ class SingleItemDropper<T> extends StatefulWidget {
     this.popupGroupHeaderStyle,
     this.itemHeight,
     this.enabled = true,
+    this.allowDelete = false,
+    this.onDeleteItem,
     this.onAddItem,
   });
 
