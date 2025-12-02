@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'common/item_dropper_common.dart';
@@ -121,10 +120,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   // Only recreate when focus state actually changes
   BoxDecoration? _cachedDecoration;
   bool? _cachedFocusState;
-  
 
-  // Single rebuild mechanism - prevents cascading rebuilds
-  bool _needsRebuild = false;
   bool _rebuildScheduled = false;
   // Track when we're the source of selection changes to prevent didUpdateWidget from rebuilding
   bool _isInternalSelectionChange = false;
@@ -216,12 +212,6 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       _filterUtils.clearCache();
       _invalidateFilteredCache();
     }
-  }
-
-  /// Clear all selected items (keeps both List and Set in sync)
-  void _clearSelectedItems() {
-    _selected.clear();
-    _selectedValues.clear();
   }
 
   /// Sync selected items from external source (keeps both List and Set in sync)
@@ -956,8 +946,6 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   }
 
   Widget _buildTextFieldChip(double width) {
-    debugPrint("[TEXTFIELD_BUILD] Building text field with width: $width");
-    
     // Use measured chip dimensions if available, otherwise fall back to calculation
     final double chipHeight = _measurements.chipHeight ?? MultiSelectLayoutCalculator.calculateTextFieldHeight(
       fontSize: widget.fieldTextStyle?.fontSize,
@@ -996,7 +984,6 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
           enabled: widget.enabled,
           // Ensure TextField can receive focus
           autofocus: false,
-          onTap: () => debugPrint("TAP: Text field clicked"),
         ),
       ),
     );
@@ -1015,13 +1002,13 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     if (inputContext == null) return const SizedBox.shrink();
     
     // Check for field height mismatch (indicates Wrap wrapped when it shouldn't)
-    final RenderBox? fieldBox = inputContext.findRenderObject() as RenderBox?;
+    /*final RenderBox? fieldBox = inputContext.findRenderObject() as RenderBox?;
     if (fieldBox != null && _measurements.wrapHeight != null) {
       // Calculate expected height from measured wrapHeight + padding + border
       final double verticalPadding = MultiSelectConstants.containerPaddingTop + 
           MultiSelectConstants.containerPaddingBottom;
       final double borderWidth = MultiSelectConstants.containerBorderWidth * 2.0; // top + bottom border
-    }
+    }*/
 
     // Show empty state if user is searching but no results found
     if (filteredItems.isEmpty) {

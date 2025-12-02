@@ -245,10 +245,7 @@ class ItemDropperRenderUtils {
                         ItemDropperConstants.kDropdownItemHeight,
                     itemBuilder: (c, i) {
                       final item = items[i];
-                      final hasPrevious = i > 0;
-                      final previousIsGroupHeader = hasPrevious && items[i - 1].isGroupHeader;
-                      
-                      
+
                       // Call builder - if it's the default builder, it will use the separator info
                       // We need to wrap the builder call to pass separator info
                       // Since we can't modify the builder signature, we'll handle separators

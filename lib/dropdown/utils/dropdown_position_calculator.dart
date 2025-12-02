@@ -49,12 +49,11 @@ class DropdownPositionCalculator {
     // Calculate available space using screen coordinates
     double availableSpaceBelow;
     double availableSpaceAbove;
-    double inputFieldViewportY;
+
     
     if (scrollRenderBox != null) {
       // Use Scrollable as the viewport reference
       final Offset scrollScreenPos = scrollRenderBox.localToGlobal(Offset.zero);
-      final double scrollOffset = scrollable!.position.hasContentDimensions ? scrollable.position.pixels : 0.0;
       final Size scrollBoxSize = scrollRenderBox.size;
       
       // Scrollable bottom in screen coordinates
@@ -64,19 +63,12 @@ class DropdownPositionCalculator {
       availableSpaceBelow = scrollableBottomScreen - inputFieldBottomScreen - viewInsets.bottom;
       availableSpaceAbove = inputFieldScreenPos.dy - scrollScreenPos.dy;
       
-      // Convert to viewport coordinates for CompositedTransformFollower offset
-      inputFieldViewportY = inputFieldScreenPos.dy - scrollScreenPos.dy + scrollOffset;
-      
     } else {
       // Fallback: no Scrollable found
-      inputFieldViewportY = inputFieldScreenPos.dy - padding.top;
       availableSpaceBelow = windowHeight - inputFieldBottomScreen - viewInsets.bottom;
       availableSpaceAbove = inputFieldScreenPos.dy - padding.top;
     }
-    
-    // Create viewport position offset for CompositedTransformFollower
-    final Offset inputFieldOffset = Offset(inputFieldScreenPos.dx - padding.left, inputFieldViewportY);
-    
+
     // Only show below if there's enough space for the full dropdown
     final bool shouldShowBelow = availableSpaceBelow >= maxDropdownHeight;
     

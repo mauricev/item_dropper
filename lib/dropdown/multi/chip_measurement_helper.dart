@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'multi_select_layout_calculator.dart';
 
 /// Helper class for managing chip and layout measurements in multi-select dropdown
 class ChipMeasurementHelper {
@@ -18,11 +17,9 @@ class ChipMeasurementHelper {
   final GlobalKey wrapKey = GlobalKey();
   
   bool _isMeasuring = false;
-  int _lastMeasuredSelectedCount = -1;
   
   // Reset measurement state - call when selection is cleared
   void resetMeasurementState() {
-    _lastMeasuredSelectedCount = -1;
     totalChipWidth = null;
     remainingWidth = null;
     calculatedTextFieldWidthForRow = null; // Clear row-specific width
@@ -74,7 +71,7 @@ class ChipMeasurementHelper {
     required void Function() requestRebuild,
   }) {
     // Only measure wrap height for overlay positioning - let Wrap handle width naturally
-    if (wrapContext == null || requestRebuild == null) return;
+    if (wrapContext == null) return;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final RenderBox? wrapBox = wrapContext.findRenderObject() as RenderBox?;

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 
 /// Shared widget that wraps dropdown input fields with overlay functionality
 class ItemDropperWithOverlay extends StatefulWidget {
