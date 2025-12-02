@@ -209,7 +209,9 @@ class ItemDropperRenderUtils {
     );
 
     return CompositedTransformFollower(
-      key: ValueKey<String>('follower_$inputFieldHeight\_$actualFieldWidth'),
+      // Use stable key based on width only - height changes shouldn't recreate the ListView
+      // This preserves scroll position when field height changes (e.g., chips wrapping)
+      key: ValueKey<String>('follower_$actualFieldWidth'),
       link: layerLink,
       showWhenUnlinked: false,
       offset: position.offset,
