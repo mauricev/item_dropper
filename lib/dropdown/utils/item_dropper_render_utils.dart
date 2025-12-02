@@ -190,13 +190,16 @@ class ItemDropperRenderUtils {
     if (items.isEmpty) return const SizedBox.shrink();
 
     // For positioning calculations, we need the input field's RenderBox
-    // For width, we ONLY use the passed width parameter (never measure)
     final RenderBox? inputBox = context.findRenderObject() as RenderBox?;
     if (inputBox == null) return const SizedBox.shrink();
 
     // Use preferredFieldHeight if available (from measurements), otherwise use actual field height
     // This prevents overlay flash when field height changes during chip removal
     final double inputFieldHeight = preferredFieldHeight ?? inputBox.size.height;
+    
+    // Use actual measured field width to ensure overlay matches field width exactly
+    // This accounts for borders, padding, and any layout differences
+    final double actualFieldWidth = inputBox.size.width;
     
     final DropdownPositionResult position = DropdownPositionCalculator.calculate(
       context: context,
@@ -206,12 +209,12 @@ class ItemDropperRenderUtils {
     );
 
     return CompositedTransformFollower(
-      key: ValueKey<String>('follower_$inputFieldHeight\_$width'),
+      key: ValueKey<String>('follower_$inputFieldHeight\_$actualFieldWidth'),
       link: layerLink,
       showWhenUnlinked: false,
       offset: position.offset,
       child: SizedBox(
-        width: width,
+        width: actualFieldWidth,
         child: FocusScope(
           canRequestFocus: false,
           child: Material(

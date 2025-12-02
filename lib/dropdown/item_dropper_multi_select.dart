@@ -1144,6 +1144,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     if (inputBox == null) return const SizedBox.shrink();
 
     final double inputFieldHeight = inputBox.size.height;
+    // Use actual measured field width to ensure overlay matches field width exactly
+    final double actualFieldWidth = inputBox.size.width;
     final double maxDropdownHeight = widget.maxDropdownHeight ?? MultiSelectConstants.defaultMaxDropdownHeight;
     
     final position = DropdownPositionCalculator.calculate(
@@ -1158,7 +1160,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       showWhenUnlinked: false,
       offset: position.offset,
       child: SizedBox(
-        width: widget.width,
+        width: actualFieldWidth,
         child: Material(
           elevation: ItemDropperConstants.kDropdownElevation,
           child: Container(
