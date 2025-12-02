@@ -71,7 +71,7 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
   ItemDropperItem<int>? selectedLargeItem;
 
   // Selected values for multi-select dropdown
-  List<ItemDropperItem<String>> selectedFruits = [];
+  List<ItemDropperItem<String>> selectedStates = [];
   List<ItemDropperItem<String>> selectedMaxItems = [];
   ItemDropperItem<String>? selectedCity;
   
@@ -89,6 +89,7 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
 
   // Generate dummy data
   late List<ItemDropperItem<String>> fruits;
+  late final List<ItemDropperItem<String>> states;
   late final List<ItemDropperItem<int>> numbers;
   late final List<ItemDropperItem<String>> countries;
   late final List<ItemDropperItem<int>> largeItemsList;
@@ -121,6 +122,60 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
       ItemDropperItem(value: 'fig', label: 'Fig'),
       ItemDropperItem(value: 'grape', label: 'Grape'),
       ItemDropperItem(value: 'honeydew', label: 'Honeydew'),
+    ];
+
+    // Dropdown 5: 50 US States
+    states = const [
+      ItemDropperItem(value: 'al', label: 'Alabama'),
+      ItemDropperItem(value: 'ak', label: 'Alaska'),
+      ItemDropperItem(value: 'az', label: 'Arizona'),
+      ItemDropperItem(value: 'ar', label: 'Arkansas'),
+      ItemDropperItem(value: 'ca', label: 'California'),
+      ItemDropperItem(value: 'co', label: 'Colorado'),
+      ItemDropperItem(value: 'ct', label: 'Connecticut'),
+      ItemDropperItem(value: 'de', label: 'Delaware'),
+      ItemDropperItem(value: 'fl', label: 'Florida'),
+      ItemDropperItem(value: 'ga', label: 'Georgia'),
+      ItemDropperItem(value: 'hi', label: 'Hawaii'),
+      ItemDropperItem(value: 'id', label: 'Idaho'),
+      ItemDropperItem(value: 'il', label: 'Illinois'),
+      ItemDropperItem(value: 'in', label: 'Indiana'),
+      ItemDropperItem(value: 'ia', label: 'Iowa'),
+      ItemDropperItem(value: 'ks', label: 'Kansas'),
+      ItemDropperItem(value: 'ky', label: 'Kentucky'),
+      ItemDropperItem(value: 'la', label: 'Louisiana'),
+      ItemDropperItem(value: 'me', label: 'Maine'),
+      ItemDropperItem(value: 'md', label: 'Maryland'),
+      ItemDropperItem(value: 'ma', label: 'Massachusetts'),
+      ItemDropperItem(value: 'mi', label: 'Michigan'),
+      ItemDropperItem(value: 'mn', label: 'Minnesota'),
+      ItemDropperItem(value: 'ms', label: 'Mississippi'),
+      ItemDropperItem(value: 'mo', label: 'Missouri'),
+      ItemDropperItem(value: 'mt', label: 'Montana'),
+      ItemDropperItem(value: 'ne', label: 'Nebraska'),
+      ItemDropperItem(value: 'nv', label: 'Nevada'),
+      ItemDropperItem(value: 'nh', label: 'New Hampshire'),
+      ItemDropperItem(value: 'nj', label: 'New Jersey'),
+      ItemDropperItem(value: 'nm', label: 'New Mexico'),
+      ItemDropperItem(value: 'ny', label: 'New York'),
+      ItemDropperItem(value: 'nc', label: 'North Carolina'),
+      ItemDropperItem(value: 'nd', label: 'North Dakota'),
+      ItemDropperItem(value: 'oh', label: 'Ohio'),
+      ItemDropperItem(value: 'ok', label: 'Oklahoma'),
+      ItemDropperItem(value: 'or', label: 'Oregon'),
+      ItemDropperItem(value: 'pa', label: 'Pennsylvania'),
+      ItemDropperItem(value: 'ri', label: 'Rhode Island'),
+      ItemDropperItem(value: 'sc', label: 'South Carolina'),
+      ItemDropperItem(value: 'sd', label: 'South Dakota'),
+      ItemDropperItem(value: 'tn', label: 'Tennessee'),
+      ItemDropperItem(value: 'tx', label: 'Texas'),
+      ItemDropperItem(value: 'ut', label: 'Utah'),
+      ItemDropperItem(value: 'vt', label: 'Vermont'),
+      ItemDropperItem(value: 'va', label: 'Virginia'),
+      ItemDropperItem(value: 'wa', label: 'Washington'),
+      ItemDropperItem(value: 'wv', label: 'West Virginia'),
+      ItemDropperItem(value: 'wi', label: 'Wisconsin'),
+      ItemDropperItem(value: 'wy', label: 'Wyoming'),
     ];
 
     // Dropdown 2: Numbers 1-50
@@ -348,21 +403,21 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
 
                 const SizedBox(height: 32),
 
-                          // Dropdown 5: Multi-Select Fruits
+                          // Dropdown 5: Multi-Select States
                           _buildMultiDropdownSection(
-                            title: '5. Multi-Select Fruits (8 items)',
-                            description: 'Select multiple fruits with chip-based display',
-                            selectedValues: selectedFruits.map((e) => e.label).join(', '),
+                            title: '5. Multi-Select States (50 items)',
+                            description: 'Select multiple US states with chip-based display',
+                            selectedValues: selectedStates.map((e) => e.label).join(', '),
                             dropdown: multiDropDown<String>(
                               width: 500,
-                              listItems: fruits,
-                              initiallySelected: selectedFruits,
+                              listItems: states,
+                              initiallySelected: selectedStates,
                               onChanged: (items) {
                                 setState(() {
-                                  selectedFruits = items;
+                                  selectedStates = items;
                                 });
                               },
-                              hintText: 'Select fruits...',
+                              hintText: 'Select states...',
                               maxDropdownHeight: 250,
                             ),
                           ),
@@ -584,9 +639,9 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
                       _buildSelectionRow(
                           'Large Item:', selectedLargeItem?.label ?? 'None'),
                       _buildSelectionRow(
-                          'Multi Fruits:', selectedFruits.isEmpty
+                          'Multi States:', selectedStates.isEmpty
                           ? 'None'
-                          : selectedFruits.map((e) => e.label).join(', ')),
+                          : selectedStates.map((e) => e.label).join(', ')),
                       _buildSelectionRow(
                           'Max Items (4 max):', selectedMaxItems.isEmpty
                           ? 'None'
