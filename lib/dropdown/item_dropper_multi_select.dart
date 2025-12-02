@@ -166,6 +166,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     if (!_selectedValues.contains(item.value)) {
       _selected.add(item);
       _selectedValues.add(item.value);
+      // Clear filter cache since excludeValues changed
+      _filterUtils.clearCache();
     }
   }
 
@@ -174,6 +176,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     if (_selectedValues.contains(value)) {
       _selected.removeWhere((item) => item.value == value);
       _selectedValues.remove(value);
+      // Clear filter cache since excludeValues changed
+      _filterUtils.clearCache();
     }
   }
 
@@ -602,9 +606,10 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       return;
     }
     
-    // Cache removed - overlay rebuilds automatically
+    // Filter utils already handles text-based cache invalidation automatically
+    // Only need to clear highlights and trigger rebuild
+    // The _filtered getter will call getFiltered() which handles caching based on search text
     _safeSetState(() {
-      _filterUtils.clearCache();
       _clearHighlights();
     });
     
