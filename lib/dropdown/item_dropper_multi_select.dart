@@ -205,6 +205,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   }
 
   // Focus management helpers
+  /// Request focus and set manual focus state
   void _gainFocus() {
     if (!_manualFocusState) {
       _manualFocusState = true;
@@ -213,16 +214,19 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     }
   }
 
-  void _ensureFocusMaintained() {
-    if (_manualFocusState && !_focusNode.hasFocus) {
-      _focusNode.requestFocus();
-    }
-  }
-
+  /// Clear manual focus state and unfocus
   void _loseFocus() {
     _manualFocusState = false;
     _updateFocusVisualState();
     _focusNode.unfocus();
+  }
+
+  /// Restore focus if manual state indicates we should be focused
+  /// Called after operations that might cause focus loss (e.g., selection changes)
+  void _restoreFocusIfNeeded() {
+    if (_manualFocusState && !_focusNode.hasFocus) {
+      _focusNode.requestFocus();
+    }
   }
 
   // Overlay management helpers
@@ -380,10 +384,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         }
       },
       postRebuildCallback: () {
-        // Manual focus management - ensure focus is maintained after selection update
-        if (_manualFocusState && !_focusNode.hasFocus) {
-          _focusNode.requestFocus();
-        }
+        // Restore focus if needed after selection update
+        _restoreFocusIfNeeded();
       },
     );
   }
@@ -485,8 +487,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         _clearHighlights();
       },
       postRebuildCallback: () {
-        // Manual focus management - ensure focus is maintained after chip removal
-        _ensureFocusMaintained();
+        // Restore focus if needed after chip removal
+        _restoreFocusIfNeeded();
         
         // Show overlay if we're below maxSelected and focused
         _showOverlayIfFocusedAndBelowMax();
