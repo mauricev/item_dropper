@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-
 class SmartWrapWithFlexibleLast extends MultiChildRenderObjectWidget {
   const SmartWrapWithFlexibleLast({
     super.key,
@@ -10,7 +9,10 @@ class SmartWrapWithFlexibleLast extends MultiChildRenderObjectWidget {
     this.minRemainingWidthForSameRow = 100.0,
   });
 
+  /// Horizontal space between children.
   final double spacing;
+
+  /// Vertical space between rows.
   final double runSpacing;
 
   /// If the remaining width on the current row is at least this,
@@ -86,160 +88,176 @@ class _RenderSmartWrapWithFlexibleLast extends RenderBox
 
   @override
   void performLayout() {
-    final maxWidth = constraints.maxWidth;
+    final double maxRowWidth = constraints.maxWidth;
 
-    double dx = 0.0;
-    double dy = 0.0;
-    double rowHeight = 0.0;
+    double currentRowX = 0.0;
+    double currentRowY = 0.0;
+    double currentRowHeight = 0.0;
 
     RenderBox? child = firstChild;
 
     while (child != null) {
-      final bool isLast = childAfter(child) == null;
-      final parentData = child.parentData as _SmartWrapParentData;
+      final bool isLastChildInList = childAfter(child) == null;
+      final _SmartWrapParentData parentData =
+      child.parentData as _SmartWrapParentData;
 
-      if (!isLast) {
+      if (!isLastChildInList) {
         // Normal wrap behavior for all but the last child.
         child.layout(
           BoxConstraints(
-            maxWidth: maxWidth,
+            maxWidth: maxRowWidth,
           ),
           parentUsesSize: true,
         );
-        final childSize = child.size;
+        final Size childSize = child.size;
 
-        // Wrap to next line if needed.
-        final double nextDx =
-        dx == 0.0 ? childSize.width : dx + spacing + childSize.width;
-        if (nextDx > maxWidth && dx != 0.0) {
-          dx = 0.0;
-          dy += rowHeight + runSpacing;
-          rowHeight = 0.0;
+        // Where would the row end if we placed this child on the current row?
+        final double proposedRowEndX = currentRowX == 0.0
+            ? childSize.width
+            : currentRowX + spacing + childSize.width;
+
+        // If it doesn't fit and we already have something on this row,
+        // move to a new row.
+        if (proposedRowEndX > maxRowWidth && currentRowX != 0.0) {
+          currentRowX = 0.0;
+          currentRowY += currentRowHeight + runSpacing;
+          currentRowHeight = 0.0;
         }
 
-        // Place child.
-        final double x = dx == 0.0 ? 0.0 : dx + spacing;
-        parentData.offset = Offset(x, dy);
-        dx = x + childSize.width;
-        rowHeight = rowHeight > childSize.height ? rowHeight : childSize.height;
-      } else {
-        // Special logic for the last child.
-        double x = dx;
-        double availableWidth;
+        // Final x position for this child on this row.
+        final double childX = currentRowX == 0.0 ? 0.0 : currentRowX + spacing;
+        parentData.offset = Offset(childX, currentRowY);
 
-        if (dx == 0.0) {
-          // Start of a new row already: give full width.
-          x = 0.0;
-          availableWidth = maxWidth;
+        currentRowX = childX + childSize.width;
+        currentRowHeight =
+        currentRowHeight > childSize.height ? currentRowHeight : childSize.height;
+      } else {
+        // Special logic for the last child in the *whole* widget.
+        double childX = currentRowX;
+        double availableWidthForLastChild;
+
+        if (currentRowX == 0.0) {
+          // We're already at the start of a new row: give it full width.
+          childX = 0.0;
+          availableWidthForLastChild = maxRowWidth;
         } else {
           // There are previous children on this row.
-          final double xWithSpacing = dx + spacing;
-          final double remaining = maxWidth - xWithSpacing;
+          final double childXWithSpacing = currentRowX + spacing;
+          final double remainingWidthOnRow = maxRowWidth - childXWithSpacing;
 
-          if (remaining >= minRemainingWidthForSameRow) {
+          if (remainingWidthOnRow >= minRemainingWidthForSameRow) {
             // Use remaining width on this row.
-            x = xWithSpacing;
-            availableWidth = remaining;
+            childX = childXWithSpacing;
+            availableWidthForLastChild = remainingWidthOnRow;
           } else {
             // Move to the next row and use full width.
-            dx = 0.0;
-            dy += rowHeight + runSpacing;
-            rowHeight = 0.0;
-            x = 0.0;
-            availableWidth = maxWidth;
+            currentRowX = 0.0;
+            currentRowY += currentRowHeight + runSpacing;
+            currentRowHeight = 0.0;
+
+            childX = 0.0;
+            availableWidthForLastChild = maxRowWidth;
           }
         }
 
         child.layout(
           BoxConstraints(
-            maxWidth: availableWidth,
+            maxWidth: availableWidthForLastChild,
           ),
           parentUsesSize: true,
         );
-        final childSize = child.size;
+        final Size childSize = child.size;
 
-        parentData.offset = Offset(x, dy);
-        dx = x + childSize.width;
-        rowHeight = rowHeight > childSize.height ? rowHeight : childSize.height;
+        parentData.offset = Offset(childX, currentRowY);
+        currentRowX = childX + childSize.width;
+        currentRowHeight =
+        currentRowHeight > childSize.height ? currentRowHeight : childSize.height;
       }
 
       child = childAfter(child);
     }
 
-    final double width = maxWidth;
-    final double height = dy + rowHeight;
-    size = constraints.constrain(Size(width, height));
+    final double layoutWidth = maxRowWidth;
+    final double layoutHeight = currentRowY + currentRowHeight;
+    size = constraints.constrain(Size(layoutWidth, layoutHeight));
   }
 
   @override
   Size computeDryLayout(BoxConstraints constraints) {
-    final maxWidth = constraints.maxWidth;
+    final double maxRowWidth = constraints.maxWidth;
 
-    double dx = 0.0;
-    double dy = 0.0;
-    double rowHeight = 0.0;
+    double currentRowX = 0.0;
+    double currentRowY = 0.0;
+    double currentRowHeight = 0.0;
 
     RenderBox? child = firstChild;
 
     while (child != null) {
-      final bool isLast = childAfter(child) == null;
+      final bool isLastChildInList = childAfter(child) == null;
 
-      if (!isLast) {
-        final childSize = child.getDryLayout(
-          BoxConstraints(maxWidth: maxWidth),
-        );
+      if (!isLastChildInList) {
+        final Size childSize =
+        child.getDryLayout(BoxConstraints(maxWidth: maxRowWidth));
 
-        final double nextDx =
-        dx == 0.0 ? childSize.width : dx + spacing + childSize.width;
-        if (nextDx > maxWidth && dx != 0.0) {
-          dx = 0.0;
-          dy += rowHeight + runSpacing;
-          rowHeight = 0.0;
+        final double proposedRowEndX = currentRowX == 0.0
+            ? childSize.width
+            : currentRowX + spacing + childSize.width;
+
+        if (proposedRowEndX > maxRowWidth && currentRowX != 0.0) {
+          currentRowX = 0.0;
+          currentRowY += currentRowHeight + runSpacing;
+          currentRowHeight = 0.0;
         }
 
-        final double x = dx == 0.0 ? 0.0 : dx + spacing;
-        dx = x + childSize.width;
-        rowHeight = rowHeight > childSize.height ? rowHeight : childSize.height;
+        final double childX = currentRowX == 0.0 ? 0.0 : currentRowX + spacing;
+        currentRowX = childX + childSize.width;
+        currentRowHeight =
+        currentRowHeight > childSize.height ? currentRowHeight : childSize.height;
       } else {
-        double x = dx;
-        double availableWidth;
+        double childX = currentRowX;
+        double availableWidthForLastChild;
 
-        if (dx == 0.0) {
-          x = 0.0;
-          availableWidth = maxWidth;
+        if (currentRowX == 0.0) {
+          childX = 0.0;
+          availableWidthForLastChild = maxRowWidth;
         } else {
-          final double xWithSpacing = dx + spacing;
-          final double remaining = maxWidth - xWithSpacing;
+          final double childXWithSpacing = currentRowX + spacing;
+          final double remainingWidthOnRow = maxRowWidth - childXWithSpacing;
 
-          if (remaining >= minRemainingWidthForSameRow) {
-            x = xWithSpacing;
-            availableWidth = remaining;
+          if (remainingWidthOnRow >= minRemainingWidthForSameRow) {
+            childX = childXWithSpacing;
+            availableWidthForLastChild = remainingWidthOnRow;
           } else {
-            dx = 0.0;
-            dy += rowHeight + runSpacing;
-            rowHeight = 0.0;
-            x = 0.0;
-            availableWidth = maxWidth;
+            currentRowX = 0.0;
+            currentRowY += currentRowHeight + runSpacing;
+            currentRowHeight = 0.0;
+
+            childX = 0.0;
+            availableWidthForLastChild = maxRowWidth;
           }
         }
 
-        final childSize = child.getDryLayout(
-          BoxConstraints(maxWidth: availableWidth),
+        final Size childSize = child.getDryLayout(
+          BoxConstraints(maxWidth: availableWidthForLastChild),
         );
-        dx = x + childSize.width;
-        rowHeight = rowHeight > childSize.height ? rowHeight : childSize.height;
+        currentRowX = childX + childSize.width;
+        currentRowHeight =
+        currentRowHeight > childSize.height ? currentRowHeight : childSize.height;
       }
 
       child = childAfter(child);
     }
 
-    final double width = maxWidth;
-    final double height = dy + rowHeight;
-    return constraints.constrain(Size(width, height));
+    final double layoutWidth = maxRowWidth;
+    final double layoutHeight = currentRowY + currentRowHeight;
+    return constraints.constrain(Size(layoutWidth, layoutHeight));
   }
 
   @override
-  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) {
+  bool hitTestChildren(
+      BoxHitTestResult result, {
+        required Offset position,
+      }) {
     return defaultHitTestChildren(result, position: position);
   }
 
