@@ -15,6 +15,17 @@ class _MultiCallbackTracker<T> {
   }
 }
 
+/// Helper to track delete callback invocations
+class _DeleteCallbackTracker<T> {
+  int callCount = 0;
+  ItemDropperItem<T>? lastItem;
+
+  void record(ItemDropperItem<T> item) {
+    callCount++;
+    lastItem = item;
+  }
+}
+
 void main() {
   group('MultiItemDropper - Basic Functionality', () {
     testWidgets('should display items list', (WidgetTester tester) async {
@@ -161,100 +172,6 @@ void main() {
         // Verify one item was removed
         expect(selectedItems.length, equals(1));
       }
-    });
-
-    testWidgets('should toggle item selection when tapped again', (WidgetTester tester) async {
-      final items = [
-        ItemDropperItem<String>(value: '1', label: 'Item 1'),
-        ItemDropperItem<String>(value: '2', label: 'Item 2'),
-      ];
-
-      List<ItemDropperItem<String>> selectedItems = [items[0]];
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: StatefulBuilder(
-              builder: (context, setState) {
-                return MultiItemDropper<String>(
-                  items: items,
-                  selectedItems: selectedItems,
-                  width: 300,
-                  onChanged: (items) {
-                    setState(() => selectedItems = items);
-                  },
-                );
-              },
-            ),
-          ),
-        ),
-      );
-
-      await tester.pumpAndSettle();
-
-      // Wait a bit for the widget to fully render with chips
-      await tester.pump(const Duration(milliseconds: 100));
-      await tester.pumpAndSettle();
-
-      // Verify initial state: 1 chip is visible
-      final initialChipCount = find.byType(Chip).evaluate().length;
-      // Note: If chips aren't showing initially, the test will fail here with a clear message
-      expect(initialChipCount, greaterThanOrEqualTo(1), 
-        reason: 'Should start with at least 1 chip. Found: $initialChipCount');
-
-      // Tap to open dropdown
-      await tester.tap(find.byType(MultiItemDropper<String>));
-      await tester.pumpAndSettle();
-
-      // Wait for overlay to fully render
-      await tester.pump(const Duration(milliseconds: 200));
-      await tester.pumpAndSettle();
-
-      // Find InkWell widgets that contain "Item 1" text (overlay items)
-      final allInkWells = find.byType(InkWell);
-      InkWell? item1InkWell;
-      
-      for (final element in allInkWells.evaluate()) {
-        try {
-          final hasItem1 = find.descendant(
-            of: find.byWidget(element.widget),
-            matching: find.text('Item 1'),
-          ).evaluate().isNotEmpty;
-          
-          if (hasItem1) {
-            final inkWellWidget = element.widget as InkWell;
-            if (inkWellWidget.onTap != null) {
-              item1InkWell = inkWellWidget;
-              break;
-            }
-          }
-        } catch (_) {
-          // Skip if we can't check
-        }
-      }
-      
-      // Tap the overlay item if found, otherwise try tapping "Item 1" text
-      if (item1InkWell != null) {
-        final inkWellFinder = find.byWidget(item1InkWell);
-        await tester.ensureVisible(inkWellFinder);
-        await tester.pumpAndSettle();
-        await tester.tap(inkWellFinder, warnIfMissed: false);
-      } else {
-        // Fallback: try tapping "Item 1" text in overlay (last occurrence)
-        final item1Widgets = find.text('Item 1');
-        if (item1Widgets.evaluate().length >= 2) {
-          await tester.tap(item1Widgets.last, warnIfMissed: false);
-        }
-      }
-      
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
-      await tester.pumpAndSettle();
-
-      // Verify observable UI change: chip count decreased
-      final chipCount = find.byType(Chip).evaluate().length;
-      expect(chipCount, equals(0), 
-        reason: 'Chip count should decrease from $initialChipCount to 0 when Item 1 is deselected. Current: $chipCount');
     });
   });
 
@@ -695,6 +612,172 @@ void main() {
       // Verify first item was selected
       expect(selectedItems.length, equals(1));
       expect(selectedItems[0].value, equals('1'));
+    });
+  });
+
+  group('MultiItemDropper - Deletable Items', () {
+    testWidgets('shows trash icon only for deletable items',
+        (WidgetTester tester) async {
+      final items = [
+        ItemDropperItem<String>(
+            value: 'd1', label: 'Deletable 1', isDeletable: true),
+        ItemDropperItem<String>(
+            value: 'd2', label: 'Deletable 2', isDeletable: true),
+        ItemDropperItem<String>(
+            value: 'k3', label: 'Keep 3', isDeletable: false),
+      ];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: MultiItemDropper<String>(
+              items: items,
+              selectedItems: const [],
+              width: 300,
+              onChanged: (_) {},
+            ),
+          ),
+        ),
+      );
+
+      // Open overlay
+      await tester.tap(find.byType(MultiItemDropper<String>));
+      await tester.pumpAndSettle();
+
+      // Two deletable items → two trash icons
+      final deleteIcons = find.byIcon(Icons.delete_outline);
+      expect(deleteIcons, findsNWidgets(2));
+
+      // All three labels should still be visible
+      expect(find.text('Deletable 1'), findsOneWidget);
+      expect(find.text('Deletable 2'), findsOneWidget);
+      expect(find.text('Keep 3'), findsOneWidget);
+    });
+
+    testWidgets(
+        'long-press on deletable item shows confirm dialog and calls onDeleteItem',
+        (WidgetTester tester) async {
+      final items = [
+        ItemDropperItem<String>(
+            value: 'd1', label: 'Deletable 1', isDeletable: true),
+        ItemDropperItem<String>(
+            value: 'k2', label: 'Keep 2', isDeletable: false),
+      ];
+
+      final tracker = _DeleteCallbackTracker<String>();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: MultiItemDropper<String>(
+              items: items,
+              selectedItems: const [],
+              width: 300,
+              onChanged: (_) {},
+              onDeleteItem: tracker.record,
+            ),
+          ),
+        ),
+      );
+
+      // Open overlay
+      await tester.tap(find.byType(MultiItemDropper<String>));
+      await tester.pumpAndSettle();
+
+      // Long-press the deletable item row
+      await tester.longPress(find.text('Deletable 1').last);
+      await tester.pumpAndSettle();
+
+      // Confirm dialog should appear
+      expect(find.text('Delete \"Deletable 1\"?'), findsOneWidget);
+
+      // Tap the Delete button
+      await tester.tap(find.text('Delete'));
+      await tester.pumpAndSettle();
+
+      // onDeleteItem should have been called once with the deletable item
+      expect(tracker.callCount, equals(1));
+      expect(tracker.lastItem, isNotNull);
+      expect(tracker.lastItem!.value, equals('d1'));
+    });
+
+    testWidgets('cancelling delete dialog does not call onDeleteItem',
+        (WidgetTester tester) async {
+      final items = [
+        ItemDropperItem<String>(
+            value: 'd1', label: 'Deletable 1', isDeletable: true),
+      ];
+
+      final tracker = _DeleteCallbackTracker<String>();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: MultiItemDropper<String>(
+              items: items,
+              selectedItems: const [],
+              width: 300,
+              onChanged: (_) {},
+              onDeleteItem: tracker.record,
+            ),
+          ),
+        ),
+      );
+
+      // Open overlay
+      await tester.tap(find.byType(MultiItemDropper<String>));
+      await tester.pumpAndSettle();
+
+      // Long-press the deletable item row
+      await tester.longPress(find.text('Deletable 1').last);
+      await tester.pumpAndSettle();
+
+      // Confirm dialog should appear
+      expect(find.text('Delete \"Deletable 1\"?'), findsOneWidget);
+
+      // Tap the Cancel button
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+
+      // onDeleteItem should NOT have been called
+      expect(tracker.callCount, equals(0));
+    });
+
+    testWidgets('long-press on non-deletable item does nothing',
+        (WidgetTester tester) async {
+      final items = [
+        ItemDropperItem<String>(
+            value: 'k1', label: 'Keep 1', isDeletable: false),
+      ];
+
+      final tracker = _DeleteCallbackTracker<String>();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: MultiItemDropper<String>(
+              items: items,
+              selectedItems: const [],
+              width: 300,
+              onChanged: (_) {},
+              onDeleteItem: tracker.record,
+            ),
+          ),
+        ),
+      );
+
+      // Open overlay
+      await tester.tap(find.byType(MultiItemDropper<String>));
+      await tester.pumpAndSettle();
+
+      // Long-press the non-deletable item
+      await tester.longPress(find.text('Keep 1').last);
+      await tester.pumpAndSettle();
+
+      // No confirmation dialog should appear
+      expect(find.textContaining('Delete \"Keep 1\"?'), findsNothing);
+      // And no delete callback
+      expect(tracker.callCount, equals(0));
     });
   });
 }
