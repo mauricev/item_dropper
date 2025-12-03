@@ -28,8 +28,7 @@ Widget multiDropDown<T>({
   TextStyle? fieldTextStyle,
   TextStyle? popupTextStyle,
   TextStyle? popupGroupHeaderStyle,
-  Color? chipColor1,
-  Color? chipColor2,
+  BoxDecoration? selectedChipDecoration,
   Widget Function(BuildContext, ItemDropperItem<T>, bool)? popupItemBuilder,
   ItemDropperItem<T>? Function(String searchText)? onAddItem,
 }) {
@@ -45,8 +44,7 @@ Widget multiDropDown<T>({
     maxDropdownHeight: maxDropdownHeight ?? 200,
     maxSelected: maxSelected,
     enabled: enabled,
-    chipColor1: chipColor1,
-    chipColor2: chipColor2,
+    selectedChipDecoration: selectedChipDecoration,
     onAddItem: onAddItem,
   );
 }
