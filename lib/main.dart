@@ -1,4 +1,5 @@
 import 'dart:ui' as ui;
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 import 'dropdown/common/item_dropper_common.dart';
@@ -92,6 +93,11 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
   late final List<ItemDropperItem<String>> deletableDemoBaseItems;
   List<ItemDropperItem<String>> deletableDemoItems = [];
   List<ItemDropperItem<String>> selectedDeletableDemoItems = [];
+
+  // Dropdown 12 (per-item enabled/disabled) state
+  late final List<ItemDropperItem<String>> disabledDemoBaseItems;
+  List<ItemDropperItem<String>> disabledDemoItems = [];
+  ItemDropperItem<String>? selectedDisabledDemoItem;
 
   // Generate dummy data
   late List<ItemDropperItem<String>> fruits;
@@ -279,12 +285,58 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
     deletableDemoItems = List.from(deletableDemoBaseItems);
     selectedDeletableDemoItems = [];
     
+    // Dropdown 12: Per-item enabled/disabled demo (10 items, 5 initially disabled)
+    disabledDemoBaseItems = const [
+      ItemDropperItem(value: 'e1', label: 'Item 1', isEnabled: true),
+      ItemDropperItem(value: 'e2', label: 'Item 2', isEnabled: false),
+      ItemDropperItem(value: 'e3', label: 'Item 3', isEnabled: true),
+      ItemDropperItem(value: 'e4', label: 'Item 4', isEnabled: false),
+      ItemDropperItem(value: 'e5', label: 'Item 5', isEnabled: true),
+      ItemDropperItem(value: 'e6', label: 'Item 6', isEnabled: false),
+      ItemDropperItem(value: 'e7', label: 'Item 7', isEnabled: true),
+      ItemDropperItem(value: 'e8', label: 'Item 8', isEnabled: false),
+      ItemDropperItem(value: 'e9', label: 'Item 9', isEnabled: true),
+      ItemDropperItem(value: 'e10', label: 'Item 10', isEnabled: false),
+    ];
+    disabledDemoItems = List.from(disabledDemoBaseItems);
+    selectedDisabledDemoItem = null;
+    
     // Initialize add-enabled dropdown with a few items
     addEnabledItems = const [
       ItemDropperItem(value: 'task1', label: 'Task 1'),
       ItemDropperItem(value: 'task2', label: 'Task 2'),
       ItemDropperItem(value: 'task3', label: 'Task 3'),
     ];
+  }
+
+  void _randomizeDisabledDemoItems() {
+    final rand = math.Random();
+
+    setState(() {
+      disabledDemoItems = disabledDemoBaseItems
+          .map(
+            (item) => ItemDropperItem<String>(
+              value: item.value,
+              label: item.label,
+              isGroupHeader: item.isGroupHeader,
+              isDeletable: item.isDeletable,
+              isEnabled: rand.nextBool(),
+            ),
+          )
+          .toList();
+
+      // Clear selection if the previously selected item is now disabled
+      if (selectedDisabledDemoItem != null) {
+        final match = disabledDemoItems.firstWhere(
+          (i) => i.value == selectedDisabledDemoItem!.value,
+          orElse: () => ItemDropperItem<String>(
+              value: '', label: '', isEnabled: false),
+        );
+        if (match.value.isEmpty || !match.isEnabled) {
+          selectedDisabledDemoItem = null;
+        }
+      }
+    });
   }
 
   String _getRandomLabel(int seed) {
@@ -678,6 +730,41 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
                                       });
                                     },
                                     child: const Text('Refill items'),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(height: 32),
+
+                          // Dropdown 12: Per-item enabled/disabled demo (single select)
+                          _buildDropdownSection(
+                            title: '12. Disabled Items (Single Select)',
+                            description:
+                                'Some items are disabled (greyed out) and cannot be selected. Use the button to randomize which items are enabled.',
+                            selectedValue: selectedDisabledDemoItem?.label,
+                            dropdown: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                dropDown<String>(
+                                  width: 400,
+                                  listItems: disabledDemoItems,
+                                  initiallySelected: selectedDisabledDemoItem,
+                                  onChanged: (item) {
+                                    setState(() {
+                                      selectedDisabledDemoItem = item;
+                                    });
+                                  },
+                                  hintText: 'Select an enabled item...',
+                                  showKeyboard: true,
+                                ),
+                                const SizedBox(height: 8),
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: TextButton(
+                                    onPressed: _randomizeDisabledDemoItems,
+                                    child: const Text('Randomize enable/disable'),
                                   ),
                                 ),
                               ],

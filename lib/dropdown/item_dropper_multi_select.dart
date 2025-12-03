@@ -452,8 +452,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   }
 
   void _toggleItem(ItemDropperItem<T> item) {
-    // Group headers cannot be selected
-    if (item.isGroupHeader) {
+    // Group headers and disabled items cannot be selected
+    if (item.isGroupHeader || !item.isEnabled) {
       return;
     }
     

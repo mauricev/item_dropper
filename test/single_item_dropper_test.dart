@@ -303,6 +303,41 @@ void main() {
       // Verify widget is rendered (visual check would show greyed out)
       expect(find.byType(SingleItemDropper<String>), findsOneWidget);
     });
+
+    testWidgets('should not select a disabled item when tapped',
+        (WidgetTester tester) async {
+      final items = [
+        ItemDropperItem<String>(value: '1', label: 'Enabled 1', isEnabled: true),
+        ItemDropperItem<String>(value: '2', label: 'Disabled 2', isEnabled: false),
+      ];
+
+      ItemDropperItem<String>? selectedItem;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SingleItemDropper<String>(
+              items: items,
+              width: 300,
+              onChanged: (item) => selectedItem = item,
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Open overlay
+      await tester.tap(find.byType(SingleItemDropper<String>));
+      await tester.pumpAndSettle();
+
+      // Tap the disabled item
+      await tester.tap(find.text('Disabled 2'));
+      await tester.pumpAndSettle();
+
+      // Verify selection did not change to the disabled item
+      expect(selectedItem, isNull);
+    });
   });
 
   group('SingleItemDropper - Add Item Feature', () {

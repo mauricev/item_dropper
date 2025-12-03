@@ -211,10 +211,11 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
   void _attemptSelectByInput(String input) {
     final String trimmedInput = input.trim().toLowerCase();
 
-    // Find exact match
+    // Find exact match among enabled items
     ItemDropperItem<T>? match;
     for (final item in widget.items) {
-      if (item.label.trim().toLowerCase() == trimmedInput) {
+      if (item.isEnabled &&
+          item.label.trim().toLowerCase() == trimmedInput) {
         match = item;
         break;
       }

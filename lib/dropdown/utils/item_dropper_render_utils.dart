@@ -90,6 +90,9 @@ class ItemDropperRenderUtils {
     // Group headers have different styling - no hover/selection effects, no background
     if (isGroupHeader) {
       background = null; // No background for group headers
+    } else if (!item.isEnabled) {
+      // Disabled items: no hover/selection background, rely on greyed-out text only
+      background = null;
     } else if (isKeyboardHighlighted || isHovered || isSingleItem) {
       background = Theme
           .of(context)
@@ -105,19 +108,27 @@ class ItemDropperRenderUtils {
       background = null;
     }
     
+    final bool isEnabled = item.isEnabled && !isGroupHeader;
+
     return InkWell(
       hoverColor: Colors.transparent,
-      onTap: isGroupHeader
-          ? null
-          : () {
+      onTap: isEnabled
+          ? () {
               onTap();
-            }, // Group headers are not clickable
+            }
+          : null, // Group headers and disabled items are not clickable
       // Desktop/web: right-click to request delete (if handler provided & item is deletable)
-      onSecondaryTap: (onRequestDelete != null && item.isDeletable && !isGroupHeader)
+      onSecondaryTap: (onRequestDelete != null &&
+              item.isDeletable &&
+              !isGroupHeader &&
+              item.isEnabled)
           ? () => onRequestDelete(context, item)
           : null,
       // Mobile: long-press to request delete (if handler provided & item is deletable)
-      onLongPress: (onRequestDelete != null && item.isDeletable && !isGroupHeader)
+      onLongPress: (onRequestDelete != null &&
+              item.isDeletable &&
+              !isGroupHeader &&
+              item.isEnabled)
           ? () => onRequestDelete(context, item)
           : null,
       child: Container(
@@ -175,6 +186,10 @@ class ItemDropperRenderUtils {
     
     final defaultItemStyle = const TextStyle(fontSize: 10.0);
     final TextStyle baseStyle = popupTextStyle ?? defaultItemStyle;
+    final bool isDisabled = !item.isEnabled;
+    final TextStyle effectiveTextStyle = isDisabled
+        ? baseStyle.copyWith(color: Colors.grey.shade400)
+        : baseStyle;
     final bool isDeletable = item.isDeletable;
 
     return Container(
@@ -185,7 +200,7 @@ class ItemDropperRenderUtils {
           Expanded(
             child: Text(
               item.label,
-              style: baseStyle,
+              style: effectiveTextStyle,
               overflow: TextOverflow.ellipsis,
             ),
           ),

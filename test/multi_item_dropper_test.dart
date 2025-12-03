@@ -369,6 +369,48 @@ void main() {
       // Verify widget is rendered
       expect(find.byType(MultiItemDropper<String>), findsOneWidget);
     });
+
+    testWidgets('should not select a disabled item when tapped',
+        (WidgetTester tester) async {
+      final items = [
+        ItemDropperItem<String>(value: '1', label: 'Enabled 1', isEnabled: true),
+        ItemDropperItem<String>(value: '2', label: 'Disabled 2', isEnabled: false),
+      ];
+
+      List<ItemDropperItem<String>> selectedItems = [];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: StatefulBuilder(
+              builder: (context, setState) {
+                return MultiItemDropper<String>(
+                  items: items,
+                  selectedItems: selectedItems,
+                  width: 300,
+                  onChanged: (items) {
+                    setState(() => selectedItems = items);
+                  },
+                );
+              },
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Open overlay
+      await tester.tap(find.byType(MultiItemDropper<String>));
+      await tester.pumpAndSettle();
+
+      // Tap the disabled item
+      await tester.tap(find.text('Disabled 2'));
+      await tester.pumpAndSettle();
+
+      // Verify selection does not include the disabled item
+      expect(selectedItems.any((item) => item.value == '2'), isFalse);
+    });
   });
 
   group('MultiItemDropper - Add Item Feature', () {

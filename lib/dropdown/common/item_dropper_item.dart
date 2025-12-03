@@ -9,11 +9,15 @@ class ItemDropperItem<T> {
   /// Group headers are displayed but cannot be selected.
   final bool isGroupHeader;
   final bool isDeletable;
+  /// Whether this item is enabled (selectable) in the dropdown.
+  /// Disabled items are rendered but cannot be selected.
+  final bool isEnabled;
 
   const ItemDropperItem({
     required this.value, 
     required this.label,
     this.isGroupHeader = false,
-    this.isDeletable = false
+    this.isDeletable = false,
+    this.isEnabled = true,
   });
 }
