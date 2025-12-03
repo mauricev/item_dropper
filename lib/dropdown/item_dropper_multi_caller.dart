@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'common/item_dropper_common.dart';
-import 'item_dropper_multi_select.dart';
+import 'package:item_dropper/item_dropper.dart';
 
 Widget popupItemBuilderMulti<T>(BuildContext context, ItemDropperItem<T> item,
     bool isSelected) {

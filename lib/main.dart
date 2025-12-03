@@ -2,7 +2,7 @@ import 'dart:ui' as ui;
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
-import 'dropdown/common/item_dropper_common.dart';
+import 'package:item_dropper/item_dropper.dart';
 import 'dropdown/item_dropper_caller.dart';
 import 'dropdown/item_dropper_multi_caller.dart';
 

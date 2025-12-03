@@ -37,6 +37,8 @@ dependencies:
   
   # Window management for desktop platforms (does not interact with dropdown code)
   window_manager: ^0.4.3
+  item_dropper:
+    path: packages/item_dropper
 
 dev_dependencies:
   flutter_test:

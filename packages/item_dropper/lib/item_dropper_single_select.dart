@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'common/item_dropper_common.dart';
-import 'utils/item_dropper_add_item_utils.dart';
+import 'package:item_dropper/src/common/item_dropper_common.dart';
+import 'package:item_dropper/src/utils/item_dropper_add_item_utils.dart';
 
 /// Single-select dropdown widget
 /// Allows selecting a single item from a searchable list

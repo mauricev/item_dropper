@@ -75,6 +75,13 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  item_dropper:
+    dependency: "direct main"
+    description:
+      path: "packages/item_dropper"
+      relative: true
+    source: path
+    version: "0.0.1"
   json_annotation:
     dependency: transitive
     description:
@@ -273,5 +280,5 @@ packages:
     source: hosted
     version: "0.4.3"
 sdks:
-  dart: ">=3.10.0 <4.0.0"
+  dart: ">=3.10.1 <4.0.0"
   flutter: ">=3.18.0-18.0.pre.54"

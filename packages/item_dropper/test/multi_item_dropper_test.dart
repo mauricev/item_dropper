@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:dropdown_tester/dropdown/item_dropper_multi_select.dart';
-import 'package:dropdown_tester/dropdown/common/item_dropper_item.dart';
+import 'package:item_dropper/item_dropper.dart';
 
 /// Helper class to track callback invocations across widget rebuilds
 class _MultiCallbackTracker<T> {

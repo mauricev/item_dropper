@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'common/item_dropper_common.dart';
-import 'multi/chip_measurement_helper.dart';
-import 'multi/multi_select_constants.dart';
-import 'multi/multi_select_layout_calculator.dart';
-import 'multi/smartwrap.dart' show SmartWrapWithFlexibleLast;
-import 'utils/item_dropper_add_item_utils.dart';
-import 'utils/dropdown_position_calculator.dart';
+import 'package:item_dropper/src/common/item_dropper_common.dart';
+import 'package:item_dropper/src/multi/chip_measurement_helper.dart';
+import 'package:item_dropper/src/multi/multi_select_constants.dart';
+import 'package:item_dropper/src/multi/multi_select_layout_calculator.dart';
+import 'package:item_dropper/src/multi/smartwrap.dart' show SmartWrapWithFlexibleLast;
+import 'package:item_dropper/src/utils/item_dropper_add_item_utils.dart';
+import 'package:item_dropper/src/utils/dropdown_position_calculator.dart';
 
 /// Multi-select dropdown widget
 /// Allows selecting multiple items with chip-based display
