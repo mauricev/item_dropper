@@ -62,6 +62,13 @@ class MultiItemDropper<T> extends StatefulWidget {
   final bool allowDelete; // Allow deleting items from the list
   final void Function(ItemDropperItem<
       T> item)? onDeleteItem; // Callback when item is deleted
+  /// Optional custom chip background colors for selected items.
+  /// 
+  /// - If both are provided, they are used as the gradient colors (start, end).
+  /// - If exactly one is provided, it is used as a solid background color.
+  /// - If neither is provided, the default blue gradient is used.
+  final Color? chipColor1;
+  final Color? chipColor2;
 
   const MultiItemDropper({
     super.key,
@@ -84,6 +91,8 @@ class MultiItemDropper<T> extends StatefulWidget {
     this.onAddItem,
     this.allowDelete = false,
     this.onDeleteItem,
+    this.chipColor1,
+    this.chipColor2,
   }) : assert(maxSelected == null ||
       maxSelected >= 2, 'maxSelected must be null or >= 2');
 
@@ -889,17 +898,41 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
           });
         }
         
+        // Determine chip background based on optional custom colors.
+        // - Both colors provided  -> gradient between them.
+        // - Exactly one provided -> solid background of that color.
+        // - None provided        -> default blue gradient.
+        final Color defaultStart = Colors.blue.shade100;
+        final Color defaultEnd = Colors.blue.shade200;
+
+        final Color? custom1 = widget.chipColor1;
+        final Color? custom2 = widget.chipColor2;
+
+        Gradient? backgroundGradient;
+        Color? backgroundColor;
+
+        if (custom1 != null && custom2 != null) {
+          backgroundGradient = LinearGradient(
+            colors: [custom1, custom2],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          );
+        } else if (custom1 != null || custom2 != null) {
+          // If only one is provided (either custom1 or custom2), use it as solid color.
+          backgroundColor = custom1 ?? custom2;
+        } else {
+          backgroundGradient = LinearGradient(
+            colors: [defaultStart, defaultEnd],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          );
+        }
+
         return Container(
           key: chipKey, // Use provided GlobalKey (for last chip) or null
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                Colors.blue.shade100,
-                Colors.blue.shade200,
-              ],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-            ),
+            color: backgroundColor,
+            gradient: backgroundGradient,
             borderRadius: BorderRadius.circular(MultiSelectConstants.chipBorderRadius),
           ),
           padding: const EdgeInsets.symmetric(
