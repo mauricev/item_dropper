@@ -526,8 +526,6 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   }
 
   void _removeChip(ItemDropperItem<T> item) {
-    debugPrint('[MULTI_CHIP] _removeChip called for value=${item.value}, label=${item.label}');
-    debugPrint('[MULTI_CHIP] Selected before remove: ${_selected.length}');
     // Focus the field and set manual focus state when removing a chip (even if unfocused)
     // This allows users to remove chips and immediately see the dropdown
     _gainFocus();
@@ -544,7 +542,6 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         _clearHighlights();
       },
       postRebuildCallback: () {
-        debugPrint('[MULTI_CHIP] _removeChip postRebuildCallback - selected now: ${_selected.length}');
         // Restore focus if needed after chip removal
         _restoreFocusIfNeeded();
         
@@ -930,7 +927,6 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
                   alignment: Alignment.center,
                   child: GestureDetector(
                     onTap: () {
-                      debugPrint('[MULTI_CHIP] X tapped for value=${item.value}, label=${item.label}');
                       _removeChip(item);
                     },
                     child: Icon(Icons.close, size: MultiSelectConstants.chipDeleteIconSize,
