@@ -557,6 +557,63 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     );
   }
 
+  /// Handle delete requests coming from overlay items (right-click / long-press).
+  /// Uses a simple built-in confirmation dialog before invoking onDeleteItem.
+  void _handleRequestDeleteFromOverlay(
+      BuildContext context, ItemDropperItem<T> item) {
+    // Only allow delete for items explicitly marked as deletable.
+    if (!item.isDeletable) {
+      return;
+    }
+
+    // Run async flow without blocking the gesture handler.
+    _confirmAndDeleteItem(context, item);
+  }
+
+  Future<void> _confirmAndDeleteItem(
+      BuildContext context, ItemDropperItem<T> item) async {
+    // Show a simple confirmation dialog above the existing overlay/dialogs.
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text('Delete "${item.label}"?'),
+          content: const Text('This will remove the item from the list.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) {
+      return;
+    }
+
+    // If the item is currently selected, remove it from the selection.
+    if (_selectedValues.contains(item.value)) {
+      _safeSetState(() {
+        _removeSelectedItem(item.value);
+      });
+    }
+
+    // Notify parent so it can remove the item from the source list.
+    if (widget.onDeleteItem != null) {
+      widget.onDeleteItem!(item);
+    }
+
+    // Invalidate filtered cache and request a rebuild so overlay updates.
+    _invalidateFilteredCache();
+    _requestRebuildIfNotScheduled();
+  }
+
   KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
       return KeyEventResult.ignored;
@@ -1094,6 +1151,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
           },
           customBuilder: itemBuilder,
           itemHeight: widget.itemHeight,
+          onRequestDelete: _handleRequestDeleteFromOverlay,
         );
       },
       itemHeight: widget.itemHeight,

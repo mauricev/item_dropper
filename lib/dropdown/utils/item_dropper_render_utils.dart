@@ -19,6 +19,8 @@ class ItemDropperRenderUtils {
     required VoidCallback onTap,
     required Widget Function(BuildContext, ItemDropperItem<T>, bool) customBuilder,
     double? itemHeight, // Optional item height parameter
+    void Function(BuildContext context, ItemDropperItem<T> item)?
+        onRequestDelete, // Optional delete handler (right-click/long-press)
   }) {
     final int itemIndex = filteredItems.indexWhere(
           (x) => x.value == item.value,
@@ -37,6 +39,7 @@ class ItemDropperRenderUtils {
         onTap: () {}, // Group headers are not clickable
         builder: customBuilder,
         itemHeight: itemHeight,
+        onRequestDelete: null, // Group headers are never deletable
       );
     }
     
@@ -52,8 +55,7 @@ class ItemDropperRenderUtils {
       child: buildDropdownItem<T>(
         context: context,
         item: item,
-        isHovered:
-        itemIndex == hoverIndex &&
+        isHovered: itemIndex == hoverIndex &&
             keyboardHighlightIndex == ItemDropperConstants.kNoHighlight,
         isKeyboardHighlighted: itemIndex == keyboardHighlightIndex,
         isSelected: isSelected,
@@ -62,6 +64,7 @@ class ItemDropperRenderUtils {
         onTap: onTap,
         builder: customBuilder,
         itemHeight: itemHeight, // Pass the itemHeight parameter
+        onRequestDelete: onRequestDelete,
       ),
     );
   }
@@ -78,6 +81,8 @@ class ItemDropperRenderUtils {
     required VoidCallback onTap,
     required Widget Function(BuildContext, ItemDropperItem<T>, bool) builder,
     double? itemHeight, // Optional item height parameter
+    void Function(BuildContext context, ItemDropperItem<T> item)?
+        onRequestDelete, // Optional delete handler (right-click/long-press)
   }) {
     Widget w = builder(context, item, isSelected);
     Color? background;
@@ -102,9 +107,19 @@ class ItemDropperRenderUtils {
     
     return InkWell(
       hoverColor: Colors.transparent,
-      onTap: isGroupHeader ? null : () {
-        onTap();
-      }, // Group headers are not clickable
+      onTap: isGroupHeader
+          ? null
+          : () {
+              onTap();
+            }, // Group headers are not clickable
+      // Desktop/web: right-click to request delete (if handler provided & item is deletable)
+      onSecondaryTap: (onRequestDelete != null && item.isDeletable && !isGroupHeader)
+          ? () => onRequestDelete(context, item)
+          : null,
+      // Mobile: long-press to request delete (if handler provided & item is deletable)
+      onLongPress: (onRequestDelete != null && item.isDeletable && !isGroupHeader)
+          ? () => onRequestDelete(context, item)
+          : null,
       child: Container(
         height: itemHeight ?? ItemDropperConstants.kDropdownItemHeight,
         color: background,
@@ -159,12 +174,30 @@ class ItemDropperRenderUtils {
     }
     
     final defaultItemStyle = const TextStyle(fontSize: 10.0);
+    final TextStyle baseStyle = popupTextStyle ?? defaultItemStyle;
+    final bool isDeletable = item.isDeletable;
+
     return Container(
       color: isSelected ? Colors.grey.shade200 : null,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      child: Text(
-        item.label,
-        style: popupTextStyle ?? defaultItemStyle,
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              item.label,
+              style: baseStyle,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          if (isDeletable) ...[
+            const SizedBox(width: 8),
+            Icon(
+              Icons.delete_outline,
+              size: 16,
+              color: Colors.redAccent.shade200,
+            ),
+          ],
+        ],
       ),
     );
   }

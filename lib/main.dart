@@ -24,7 +24,8 @@ void main() async {
 
   final windowOptions = WindowOptions(
     size: windowSize,
-    minimumSize: const Size(800, 600),
+    // Make the default window a bit larger to reduce scrolling for all dropdowns
+    minimumSize: const Size(1100, 800),
     center: true,
     backgroundColor: Colors.transparent,
     skipTaskbar: false,
@@ -86,6 +87,11 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
   // Dropdown 10 state
   ItemDropperItem<String>? selectedDropdown10;
   bool dropdown10Enabled = true;
+
+  // Dropdown 11 (deletable multi-select) state
+  late final List<ItemDropperItem<String>> deletableDemoBaseItems;
+  List<ItemDropperItem<String>> deletableDemoItems = [];
+  List<ItemDropperItem<String>> selectedDeletableDemoItems = [];
 
   // Generate dummy data
   late List<ItemDropperItem<String>> fruits;
@@ -256,6 +262,22 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
       ItemDropperItem(value: 'edison', label: 'Edison'),
       ItemDropperItem(value: 'trenton', label: 'Trenton'),
     ];
+    
+    // Dropdown 11: Deletable multi-select items (10 items, 5 deletable)
+    deletableDemoBaseItems = const [
+      ItemDropperItem(value: 'd1', label: 'Deletable 1', isDeletable: true),
+      ItemDropperItem(value: 'd2', label: 'Deletable 2', isDeletable: true),
+      ItemDropperItem(value: 'd3', label: 'Deletable 3', isDeletable: true),
+      ItemDropperItem(value: 'd4', label: 'Deletable 4', isDeletable: true),
+      ItemDropperItem(value: 'd5', label: 'Deletable 5', isDeletable: true),
+      ItemDropperItem(value: 'k6', label: 'Keep 6'),
+      ItemDropperItem(value: 'k7', label: 'Keep 7'),
+      ItemDropperItem(value: 'k8', label: 'Keep 8'),
+      ItemDropperItem(value: 'k9', label: 'Keep 9'),
+      ItemDropperItem(value: 'k10', label: 'Keep 10'),
+    ];
+    deletableDemoItems = List.from(deletableDemoBaseItems);
+    selectedDeletableDemoItems = [];
     
     // Initialize add-enabled dropdown with a few items
     addEnabledItems = const [
@@ -546,7 +568,7 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
 
                     const SizedBox(width: 32),
 
-                    // Third column: Dropdown 10 with checkbox
+                    // Third column: Dropdown 10 with checkbox, then Dropdown 11
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -603,6 +625,62 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
                               hintText: 'Select a fruit...',
                               showKeyboard: true,
                               enabled: dropdown10Enabled,
+                            ),
+                          ),
+
+                          const SizedBox(height: 32),
+
+                          // Dropdown 11: Deletable items (multi-select)
+                          _buildMultiDropdownSection(
+                            title: '11. Deletable Items (Multi-Select)',
+                            description:
+                                'Right-click (desktop/web) or long-press (mobile) items with a trash icon to delete them.',
+                            selectedValues: selectedDeletableDemoItems
+                                .map((e) => e.label)
+                                .join(', '),
+                            dropdown: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                multiDropDown<String>(
+                                  width: 500,
+                                  listItems: deletableDemoItems,
+                                  initiallySelected: selectedDeletableDemoItems,
+                                  onChanged: (items) {
+                                    setState(() {
+                                      selectedDeletableDemoItems = items;
+                                    });
+                                  },
+                                  hintText:
+                                      'Select items (right-click/long-press to delete)...',
+                                  maxDropdownHeight: 250,
+                                  onDeleteItem: (item) {
+                                    setState(() {
+                                      deletableDemoItems = deletableDemoItems
+                                          .where((i) => i.value != item.value)
+                                          .toList();
+                                      selectedDeletableDemoItems =
+                                          selectedDeletableDemoItems
+                                              .where((i) =>
+                                                  i.value != item.value)
+                                              .toList();
+                                    });
+                                  },
+                                ),
+                                const SizedBox(height: 8),
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: TextButton(
+                                    onPressed: () {
+                                      setState(() {
+                                        deletableDemoItems =
+                                            List.from(deletableDemoBaseItems);
+                                        selectedDeletableDemoItems = [];
+                                      });
+                                    },
+                                    child: const Text('Refill items'),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],

@@ -31,6 +31,7 @@ Widget multiDropDown<T>({
   BoxDecoration? selectedChipDecoration,
   Widget Function(BuildContext, ItemDropperItem<T>, bool)? popupItemBuilder,
   ItemDropperItem<T>? Function(String searchText)? onAddItem,
+  void Function(ItemDropperItem<T> item)? onDeleteItem,
 }) {
   return MultiItemDropper<T>(
     width: width,
@@ -46,5 +47,6 @@ Widget multiDropDown<T>({
     enabled: enabled,
     selectedChipDecoration: selectedChipDecoration,
     onAddItem: onAddItem,
+    onDeleteItem: onDeleteItem,
   );
 }
