@@ -142,7 +142,7 @@ class ItemDropperRenderUtils {
   /// Default popup row builder for dropdown items
   /// 
   /// [popupTextStyle] - TextStyle for normal items. If null, defaults to fontSize 10.
-  /// [popupGroupHeaderStyle] - TextStyle for group headers. If null, defaults to fontSize 9, bold, reduced opacity.
+  /// [popupGroupHeaderStyle] - TextStyle for group headers. If null, defaults to fontSize 10, bold, reduced opacity.
   /// [hasPreviousItem] - Whether there is a previous item (used to determine if separator should be shown above group header).
   /// [previousItemIsGroupHeader] - Whether the previous item is a group header (used to determine if separator should be shown).
   static Widget defaultDropdownPopupItemBuilder<T>(
@@ -157,9 +157,13 @@ class ItemDropperRenderUtils {
     // Group headers have different styling
     if (item.isGroupHeader) {
       final defaultGroupStyle = TextStyle(
-        fontSize: 9.0,
+        fontSize: ItemDropperConstants.kDropdownItemFontSize,
         fontWeight: FontWeight.bold,
-        color: Theme.of(context).colorScheme.onSurface.withAlpha(200),
+        color: Theme
+            .of(context)
+            .colorScheme
+            .onSurface
+            .withAlpha(ItemDropperConstants.kDropdownGroupHeaderAlpha),
       );
       
       // Add separator line above group header if there's a previous item that's not a group header
@@ -171,20 +175,23 @@ class ItemDropperRenderUtils {
                 border: Border(
                   top: BorderSide(
                     color: Colors.grey.shade300,
-                    width: 1.0,
+                    width: ItemDropperConstants.kDropdownSeparatorWidth,
                   ),
                 ),
               )
             : null,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: const EdgeInsets.symmetric(
+            horizontal: ItemDropperConstants.kDropdownItemHorizontalPadding,
+            vertical: ItemDropperConstants.kDropdownGroupHeaderVerticalPadding),
         child: Text(
           item.label,
           style: popupGroupHeaderStyle ?? defaultGroupStyle,
         ),
       );
     }
-    
-    final defaultItemStyle = const TextStyle(fontSize: 10.0);
+
+    final defaultItemStyle = const TextStyle(
+        fontSize: ItemDropperConstants.kDropdownItemFontSize);
     final TextStyle baseStyle = popupTextStyle ?? defaultItemStyle;
     final bool isDisabled = !item.isEnabled;
     final TextStyle effectiveTextStyle = isDisabled
@@ -194,7 +201,9 @@ class ItemDropperRenderUtils {
 
     return Container(
       color: isSelected ? Colors.grey.shade200 : null,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(
+          horizontal: ItemDropperConstants.kDropdownItemHorizontalPadding,
+          vertical: ItemDropperConstants.kDropdownItemVerticalPadding),
       child: Row(
         children: [
           Expanded(
@@ -205,10 +214,11 @@ class ItemDropperRenderUtils {
             ),
           ),
           if (isDeletable) ...[
-            const SizedBox(width: 8),
+            const SizedBox(
+                width: ItemDropperConstants.kDropdownTextToDeleteIconSpacing),
             Icon(
               Icons.delete_outline,
-              size: 16,
+              size: ItemDropperConstants.kDropdownDeleteIconSize,
               color: Colors.redAccent.shade200,
             ),
           ],
