@@ -32,9 +32,9 @@ class SmartWrapWithFlexibleLast extends MultiChildRenderObjectWidget {
   @override
   void updateRenderObject(
       BuildContext context,
-      covariant _RenderSmartWrapWithFlexibleLast renderObject,
-      ) {
-    renderObject
+      covariant RenderObject renderObject,) {
+    final _RenderSmartWrapWithFlexibleLast typedRenderObject = renderObject as _RenderSmartWrapWithFlexibleLast;
+    typedRenderObject
       ..spacing = spacing
       ..runSpacing = runSpacing
       ..minRemainingWidthForSameRow = minRemainingWidthForSameRow;

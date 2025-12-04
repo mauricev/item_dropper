@@ -1,9 +1,9 @@
 // Dropdown library exports
-///
-/// This file provides a centralized export of all dropdown-related components.
-/// The library is organized into:
-/// - common/: Basic widgets and data structures
-/// - utils/: Utility classes for filtering, rendering, and navigation
+//
+// This file provides a centralized export of all dropdown-related components.
+// The library is organized into:
+// - common/: Basic widgets and data structures
+// - utils/: Utility classes for filtering, rendering, and navigation
 
 // Common components
 export 'measure_size.dart';
