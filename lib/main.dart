@@ -99,6 +99,12 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
   List<ItemDropperItem<String>> disabledDemoItems = [];
   ItemDropperItem<String>? selectedDisabledDemoItem;
 
+  // Dropdown 13 (font size testing) state
+  late final List<ItemDropperItem<String>> fontSizeTestItems;
+  List<ItemDropperItem<String>> selectedFontSizeTestItems = [];
+  double chipFieldFontSize = 10.0; // Font size for chips and text field
+  double itemFontSize = 10.0; // Font size for dropdown items
+
   // Generate dummy data
   late List<ItemDropperItem<String>> fruits;
   late final List<ItemDropperItem<String>> states;
@@ -300,7 +306,18 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
     ];
     disabledDemoItems = List.from(disabledDemoBaseItems);
     selectedDisabledDemoItem = null;
-    
+
+    // Dropdown 13: Font size testing
+    fontSizeTestItems = [
+      ItemDropperItem(value: '8', label: '8'),
+      ItemDropperItem(value: '10', label: '10'),
+      ItemDropperItem(value: '12', label: '12'),
+      ItemDropperItem(value: '14', label: '14'),
+      ItemDropperItem(value: '16', label: '16'),
+      ItemDropperItem(value: '18', label: '18'),
+      ItemDropperItem(value: '20', label: '20'),
+    ];
+
     // Initialize add-enabled dropdown with a few items
     addEnabledItems = const [
       ItemDropperItem(value: 'task1', label: 'Task 1'),
@@ -382,7 +399,7 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
                 ),
                 const SizedBox(height: 32),
 
-                // Three-column layout
+                // Four-column layout
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -393,89 +410,89 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
                         children: [
                           // Dropdown 1: Fruits (Small list)
                           _buildDropdownSection(
-                  title: '1. Fruits (8 items)',
-                  description: 'Small list for basic functionality testing',
-                  selectedValue: selectedFruit?.label,
-                  dropdown: dropDown<String>(
-                    width: 300,
-                    listItems: fruits,
-                    initiallySelected: selectedFruit,
-                    onChanged: (item) {
-                      setState(() {
-                        selectedFruit = item;
-                      });
-                    },
-                    hintText: 'Select a fruit...',
-                    showKeyboard: true,
-                  ),
-                ),
+                            title: '1. Fruits (8 items)',
+                            description: 'Small list for basic functionality testing',
+                            selectedValue: selectedFruit?.label,
+                            dropdown: dropDown<String>(
+                              width: 300,
+                              listItems: fruits,
+                              initiallySelected: selectedFruit,
+                              onChanged: (item) {
+                                setState(() {
+                                  selectedFruit = item;
+                                });
+                              },
+                              hintText: 'Select a fruit...',
+                              showKeyboard: true,
+                            ),
+                          ),
 
-                const SizedBox(height: 32),
+                          const SizedBox(height: 32),
 
-                // Dropdown 2: Numbers (Medium list)
-                _buildDropdownSection(
-                  title: '2. Numbers (50 items)',
-                  description: 'Medium-sized list with numeric values',
-                  selectedValue: selectedNumber?.label,
-                  dropdown: dropDown<int>(
-                    width: 300,
-                    listItems: numbers,
-                    initiallySelected: selectedNumber,
-                    onChanged: (item) {
-                      setState(() {
-                        selectedNumber = item;
-                      });
-                    },
-                    hintText: 'Select a number...',
-                    showKeyboard: true,
-                  ),
-                ),
+                          // Dropdown 2: Numbers (Medium list)
+                          _buildDropdownSection(
+                            title: '2. Numbers (50 items)',
+                            description: 'Medium-sized list with numeric values',
+                            selectedValue: selectedNumber?.label,
+                            dropdown: dropDown<int>(
+                              width: 300,
+                              listItems: numbers,
+                              initiallySelected: selectedNumber,
+                              onChanged: (item) {
+                                setState(() {
+                                  selectedNumber = item;
+                                });
+                              },
+                              hintText: 'Select a number...',
+                              showKeyboard: true,
+                            ),
+                          ),
 
-                const SizedBox(height: 32),
+                          const SizedBox(height: 32),
 
-                // Dropdown 3: Countries (Medium list)
-                _buildDropdownSection(
-                  title: '3. Countries (15 items)',
-                  description: 'Test with real-world data',
-                  selectedValue: selectedCountry?.label,
-                  dropdown: dropDown<String>(
-                    width: 300,
-                    listItems: countries,
-                    initiallySelected: selectedCountry,
-                    onChanged: (item) {
-                      setState(() {
-                        selectedCountry = item;
-                      });
-                    },
-                    hintText: 'Select a country...',
-                    showKeyboard: true,
-                    maxDropdownHeight: 250,
-                  ),
-                ),
+                          // Dropdown 3: Countries (Medium list)
+                          _buildDropdownSection(
+                            title: '3. Countries (15 items)',
+                            description: 'Test with real-world data',
+                            selectedValue: selectedCountry?.label,
+                            dropdown: dropDown<String>(
+                              width: 300,
+                              listItems: countries,
+                              initiallySelected: selectedCountry,
+                              onChanged: (item) {
+                                setState(() {
+                                  selectedCountry = item;
+                                });
+                              },
+                              hintText: 'Select a country...',
+                              showKeyboard: true,
+                              maxDropdownHeight: 250,
+                            ),
+                          ),
 
-                const SizedBox(height: 32),
+                          const SizedBox(height: 32),
 
-                // Dropdown 4: Large list (Performance test)
-                _buildDropdownSection(
-                  title: '4. Large Dataset (5000 items) - Performance Test',
-                  description: 'Stress test with large list and search functionality',
-                  selectedValue: selectedLargeItem?.label,
-                  dropdown: dropDown<int>(
-                    width: 400,
-                    listItems: largeItemsList,
-                    initiallySelected: selectedLargeItem,
-                    onChanged: (item) {
-                      setState(() {
-                        selectedLargeItem = item;
-                      });
-                    },
-                    hintText: 'Search through 5000 items...',
-                    showKeyboard: true,
-                    maxDropdownHeight: 300,
-                  ),
-                ),
+                          // Dropdown 4: Large list (Performance test)
+                          _buildDropdownSection(
+                            title: '4. Large Dataset (5000 items) - Performance Test',
+                            description: 'Stress test with large list and search functionality',
+                            selectedValue: selectedLargeItem?.label,
+                            dropdown: dropDown<int>(
+                              width: 400,
+                              listItems: largeItemsList,
+                              initiallySelected: selectedLargeItem,
+                              onChanged: (item) {
+                                setState(() {
+                                  selectedLargeItem = item;
+                                });
+                              },
+                              hintText: 'Search through 5000 items...',
+                              showKeyboard: true,
+                              maxDropdownHeight: 300,
+                            ),
+                          ),
 
-                const SizedBox(height: 32),
+                          const SizedBox(height: 32),
 
                           // Dropdown 5: Multi-Select States
                           _buildMultiDropdownSection(
@@ -501,7 +518,7 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
 
                     const SizedBox(width: 32),
 
-                    // Right column: Dropdowns 6-7
+                    // Second column: Dropdowns 6-9
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -620,7 +637,7 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
 
                     const SizedBox(width: 32),
 
-                    // Third column: Dropdown 10 with checkbox, then Dropdown 11
+                    // Third column: Dropdown 10-12
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -773,6 +790,148 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
                         ],
                       ),
                     ),
+
+                    const SizedBox(width: 32),
+
+                    // Fourth column: Font size controls and Dropdown 13
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Font size controls
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey.shade300),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.grey.shade200,
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Font Size Controls',
+                                  style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Adjust font sizes for chips/fields and dropdown items',
+                                  style: TextStyle(fontSize: 12,
+                                      color: Colors.grey.shade600),
+                                ),
+                                const SizedBox(height: 16),
+
+                                // Chip/Field Font Size Control
+                                Row(
+                                  children: [
+                                    const Text('Chip/Field Font:'),
+                                    const Spacer(),
+                                    IconButton(
+                                      icon: const Icon(Icons.remove),
+                                      onPressed: () {
+                                        setState(() {
+                                          chipFieldFontSize =
+                                              (chipFieldFontSize - 1).clamp(
+                                                  8.0, 20.0);
+                                        });
+                                      },
+                                    ),
+                                    Text('${chipFieldFontSize.toInt()}'),
+                                    IconButton(
+                                      icon: const Icon(Icons.add),
+                                      onPressed: () {
+                                        setState(() {
+                                          chipFieldFontSize =
+                                              (chipFieldFontSize + 1).clamp(
+                                                  8.0, 20.0);
+                                        });
+                                      },
+                                    ),
+                                  ],
+                                ),
+
+                                const SizedBox(height: 8),
+
+                                // Item Font Size Control
+                                Row(
+                                  children: [
+                                    const Text('Item Font:'),
+                                    const Spacer(),
+                                    IconButton(
+                                      icon: const Icon(Icons.remove),
+                                      onPressed: () {
+                                        setState(() {
+                                          itemFontSize =
+                                              (itemFontSize - 1).clamp(
+                                                  8.0, 20.0);
+                                        });
+                                      },
+                                    ),
+                                    Text('${itemFontSize.toInt()}'),
+                                    IconButton(
+                                      icon: const Icon(Icons.add),
+                                      onPressed: () {
+                                        setState(() {
+                                          itemFontSize =
+                                              (itemFontSize + 1).clamp(
+                                                  8.0, 20.0);
+                                        });
+                                      },
+                                    ),
+                                  ],
+                                ),
+
+                                const SizedBox(height: 16),
+
+                                Text(
+                                  'Current: Chip/Field = ${chipFieldFontSize
+                                      .toInt()}pt, Items = ${itemFontSize
+                                      .toInt()}pt',
+                                  style: TextStyle(fontSize: 11,
+                                      color: Colors.grey.shade600),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(height: 32),
+
+                          // Dropdown 13: Font size testing
+                          _buildMultiDropdownSection(
+                            title: '13. Font Size Testing (10 items)',
+                            description:
+                            'Multi-select with 10 test items. Use controls above to adjust font sizes.',
+                            selectedValues: selectedFontSizeTestItems.map((
+                                e) => e.label).join(', '),
+                            dropdown: multiDropDown<String>(
+                              width: 500,
+                              listItems: fontSizeTestItems,
+                              initiallySelected: selectedFontSizeTestItems,
+                              onChanged: (items) {
+                                setState(() {
+                                  selectedFontSizeTestItems = items;
+                                });
+                              },
+                              hintText: 'Select font sizes...',
+                              maxDropdownHeight: 250,
+                              // Apply the dynamic font sizes
+                              fieldTextStyle: TextStyle(
+                                  fontSize: chipFieldFontSize),
+                              popupTextStyle: TextStyle(fontSize: itemFontSize),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
 
@@ -815,6 +974,19 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
                           'City:', selectedCity?.label ?? 'None'),
                       _buildSelectionRow(
                           'Add-Enabled Item:', selectedAddItem?.label ?? 'None'),
+                      _buildSelectionRow(
+                          'Deletable Items:', selectedDeletableDemoItems.isEmpty
+                          ? 'None'
+                          : selectedDeletableDemoItems.map((e) => e.label).join(
+                          ', ')),
+                      _buildSelectionRow(
+                          'Disabled Item:',
+                          selectedDisabledDemoItem?.label ?? 'None'),
+                      _buildSelectionRow(
+                          'Font Size:', selectedFontSizeTestItems.isEmpty
+                          ? 'None'
+                          : selectedFontSizeTestItems.map((e) => e.label).join(
+                          ', ')),
                     ],
                   ),
                 ),
