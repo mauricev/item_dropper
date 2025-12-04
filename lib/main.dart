@@ -12,21 +12,8 @@ void main() async {
   // Configure window size for desktop platforms
   await windowManager.ensureInitialized();
 
-  // Get screen size using PlatformDispatcher
-  final screenSize = ui.PlatformDispatcher.instance.views.first.physicalSize /
-      ui.PlatformDispatcher.instance.views.first.devicePixelRatio;
-  
-  // On macOS, account for menubar (~22px) and dock (varies, typically ~50-60px when visible)
-  // We'll use a conservative estimate of 80px total for system UI
-  final windowSize = Size(
-    screenSize.width,
-    screenSize.height - 80, // Account for menubar and dock
-  );
-
   final windowOptions = WindowOptions(
-    size: windowSize,
-    // Make the default window a bit larger to reduce scrolling for all dropdowns
-    minimumSize: const Size(1100, 800),
+    size: const Size(1800, 1263),
     center: true,
     backgroundColor: Colors.transparent,
     skipTaskbar: false,
@@ -47,7 +34,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'SearchDropdown Tester',
+      title: 'ItemDropper Tester',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
@@ -384,7 +371,7 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
         padding: const EdgeInsets.all(24.0),
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1400),
+            constraints: const BoxConstraints(maxWidth: 2000),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -934,62 +921,6 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
                     ),
                   ],
                 ),
-
-                const SizedBox(height: 48),
-
-                // Display selected values
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey.shade300),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Selected Values:',
-                        style: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 12),
-                      _buildSelectionRow(
-                          'Single Fruit:', selectedFruit?.label ?? 'None'),
-                      _buildSelectionRow(
-                          'Number:', selectedNumber?.label ?? 'None'),
-                      _buildSelectionRow(
-                          'Country:', selectedCountry?.label ?? 'None'),
-                      _buildSelectionRow(
-                          'Large Item:', selectedLargeItem?.label ?? 'None'),
-                      _buildSelectionRow(
-                          'Multi States:', selectedStates.isEmpty
-                          ? 'None'
-                          : selectedStates.map((e) => e.label).join(', ')),
-                      _buildSelectionRow(
-                          'Max Items (4 max):', selectedMaxItems.isEmpty
-                          ? 'None'
-                          : selectedMaxItems.map((e) => e.label).join(', ')),
-                      _buildSelectionRow(
-                          'City:', selectedCity?.label ?? 'None'),
-                      _buildSelectionRow(
-                          'Add-Enabled Item:', selectedAddItem?.label ?? 'None'),
-                      _buildSelectionRow(
-                          'Deletable Items:', selectedDeletableDemoItems.isEmpty
-                          ? 'None'
-                          : selectedDeletableDemoItems.map((e) => e.label).join(
-                          ', ')),
-                      _buildSelectionRow(
-                          'Disabled Item:',
-                          selectedDisabledDemoItem?.label ?? 'None'),
-                      _buildSelectionRow(
-                          'Font Size:', selectedFontSizeTestItems.isEmpty
-                          ? 'None'
-                          : selectedFontSizeTestItems.map((e) => e.label).join(
-                          ', ')),
-                    ],
-                  ),
-                ),
               ],
             ),
           ),
@@ -1101,29 +1032,6 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
               ),
             ),
           ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSelectionRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 120,
-            child: Text(
-              label,
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(color: Colors.black87),
-            ),
-          ),
         ],
       ),
     );
