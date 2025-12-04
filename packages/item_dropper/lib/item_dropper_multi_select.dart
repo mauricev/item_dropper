@@ -901,7 +901,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     );
   }
 
-  Widget _buildInputField({InputDecoration? previewDecoration}) {
+  Widget _buildInputField() {
     return Container(
       key: widget.inputKey ?? _fieldKey,
       width: widget.width, // Constrain to 500px

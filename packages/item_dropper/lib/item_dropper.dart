@@ -1,4 +1,4 @@
-library item_dropper;
+library;
 
 export 'src/common/item_dropper_item.dart';
 export 'item_dropper_single_select.dart';

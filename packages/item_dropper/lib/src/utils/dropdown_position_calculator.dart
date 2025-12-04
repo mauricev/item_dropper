@@ -35,17 +35,6 @@ class DropdownPositionCalculator {
     final Offset inputFieldScreenPos = inputBox.localToGlobal(Offset.zero);
     final double inputFieldBottomScreen = inputFieldScreenPos.dy + inputFieldHeight;
     
-    // Find Scrollable to get the actual viewport bounds
-    final ScrollableState? scrollable = Scrollable.maybeOf(context);
-    RenderBox? scrollRenderBox;
-    
-    if (scrollable != null) {
-      final RenderObject? scrollRenderObject = scrollable.context.findRenderObject();
-      if (scrollRenderObject is RenderBox) {
-        scrollRenderBox = scrollRenderObject;
-      }
-    }
-    
     // Calculate available space using screen coordinates
     double availableSpaceBelow;
     double availableSpaceAbove;
@@ -71,34 +60,6 @@ class DropdownPositionCalculator {
         ? Offset(0.0, inputFieldHeight + ItemDropperConstants.kDropdownMargin)
         : Offset(0.0, -constrainedMaxHeight - ItemDropperConstants.kDropdownMargin);
 
-    // DEBUG: Print position calculation details (only when overlay is shown)
-    print('=== DROPDOWN POSITION CALCULATION ===');
-    print('Input field screen Y: ${inputFieldScreenPos.dy.toStringAsFixed(1)}');
-    print('Input field bottom: ${inputFieldBottomScreen.toStringAsFixed(1)}');
-    print('Input field height: ${inputFieldHeight.toStringAsFixed(1)}');
-    print('Requested max dropdown height: ${maxDropdownHeight.toStringAsFixed(
-        1)}');
-    print('Available space BELOW: ${availableSpaceBelow.toStringAsFixed(1)}');
-    print('Available space ABOVE: ${availableSpaceAbove.toStringAsFixed(1)}');
-    print('Window height: ${windowHeight.toStringAsFixed(1)}');
-    print('View insets bottom: ${viewInsets.bottom.toStringAsFixed(1)}');
-    if (scrollRenderBox != null) {
-      final Offset scrollScreenPos = scrollRenderBox.localToGlobal(Offset.zero);
-      final Size scrollBoxSize = scrollRenderBox.size;
-      print('Scroll viewport top: ${scrollScreenPos.dy.toStringAsFixed(1)}');
-      print(
-          'Scroll viewport bottom: ${(scrollScreenPos.dy + scrollBoxSize.height)
-              .toStringAsFixed(1)}');
-      print(
-          'Scroll viewport height: ${scrollBoxSize.height.toStringAsFixed(1)}');
-    } else {
-      print('No scrollable parent found');
-    }
-    print('DECISION: Open ${shouldShowBelow ? "BELOW" : "ABOVE"}');
-    print('Constrained height: ${constrainedMaxHeight.toStringAsFixed(1)}');
-    print('Offset: ${offset.dy.toStringAsFixed(1)}');
-    print('=====================================\n');
-    
     return DropdownPositionResult(
       shouldShowBelow: shouldShowBelow,
       constrainedMaxHeight: constrainedMaxHeight,
