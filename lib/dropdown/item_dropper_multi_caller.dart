@@ -23,15 +23,20 @@ Widget multiDropDown<T>({
   String? hintText,
   double? maxDropdownHeight,
   int? maxSelected,
+  double? itemHeight,
   bool enabled = true,
   TextStyle? fieldTextStyle,
   TextStyle? popupTextStyle,
   TextStyle? popupGroupHeaderStyle,
   BoxDecoration? selectedChipDecoration,
+  BoxDecoration? fieldDecoration,
   Widget Function(BuildContext, ItemDropperItem<T>, bool)? popupItemBuilder,
   ItemDropperItem<T>? Function(String searchText)? onAddItem,
   void Function(ItemDropperItem<T> item)? onDeleteItem,
 }) {
+  final double? effectiveItemHeight =
+  popupItemBuilder != null ? itemHeight : null;
+
   return MultiItemDropper<T>(
     width: width,
     items: listItems,
@@ -44,7 +49,9 @@ Widget multiDropDown<T>({
     maxDropdownHeight: maxDropdownHeight ?? 200,
     maxSelected: maxSelected,
     enabled: enabled,
+    itemHeight: effectiveItemHeight,
     selectedChipDecoration: selectedChipDecoration,
+    fieldDecoration: fieldDecoration,
     onAddItem: onAddItem,
     onDeleteItem: onDeleteItem,
   );

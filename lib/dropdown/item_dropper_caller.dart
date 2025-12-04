@@ -31,6 +31,7 @@ Widget dropDown<T>({
   TextStyle? fieldTextStyle,
   TextStyle? popupTextStyle,
   TextStyle? popupGroupHeaderStyle,
+  BoxDecoration? fieldDecoration,
   Widget Function(BuildContext, ItemDropperItem<T>, bool)? popupItemBuilder,
   ItemDropperItem<T>? Function(String searchText)? onAddItem,
 }) {
@@ -46,6 +47,7 @@ Widget dropDown<T>({
     popupGroupHeaderStyle: popupGroupHeaderStyle,
     maxDropdownHeight: maxDropdownHeight ?? 200,
     enabled: enabled,
+    fieldDecoration: fieldDecoration,
     onAddItem: onAddItem,
   );
 }

@@ -56,6 +56,12 @@ class SingleItemDropper<T> extends StatefulWidget {
   /// If null, the add row will not appear.
   final ItemDropperItem<T>? Function(String searchText)? onAddItem;
 
+  /// Optional custom decoration for the dropdown field container.
+  ///
+  /// - If provided, this BoxDecoration is used as-is for the field container.
+  /// - If null, a default white-to-grey gradient with rounded corners is applied.
+  final BoxDecoration? fieldDecoration;
+
   const SingleItemDropper({
     super.key,
     this.inputKey, // Optional: provide a GlobalKey for external access to the input field
@@ -75,6 +81,7 @@ class SingleItemDropper<T> extends StatefulWidget {
     this.allowDelete = false,
     this.onDeleteItem,
     this.onAddItem,
+    this.fieldDecoration,
   });
 
   @override
@@ -696,7 +703,7 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
       onDismiss: _dismissDropdown,
       overlay: _buildDropdownOverlay(),
       inputField: Container(
-          decoration: BoxDecoration(
+          decoration: widget.fieldDecoration ?? BoxDecoration(
             gradient: LinearGradient(
               colors: [Colors.white, Colors.grey.shade200],
               begin: Alignment.topCenter,

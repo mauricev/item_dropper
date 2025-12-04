@@ -68,6 +68,16 @@ class MultiItemDropper<T> extends StatefulWidget {
   /// - If null, a default blue vertical gradient and radius are applied.
   final BoxDecoration? selectedChipDecoration;
 
+  /// Optional custom decoration for the dropdown field container.
+  ///
+  /// - If provided, this BoxDecoration is used as-is for the field container.
+  /// - If null, a default white-to-grey gradient with focus-responsive border is applied.
+  /// 
+  /// Note: When providing a custom decoration, you are responsible for handling
+  /// focus state styling if desired. The default decoration changes border color
+  /// based on focus state (blue when focused, grey when not).
+  final BoxDecoration? fieldDecoration;
+
   const MultiItemDropper({
     super.key,
     required this.items,
@@ -90,6 +100,7 @@ class MultiItemDropper<T> extends StatefulWidget {
     this.allowDelete = false,
     this.onDeleteItem,
     this.selectedChipDecoration,
+    this.fieldDecoration,
   }) : assert(maxSelected == null ||
       maxSelected >= 2, 'maxSelected must be null or >= 2');
 
@@ -389,6 +400,12 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
 
   /// Get cached decoration, recreating only if focus state changed
   BoxDecoration _getCachedDecoration() {
+    // If custom decoration provided, use it as-is (no caching or focus-based changes)
+    if (widget.fieldDecoration != null) {
+      return widget.fieldDecoration!;
+    }
+
+    // Otherwise use default decoration with focus-based border color
     // Only recreate if cache is null or focus state changed
     if (_cachedDecoration == null || _cachedFocusState != _manualFocusState) {
       _cachedFocusState = _manualFocusState;
@@ -1082,15 +1099,6 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
 
     final double effectiveItemHeight = widget.itemHeight ??
         calculateItemHeightFromStyle();
-    
-    // Check for field height mismatch (indicates Wrap wrapped when it shouldn't)
-    /*final RenderBox? fieldBox = inputContext.findRenderObject() as RenderBox?;
-    if (fieldBox != null && _measurements.wrapHeight != null) {
-      // Calculate expected height from measured wrapHeight + padding + border
-      final double verticalPadding = MultiSelectConstants.containerPaddingTop + 
-          MultiSelectConstants.containerPaddingBottom;
-      final double borderWidth = MultiSelectConstants.containerBorderWidth * 2.0; // top + bottom border
-    }*/
 
     // Show empty state if user is searching but no results found
     if (filteredItems.isEmpty) {
