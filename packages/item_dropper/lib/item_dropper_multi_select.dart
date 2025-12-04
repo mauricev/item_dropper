@@ -1066,6 +1066,23 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         .currentContext;
     if (inputContext == null) return const SizedBox.shrink();
     
+    // Calculate effective item height:
+    // - If widget.itemHeight is provided, use it
+    // - Otherwise, calculate from popupTextStyle
+    double calculateItemHeightFromStyle() {
+      final TextStyle resolvedStyle = widget.popupTextStyle ??
+          const TextStyle(fontSize: MultiSelectConstants.defaultFontSize);
+      final double fontSize = resolvedStyle.fontSize ??
+          MultiSelectConstants.defaultFontSize;
+      final double lineHeight = fontSize * (resolvedStyle.height ??
+          MultiSelectConstants.textLineHeightMultiplier);
+      return lineHeight +
+          (ItemDropperConstants.kDropdownItemVerticalPadding * 2);
+    }
+
+    final double effectiveItemHeight = widget.itemHeight ??
+        calculateItemHeightFromStyle();
+    
     // Check for field height mismatch (indicates Wrap wrapped when it shouldn't)
     /*final RenderBox? fieldBox = inputContext.findRenderObject() as RenderBox?;
     if (fieldBox != null && _measurements.wrapHeight != null) {
@@ -1150,11 +1167,11 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
             _toggleItem(item);
           },
           customBuilder: itemBuilder,
-          itemHeight: widget.itemHeight,
+          itemHeight: effectiveItemHeight,
           onRequestDelete: _handleRequestDeleteFromOverlay,
         );
       },
-      itemHeight: widget.itemHeight,
+      itemHeight: effectiveItemHeight,
       preferredFieldHeight: measuredWrapHeight, // Pass measured height directly
     );
   }
