@@ -617,6 +617,140 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
                               },
                             ),
                           ),
+
+                          const SizedBox(height: 32),
+
+                          // Font size controls
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey.shade300),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.grey.shade200,
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Font Size Controls',
+                                  style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Adjust font sizes for chips/fields and dropdown items',
+                                  style: TextStyle(fontSize: 12,
+                                      color: Colors.grey.shade600),
+                                ),
+                                const SizedBox(height: 16),
+
+                                // Chip/Field Font Size Control
+                                Row(
+                                  children: [
+                                    const Text('Chip/Field Font:'),
+                                    const Spacer(),
+                                    IconButton(
+                                      icon: const Icon(Icons.remove),
+                                      onPressed: () {
+                                        setState(() {
+                                          chipFieldFontSize =
+                                              (chipFieldFontSize - 1).clamp(
+                                                  8.0, 20.0);
+                                        });
+                                      },
+                                    ),
+                                    Text('${chipFieldFontSize.toInt()}'),
+                                    IconButton(
+                                      icon: const Icon(Icons.add),
+                                      onPressed: () {
+                                        setState(() {
+                                          chipFieldFontSize =
+                                              (chipFieldFontSize + 1).clamp(
+                                                  8.0, 20.0);
+                                        });
+                                      },
+                                    ),
+                                  ],
+                                ),
+
+                                const SizedBox(height: 8),
+
+                                // Item Font Size Control
+                                Row(
+                                  children: [
+                                    const Text('Item Font:'),
+                                    const Spacer(),
+                                    IconButton(
+                                      icon: const Icon(Icons.remove),
+                                      onPressed: () {
+                                        setState(() {
+                                          itemFontSize =
+                                              (itemFontSize - 1).clamp(
+                                                  8.0, 20.0);
+                                        });
+                                      },
+                                    ),
+                                    Text('${itemFontSize.toInt()}'),
+                                    IconButton(
+                                      icon: const Icon(Icons.add),
+                                      onPressed: () {
+                                        setState(() {
+                                          itemFontSize =
+                                              (itemFontSize + 1).clamp(
+                                                  8.0, 20.0);
+                                        });
+                                      },
+                                    ),
+                                  ],
+                                ),
+
+                                const SizedBox(height: 16),
+
+                                Text(
+                                  'Current: Chip/Field = ${chipFieldFontSize
+                                      .toInt()}pt, Items = ${itemFontSize
+                                      .toInt()}pt',
+                                  style: TextStyle(fontSize: 11,
+                                      color: Colors.grey.shade600),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(height: 32),
+
+                          // Dropdown 13: Font size testing
+                          _buildMultiDropdownSection(
+                            title: '13. Font Size Testing (10 items)',
+                            description:
+                            'Multi-select with 10 test items. Use controls above to adjust font sizes.',
+                            selectedValues: selectedFontSizeTestItems.map((
+                                e) => e.label).join(', '),
+                            dropdown: multiDropDown<String>(
+                              width: 500,
+                              listItems: fontSizeTestItems,
+                              initiallySelected: selectedFontSizeTestItems,
+                              onChanged: (items) {
+                                setState(() {
+                                  selectedFontSizeTestItems = items;
+                                });
+                              },
+                              hintText: 'Select font sizes...',
+                              maxDropdownHeight: 250,
+                              // Apply the dynamic font sizes
+                              fieldTextStyle: TextStyle(
+                                  fontSize: chipFieldFontSize),
+                              popupTextStyle: TextStyle(fontSize: itemFontSize),
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -779,142 +913,11 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
 
                     const SizedBox(width: 32),
 
-                    // Fourth column: Font size controls and Dropdown 13
+                    // Fourth column: Empty for now
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Font size controls
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.grey.shade300),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.grey.shade200,
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Font Size Controls',
-                                  style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Adjust font sizes for chips/fields and dropdown items',
-                                  style: TextStyle(fontSize: 12,
-                                      color: Colors.grey.shade600),
-                                ),
-                                const SizedBox(height: 16),
-
-                                // Chip/Field Font Size Control
-                                Row(
-                                  children: [
-                                    const Text('Chip/Field Font:'),
-                                    const Spacer(),
-                                    IconButton(
-                                      icon: const Icon(Icons.remove),
-                                      onPressed: () {
-                                        setState(() {
-                                          chipFieldFontSize =
-                                              (chipFieldFontSize - 1).clamp(
-                                                  8.0, 20.0);
-                                        });
-                                      },
-                                    ),
-                                    Text('${chipFieldFontSize.toInt()}'),
-                                    IconButton(
-                                      icon: const Icon(Icons.add),
-                                      onPressed: () {
-                                        setState(() {
-                                          chipFieldFontSize =
-                                              (chipFieldFontSize + 1).clamp(
-                                                  8.0, 20.0);
-                                        });
-                                      },
-                                    ),
-                                  ],
-                                ),
-
-                                const SizedBox(height: 8),
-
-                                // Item Font Size Control
-                                Row(
-                                  children: [
-                                    const Text('Item Font:'),
-                                    const Spacer(),
-                                    IconButton(
-                                      icon: const Icon(Icons.remove),
-                                      onPressed: () {
-                                        setState(() {
-                                          itemFontSize =
-                                              (itemFontSize - 1).clamp(
-                                                  8.0, 20.0);
-                                        });
-                                      },
-                                    ),
-                                    Text('${itemFontSize.toInt()}'),
-                                    IconButton(
-                                      icon: const Icon(Icons.add),
-                                      onPressed: () {
-                                        setState(() {
-                                          itemFontSize =
-                                              (itemFontSize + 1).clamp(
-                                                  8.0, 20.0);
-                                        });
-                                      },
-                                    ),
-                                  ],
-                                ),
-
-                                const SizedBox(height: 16),
-
-                                Text(
-                                  'Current: Chip/Field = ${chipFieldFontSize
-                                      .toInt()}pt, Items = ${itemFontSize
-                                      .toInt()}pt',
-                                  style: TextStyle(fontSize: 11,
-                                      color: Colors.grey.shade600),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          const SizedBox(height: 32),
-
-                          // Dropdown 13: Font size testing
-                          _buildMultiDropdownSection(
-                            title: '13. Font Size Testing (10 items)',
-                            description:
-                            'Multi-select with 10 test items. Use controls above to adjust font sizes.',
-                            selectedValues: selectedFontSizeTestItems.map((
-                                e) => e.label).join(', '),
-                            dropdown: multiDropDown<String>(
-                              width: 500,
-                              listItems: fontSizeTestItems,
-                              initiallySelected: selectedFontSizeTestItems,
-                              onChanged: (items) {
-                                setState(() {
-                                  selectedFontSizeTestItems = items;
-                                });
-                              },
-                              hintText: 'Select font sizes...',
-                              maxDropdownHeight: 250,
-                              // Apply the dynamic font sizes
-                              fieldTextStyle: TextStyle(
-                                  fontSize: chipFieldFontSize),
-                              popupTextStyle: TextStyle(fontSize: itemFontSize),
-                            ),
-                          ),
                         ],
                       ),
                     ),
