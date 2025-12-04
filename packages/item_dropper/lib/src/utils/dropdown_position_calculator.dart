@@ -50,24 +50,12 @@ class DropdownPositionCalculator {
     double availableSpaceBelow;
     double availableSpaceAbove;
 
-    
-    if (scrollRenderBox != null) {
-      // Use Scrollable as the viewport reference
-      final Offset scrollScreenPos = scrollRenderBox.localToGlobal(Offset.zero);
-      final Size scrollBoxSize = scrollRenderBox.size;
-      
-      // Scrollable bottom in screen coordinates
-      final double scrollableBottomScreen = scrollScreenPos.dy + scrollBoxSize.height;
-      
-      // Available space = Scrollable bottom - Input field bottom
-      availableSpaceBelow = scrollableBottomScreen - inputFieldBottomScreen - viewInsets.bottom;
-      availableSpaceAbove = inputFieldScreenPos.dy - scrollScreenPos.dy;
-      
-    } else {
-      // Fallback: no Scrollable found
-      availableSpaceBelow = windowHeight - inputFieldBottomScreen - viewInsets.bottom;
-      availableSpaceAbove = inputFieldScreenPos.dy - padding.top;
-    }
+    // Since overlays render globally (not clipped by scrollable viewport),
+    // we should use the actual window bounds, not the scrollable viewport bounds
+    availableSpaceBelow =
+        windowHeight - inputFieldBottomScreen - viewInsets.bottom -
+            padding.bottom;
+    availableSpaceAbove = inputFieldScreenPos.dy - padding.top;
 
     // Only show below if there's enough space for the full dropdown
     final bool shouldShowBelow = availableSpaceBelow >= maxDropdownHeight;
@@ -82,6 +70,34 @@ class DropdownPositionCalculator {
     final Offset offset = shouldShowBelow
         ? Offset(0.0, inputFieldHeight + ItemDropperConstants.kDropdownMargin)
         : Offset(0.0, -constrainedMaxHeight - ItemDropperConstants.kDropdownMargin);
+
+    // DEBUG: Print position calculation details (only when overlay is shown)
+    print('=== DROPDOWN POSITION CALCULATION ===');
+    print('Input field screen Y: ${inputFieldScreenPos.dy.toStringAsFixed(1)}');
+    print('Input field bottom: ${inputFieldBottomScreen.toStringAsFixed(1)}');
+    print('Input field height: ${inputFieldHeight.toStringAsFixed(1)}');
+    print('Requested max dropdown height: ${maxDropdownHeight.toStringAsFixed(
+        1)}');
+    print('Available space BELOW: ${availableSpaceBelow.toStringAsFixed(1)}');
+    print('Available space ABOVE: ${availableSpaceAbove.toStringAsFixed(1)}');
+    print('Window height: ${windowHeight.toStringAsFixed(1)}');
+    print('View insets bottom: ${viewInsets.bottom.toStringAsFixed(1)}');
+    if (scrollRenderBox != null) {
+      final Offset scrollScreenPos = scrollRenderBox.localToGlobal(Offset.zero);
+      final Size scrollBoxSize = scrollRenderBox.size;
+      print('Scroll viewport top: ${scrollScreenPos.dy.toStringAsFixed(1)}');
+      print(
+          'Scroll viewport bottom: ${(scrollScreenPos.dy + scrollBoxSize.height)
+              .toStringAsFixed(1)}');
+      print(
+          'Scroll viewport height: ${scrollBoxSize.height.toStringAsFixed(1)}');
+    } else {
+      print('No scrollable parent found');
+    }
+    print('DECISION: Open ${shouldShowBelow ? "BELOW" : "ABOVE"}');
+    print('Constrained height: ${constrainedMaxHeight.toStringAsFixed(1)}');
+    print('Offset: ${offset.dy.toStringAsFixed(1)}');
+    print('=====================================\n');
     
     return DropdownPositionResult(
       shouldShowBelow: shouldShowBelow,
