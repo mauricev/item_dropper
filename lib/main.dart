@@ -295,9 +295,9 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
 
     // Dropdown 13: Font size testing
     fontSizeTestItems = [
-      ItemDropperItem(value: '8', label: '8'),
-      ItemDropperItem(value: '10', label: '10'),
-      ItemDropperItem(value: '12', label: '12'),
+      ItemDropperItem(value: 'y', label: 'y'),
+      ItemDropperItem(value: 'j', label: 'j'),
+      ItemDropperItem(value: 'g', label: 'g'),
       ItemDropperItem(value: '14', label: '14'),
       ItemDropperItem(value: '16', label: '16'),
       ItemDropperItem(value: '18', label: '18'),

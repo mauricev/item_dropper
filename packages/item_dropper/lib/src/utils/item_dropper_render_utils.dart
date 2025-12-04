@@ -84,7 +84,7 @@ class ItemDropperRenderUtils {
     void Function(BuildContext context, ItemDropperItem<T> item)?
         onRequestDelete, // Optional delete handler (right-click/long-press)
   }) {
-    Widget w = builder(context, item, isSelected);
+    Widget itemContent = builder(context, item, isSelected);
     Color? background;
     
     // Group headers have different styling - no hover/selection effects, no background
@@ -131,10 +131,15 @@ class ItemDropperRenderUtils {
               item.isEnabled)
           ? () => onRequestDelete(context, item)
           : null,
-      child: Container(
+      child: SizedBox(
         height: itemHeight ?? ItemDropperConstants.kDropdownItemHeight,
-        color: background,
-        child: w,
+        child: ColoredBox(
+          color: background ?? Colors.transparent,
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: itemContent,
+          ),
+        ),
       ),
     );
   }
@@ -203,8 +208,10 @@ class ItemDropperRenderUtils {
       color: isSelected ? Colors.grey.shade200 : null,
       padding: const EdgeInsets.symmetric(
           horizontal: ItemDropperConstants.kDropdownItemHorizontalPadding,
-          vertical: ItemDropperConstants.kDropdownItemVerticalPadding),
+          vertical: 0),
+      alignment: Alignment.centerLeft,
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(
             child: Text(
