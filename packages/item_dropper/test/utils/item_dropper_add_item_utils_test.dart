@@ -176,14 +176,28 @@ void main() {
         expect(addItem.isGroupHeader, isFalse);
       });
 
-      test('handles empty items list by casting search text', () {
-        final addItem = ItemDropperAddItemUtils.createAddItem<String>(
-          'Orange',
-          [],
+      test('throws ArgumentError when items list is empty', () {
+        expect(
+          () => ItemDropperAddItemUtils.createAddItem<String>('Orange', []),
+          throwsA(isA<ArgumentError>()),
         );
+      });
 
-        expect(addItem.label, equals('Add "Orange"'));
-        expect(addItem.value, equals('Orange'));
+      test('error message explains the issue', () {
+        try {
+          ItemDropperAddItemUtils.createAddItem<String>('Orange', []);
+          fail('Should have thrown ArgumentError');
+        } catch (e) {
+          expect(e, isA<ArgumentError>());
+          expect(
+            e.toString(),
+            contains('Cannot create add item when originalItems is empty'),
+          );
+          expect(
+            e.toString(),
+            contains('must contain at least one item'),
+          );
+        }
       });
     });
 

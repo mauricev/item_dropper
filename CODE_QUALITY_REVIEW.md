@@ -447,41 +447,48 @@ _containerBorderRadius   // Not a constant, just a local value
 
 **Minor issues found:**
 
-**1. Add item value casting:**
+**1. Add item value casting:** ✅ **FIXED**
+
+~~**Was:**~~
 
 ```dart
 // item_dropper_add_item_utils.dart:36
 addItemValue = searchText as T;  // Unsafe cast, will crash if T != String
 ```
 
-**Fix:**
+**Now:**
 
 ```dart
-T _createDummyValue<T>(List<ItemDropperItem<T>> items, String searchText) {
-  if (items.isNotEmpty) {
-    return items.first.value;
-  }
-  // Try casting, but handle failure
-  try {
-    return searchText as T;
-  } catch (e) {
-    // For non-String types, this will fail
-    // Could use a factory callback instead
+static ItemDropperItem<T> createAddItem<T>(
+  String searchText,
+  List<ItemDropperItem<T>> originalItems,
+) {
+  if (originalItems.isEmpty) {
     throw ArgumentError(
-      'Cannot create add item for type $T. '
-      'Provide items list or implement custom value creation.'
+      'Cannot create add item when originalItems is empty. '
+      'The items list must contain at least one item to provide a type reference for T. '
+      'If your list can be empty, provide a default item or disable the onAddItem feature.',
     );
   }
+  
+  // Safe: Use first item's value as type reference
+  final T addItemValue = originalItems.first.value;
+  
+  return ItemDropperItem<T>(
+    value: addItemValue,
+    label: 'Add "$searchText"',
+    isGroupHeader: false,
+  );
 }
 ```
 
-**Better API:**
+**Result:**
 
-```dart
-final T Function(String searchText)? createAddItemValue;
-
-// Then use this in createAddItem
-```
+- ✅ Type-safe (no casting)
+- ✅ Clear error message if violated
+- ✅ Documented requirement
+- ✅ Tests updated
+- See `HIGH_PRIORITY_2_COMPLETE.md` for details
 
 **2. Race condition in measurement:**
 
@@ -783,8 +790,12 @@ Split into:
     - **Total: 163 tests, all passing**
     - See `TEST_COVERAGE_SUMMARY.md` for details
 
-2. **Fix add item casting bug**
-    - Add safe value creation or require callback
+2. **Fix add item casting bug** ✅ **COMPLETE**
+    - ✅ Removed unsafe `searchText as T` cast
+    - ✅ Now requires non-empty items list for type reference
+    - ✅ Throws clear ArgumentError with helpful message
+    - ✅ Added tests for error case
+    - **See `HIGH_PRIORITY_2_COMPLETE.md` for details**
 
 3. **Add error callbacks**
     - Allow parent to handle errors gracefully
