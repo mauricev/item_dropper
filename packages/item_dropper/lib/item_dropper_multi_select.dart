@@ -937,46 +937,51 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
               BorderRadius.circular(MultiSelectConstants.kChipBorderRadius),
             );
 
-        return Container(
-          key: chipKey,
-          // Use provided GlobalKey (for last chip) or null
-          decoration: effectiveDecoration,
-          padding: const EdgeInsets.symmetric(
-            horizontal: MultiSelectConstants.kChipHorizontalPadding,
-            vertical: MultiSelectConstants.kChipVerticalPadding,
-          ),
-          margin: const EdgeInsets.only(
-            right: MultiSelectConstants.kChipMarginRight,),
-          child: Row(
-            key: rowKey, // Only first chip gets the key
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Text(
-                item.label,
-                style: (widget.fieldTextStyle ?? const TextStyle(
-                    fontSize: ItemDropperConstants.kDropdownItemFontSize))
-                    .copyWith(
-                  color: widget.enabled
-                      ? (widget.fieldTextStyle?.color ?? Colors.black)
-                      : Colors.grey.shade500,
-                ),
-              ),
-              if (widget.enabled)
-                Container(
-                  width: MultiSelectConstants.kChipDeleteButtonSize,
-                  height: MultiSelectConstants.kChipDeleteButtonSize,
-                  alignment: Alignment.center,
-                  child: GestureDetector(
-                    onTap: () {
-                      _removeChip(item);
-                    },
-                    child: Icon(Icons.close,
-                        size: MultiSelectConstants.kChipDeleteIconSize,
-                        color: Colors.grey.shade700),
+        return Semantics(
+          label: '${item.label}, selected',
+          button: true,
+          excludeSemantics: true,
+          child: Container(
+            key: chipKey,
+            // Use provided GlobalKey (for last chip) or null
+            decoration: effectiveDecoration,
+            padding: const EdgeInsets.symmetric(
+              horizontal: MultiSelectConstants.kChipHorizontalPadding,
+              vertical: MultiSelectConstants.kChipVerticalPadding,
+            ),
+            margin: const EdgeInsets.only(
+              right: MultiSelectConstants.kChipMarginRight,),
+            child: Row(
+              key: rowKey, // Only first chip gets the key
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text(
+                  item.label,
+                  style: (widget.fieldTextStyle ?? const TextStyle(
+                      fontSize: ItemDropperConstants.kDropdownItemFontSize))
+                      .copyWith(
+                    color: widget.enabled
+                        ? (widget.fieldTextStyle?.color ?? Colors.black)
+                        : Colors.grey.shade500,
                   ),
                 ),
-            ],
+                if (widget.enabled)
+                  Container(
+                    width: MultiSelectConstants.kChipDeleteButtonSize,
+                    height: MultiSelectConstants.kChipDeleteButtonSize,
+                    alignment: Alignment.center,
+                    child: GestureDetector(
+                      onTap: () {
+                        _removeChip(item);
+                      },
+                      child: Icon(Icons.close,
+                          size: MultiSelectConstants.kChipDeleteIconSize,
+                          color: Colors.grey.shade700),
+                    ),
+                  ),
+              ],
+            ),
           ),
         );
       },
@@ -1006,9 +1011,12 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       height: chipHeight, // Use measured chip height
       child: IgnorePointer(
         ignoring: !widget.enabled,
-        child: TextField(
-          controller: _searchController,
-          focusNode: _focusNode,
+        child: Semantics(
+          label: 'Search and add items',
+          textField: true,
+          child: TextField(
+            controller: _searchController,
+            focusNode: _focusNode,
           style: widget.fieldTextStyle ??
               const TextStyle(fontSize: ItemDropperConstants
                   .kDropdownItemFontSize),
@@ -1026,8 +1034,9 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
           enabled: widget.enabled,
           // Ensure TextField can receive focus
           autofocus: false,
-        ),
-      ),
+        ), // Close TextField
+        ), // Close Semantics
+      ), // Close IgnorePointer
     );
   }
 

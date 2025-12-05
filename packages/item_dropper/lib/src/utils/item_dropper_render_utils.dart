@@ -110,7 +110,12 @@ class ItemDropperRenderUtils {
     
     final bool isEnabled = item.isEnabled && !isGroupHeader;
 
-    return InkWell(
+    return Semantics(
+        label: item.label,
+        button: !isGroupHeader,
+        selected: isSelected,
+        excludeSemantics: true,
+        child: InkWell(
       hoverColor: Colors.transparent,
       onTap: isEnabled
           ? () {
@@ -140,8 +145,9 @@ class ItemDropperRenderUtils {
             child: itemContent,
           ),
         ),
-      ),
-    );
+      ), // Close SizedBox
+    ), // Close InkWell
+    ); // Close Semantics
   }
 
   /// Default popup row builder for dropdown items

@@ -797,14 +797,19 @@ Split into:
     - ✅ Added tests for error case
     - **See `HIGH_PRIORITY_2_COMPLETE.md` for details**
 
-3. **Add error callbacks**
-    - Allow parent to handle errors gracefully
-    - Provide user feedback for failures
+3. **Add error callbacks** ✅ **SKIPPED - NOT NEEDED**
+    - ✅ Analysis showed parent already has full control
+    - ✅ Errors are preventable by design (parent owns callbacks)
+    - ✅ Would add complexity without clear benefit
+    - **Recommendation: Document error handling patterns instead**
 
-4. **Improve accessibility**
-    - Add Semantics widgets
-    - Screen reader support
-    - Keyboard navigation announcements
+4. **Improve accessibility** ✅ **COMPLETE - MINIMAL**
+    - ✅ TextField labels added (both single & multi-select)
+    - ✅ Chip excludeSemantics (prevents confusing double-reading)
+    - ✅ Item selection state announced ("selected" / "not selected")
+    - ✅ All 164 tests still passing
+    - ⏭️ Future enhancements: position info, action hints, live announcements
+    - **See `HIGH_PRIORITY_4_COMPLETE.md` for details**
 
 ### Medium Priority
 

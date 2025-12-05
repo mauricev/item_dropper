@@ -715,9 +715,12 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
             width: widget.width,
             child: IgnorePointer(
               ignoring: !widget.enabled,
-              child: TextField(
-                key: widget.inputKey ?? _internalFieldKey,
-                controller: _controller,
+              child: Semantics(
+                label: 'Search dropdown',
+                textField: true,
+                child: TextField(
+                  key: widget.inputKey ?? _internalFieldKey,
+                  controller: _controller,
                 focusNode: _focusNode,
                 scrollController: _textScrollCtrl,
                 readOnly: !widget.showKeyboard,
@@ -802,11 +805,12 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
                   arrowButtonRightPosition: _arrowButtonRightPosition,
                   textSize: widget.fieldTextStyle?.fontSize ?? 12.0, // Pass font size
                 ),
-              ),
-            ),
-          ),
-        ),
-      ),
+              ), // Close InputDecoration
+                ), // Close TextField
+              ), // Close Semantics
+            ), // Close IgnorePointer
+          ), // Close SizedBox
+      ), // Close Container
     );
   }
 }
