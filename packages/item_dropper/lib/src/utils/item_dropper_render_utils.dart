@@ -197,7 +197,9 @@ class ItemDropperRenderUtils {
 
     final defaultItemStyle = const TextStyle(
         fontSize: ItemDropperConstants.kDropdownItemFontSize);
-    final TextStyle baseStyle = popupTextStyle ?? defaultItemStyle;
+    // Merge user's style with defaults - user's non-null values take precedence,
+    // but we ensure fontSize is always set
+    final TextStyle baseStyle = defaultItemStyle.merge(popupTextStyle);
     final bool isDisabled = !item.isEnabled;
     final TextStyle effectiveTextStyle = isDisabled
         ? baseStyle.copyWith(color: Colors.grey.shade400)
@@ -313,7 +315,7 @@ class ItemDropperRenderUtils {
                     .textTheme
                     .bodyMedium!
                     .copyWith(
-                  fontSize: ItemDropperConstants.kDropdownFontSize,
+                  fontSize: ItemDropperConstants.kDropdownItemFontSize,
                 ),
                 child: Scrollbar(
                   controller: scrollController,

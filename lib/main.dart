@@ -91,6 +91,25 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
   double chipFieldFontSize = 10.0; // Font size for chips and text field
   double itemFontSize = 10.0; // Font size for dropdown items
 
+  // Dropdown 14 (decoration customization) state
+  late final List<ItemDropperItem<String>> decorationTestItems;
+  List<ItemDropperItem<String>> selectedDecorationTestItems = [];
+
+  // Field decoration properties
+  Color fieldBorderColor = Colors.grey;
+  double fieldBorderWidth = 1.0;
+  double fieldBorderRadius = 8.0;
+  Color fieldBackgroundColor = Colors.white;
+
+  // Chip decoration properties
+  Color chipBackgroundColor = Colors.blue;
+  Color chipTextColor = Colors.white;
+  double chipBorderRadius = 4.0;
+
+  // Font family properties
+  String fieldFontFamily = 'Default';
+  String itemFontFamily = 'Default';
+
   // Generate dummy data
   late List<ItemDropperItem<String>> fruits;
   late final List<ItemDropperItem<String>> states;
@@ -302,6 +321,20 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
       ItemDropperItem(value: '16', label: '16'),
       ItemDropperItem(value: '18', label: '18'),
       ItemDropperItem(value: '20', label: '20'),
+    ];
+
+    // Dropdown 14: Decoration customization testing
+    decorationTestItems = const [
+      ItemDropperItem(value: 'alpha', label: 'Alpha'),
+      ItemDropperItem(value: 'beta', label: 'Beta'),
+      ItemDropperItem(value: 'gamma', label: 'Gamma'),
+      ItemDropperItem(value: 'delta', label: 'Delta'),
+      ItemDropperItem(value: 'epsilon', label: 'Epsilon'),
+      ItemDropperItem(value: 'zeta', label: 'Zeta'),
+      ItemDropperItem(value: 'eta', label: 'Eta'),
+      ItemDropperItem(value: 'theta', label: 'Theta'),
+      ItemDropperItem(value: 'iota', label: 'Iota'),
+      ItemDropperItem(value: 'kappa', label: 'Kappa'),
     ];
 
     // Initialize add-enabled dropdown with a few items
@@ -913,11 +946,363 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
 
                     const SizedBox(width: 32),
 
-                    // Fourth column: Empty for now
+                    // Fourth column: Decoration customization
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          // Decoration controls
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey.shade300),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.grey.shade200,
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Decoration Controls',
+                                  style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 16),
+
+                                // Field Border Color
+                                const Text('Field Border Color:',
+                                    style: TextStyle(fontSize: 12,
+                                        fontWeight: FontWeight.bold)),
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    _buildColorButton(
+                                        Colors.grey, fieldBorderColor, (color) {
+                                      setState(() => fieldBorderColor = color);
+                                    }),
+                                    _buildColorButton(
+                                        Colors.blue, fieldBorderColor, (color) {
+                                      setState(() => fieldBorderColor = color);
+                                    }),
+                                    _buildColorButton(
+                                        Colors.green, fieldBorderColor, (
+                                        color) {
+                                      setState(() => fieldBorderColor = color);
+                                    }),
+                                    _buildColorButton(
+                                        Colors.red, fieldBorderColor, (color) {
+                                      setState(() => fieldBorderColor = color);
+                                    }),
+                                    _buildColorButton(
+                                        Colors.orange, fieldBorderColor, (
+                                        color) {
+                                      setState(() => fieldBorderColor = color);
+                                    }),
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
+
+                                // Field Border Width
+                                const Text('Field Border Width:',
+                                    style: TextStyle(fontSize: 12,
+                                        fontWeight: FontWeight.bold)),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Slider(
+                                        value: fieldBorderWidth,
+                                        min: 0,
+                                        max: 5,
+                                        divisions: 10,
+                                        label: fieldBorderWidth.toStringAsFixed(
+                                            1),
+                                        onChanged: (value) {
+                                          setState(() =>
+                                          fieldBorderWidth = value);
+                                        },
+                                      ),
+                                    ),
+                                    Text('${fieldBorderWidth.toStringAsFixed(
+                                        1)}px'),
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
+
+                                // Field Border Radius
+                                const Text('Field Border Radius:',
+                                    style: TextStyle(fontSize: 12,
+                                        fontWeight: FontWeight.bold)),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Slider(
+                                        value: fieldBorderRadius,
+                                        min: 0,
+                                        max: 20,
+                                        divisions: 20,
+                                        label: fieldBorderRadius
+                                            .toStringAsFixed(0),
+                                        onChanged: (value) {
+                                          setState(() =>
+                                          fieldBorderRadius = value);
+                                        },
+                                      ),
+                                    ),
+                                    Text('${fieldBorderRadius.toStringAsFixed(
+                                        0)}px'),
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
+
+                                // Field Background Color
+                                const Text('Field Background:',
+                                    style: TextStyle(fontSize: 12,
+                                        fontWeight: FontWeight.bold)),
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    _buildColorButton(
+                                        Colors.white, fieldBackgroundColor, (
+                                        color) {
+                                      setState(() =>
+                                      fieldBackgroundColor = color);
+                                    }),
+                                    _buildColorButton(Colors.grey.shade100,
+                                        fieldBackgroundColor, (color) {
+                                          setState(() =>
+                                          fieldBackgroundColor = color);
+                                        }),
+                                    _buildColorButton(Colors.blue.shade50,
+                                        fieldBackgroundColor, (color) {
+                                          setState(() =>
+                                          fieldBackgroundColor = color);
+                                        }),
+                                    _buildColorButton(Colors.green.shade50,
+                                        fieldBackgroundColor, (color) {
+                                          setState(() =>
+                                          fieldBackgroundColor = color);
+                                        }),
+                                    _buildColorButton(Colors.amber.shade50,
+                                        fieldBackgroundColor, (color) {
+                                          setState(() =>
+                                          fieldBackgroundColor = color);
+                                        }),
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
+
+                                const Divider(),
+                                const SizedBox(height: 16),
+
+                                // Chip Background Color
+                                const Text('Chip Background:',
+                                    style: TextStyle(fontSize: 12,
+                                        fontWeight: FontWeight.bold)),
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    _buildColorButton(
+                                        Colors.blue, chipBackgroundColor, (
+                                        color) {
+                                      setState(() =>
+                                      chipBackgroundColor = color);
+                                    }),
+                                    _buildColorButton(
+                                        Colors.green, chipBackgroundColor, (
+                                        color) {
+                                      setState(() =>
+                                      chipBackgroundColor = color);
+                                    }),
+                                    _buildColorButton(
+                                        Colors.purple, chipBackgroundColor, (
+                                        color) {
+                                      setState(() =>
+                                      chipBackgroundColor = color);
+                                    }),
+                                    _buildColorButton(
+                                        Colors.orange, chipBackgroundColor, (
+                                        color) {
+                                      setState(() =>
+                                      chipBackgroundColor = color);
+                                    }),
+                                    _buildColorButton(
+                                        Colors.teal, chipBackgroundColor, (
+                                        color) {
+                                      setState(() =>
+                                      chipBackgroundColor = color);
+                                    }),
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
+
+                                // Chip Text Color
+                                const Text('Chip Text Color:',
+                                    style: TextStyle(fontSize: 12,
+                                        fontWeight: FontWeight.bold)),
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    _buildColorButton(
+                                        Colors.white, chipTextColor, (color) {
+                                      setState(() => chipTextColor = color);
+                                    }),
+                                    _buildColorButton(
+                                        Colors.black, chipTextColor, (color) {
+                                      setState(() => chipTextColor = color);
+                                    }),
+                                    _buildColorButton(
+                                        Colors.blue.shade900, chipTextColor, (
+                                        color) {
+                                      setState(() => chipTextColor = color);
+                                    }),
+                                    _buildColorButton(
+                                        Colors.green.shade900, chipTextColor, (
+                                        color) {
+                                      setState(() => chipTextColor = color);
+                                    }),
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
+
+                                // Chip Border Radius
+                                const Text('Chip Border Radius:',
+                                    style: TextStyle(fontSize: 12,
+                                        fontWeight: FontWeight.bold)),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Slider(
+                                        value: chipBorderRadius,
+                                        min: 0,
+                                        max: 20,
+                                        divisions: 20,
+                                        label: chipBorderRadius.toStringAsFixed(
+                                            0),
+                                        onChanged: (value) {
+                                          setState(() =>
+                                          chipBorderRadius = value);
+                                        },
+                                      ),
+                                    ),
+                                    Text('${chipBorderRadius.toStringAsFixed(
+                                        0)}px'),
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
+
+                                const Divider(),
+                                const SizedBox(height: 16),
+
+                                // Field/Chip Font Family
+                                const Text('Field/Chip Font:',
+                                    style: TextStyle(fontSize: 12,
+                                        fontWeight: FontWeight.bold)),
+                                const SizedBox(height: 8),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: [
+                                    _buildFontButton(
+                                        'Default', fieldFontFamily, (font) {
+                                      setState(() => fieldFontFamily = font);
+                                    }),
+                                    _buildFontButton(
+                                        'Courier', fieldFontFamily, (font) {
+                                      setState(() => fieldFontFamily = font);
+                                    }),
+                                    _buildFontButton(
+                                        'Times', fieldFontFamily, (font) {
+                                      setState(() => fieldFontFamily = font);
+                                    }),
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
+
+                                // Item Font Family
+                                const Text('Item Font:',
+                                    style: TextStyle(fontSize: 12,
+                                        fontWeight: FontWeight.bold)),
+                                const SizedBox(height: 8),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: [
+                                    _buildFontButton(
+                                        'Default', itemFontFamily, (font) {
+                                      setState(() => itemFontFamily = font);
+                                    }),
+                                    _buildFontButton(
+                                        'Courier', itemFontFamily, (font) {
+                                      setState(() => itemFontFamily = font);
+                                    }),
+                                    _buildFontButton(
+                                        'Times', itemFontFamily, (font) {
+                                      setState(() => itemFontFamily = font);
+                                    }),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(height: 32),
+
+                          // Dropdown 14: Decoration testing
+                          _buildMultiDropdownSection(
+                            title: '14. Decoration Testing (10 items)',
+                            description:
+                            'Multi-select with customizable field and chip decorations. Use controls above.',
+                            selectedValues: selectedDecorationTestItems.map((
+                                e) => e.label).join(', '),
+                            dropdown: multiDropDown<String>(
+                              width: 500,
+                              listItems: decorationTestItems,
+                              initiallySelected: selectedDecorationTestItems,
+                              onChanged: (items) {
+                                setState(() {
+                                  selectedDecorationTestItems = items;
+                                });
+                              },
+                              hintText: 'Select items...',
+                              maxDropdownHeight: 250,
+                              fieldDecoration: BoxDecoration(
+                                color: fieldBackgroundColor,
+                                border: Border.all(
+                                  color: fieldBorderColor,
+                                  width: fieldBorderWidth,
+                                ),
+                                borderRadius: BorderRadius.circular(
+                                    fieldBorderRadius),
+                              ),
+                              selectedChipDecoration: BoxDecoration(
+                                color: chipBackgroundColor,
+                                borderRadius: BorderRadius.circular(
+                                    chipBorderRadius),
+                              ),
+                              fieldTextStyle: TextStyle(
+                                fontSize: 10,
+                                // Use internal default for consistent sizing
+                                color: chipTextColor,
+                                fontFamily: fieldFontFamily == 'Default'
+                                    ? null
+                                    : fieldFontFamily,
+                              ),
+                              popupTextStyle: TextStyle(
+                                // fontSize NOT specified - let default (10.0) apply
+                                fontFamily: itemFontFamily == 'Default'
+                                    ? null
+                                    : itemFontFamily,
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -1035,6 +1420,54 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
             ),
           ],
         ],
+      ),
+    );
+  }
+
+  Widget _buildColorButton(Color color, Color currentColor,
+      Function(Color) onTap) {
+    final bool isSelected = color == currentColor;
+    return GestureDetector(
+      onTap: () => onTap(color),
+      child: Container(
+        width: 32,
+        height: 32,
+        margin: const EdgeInsets.only(right: 8),
+        decoration: BoxDecoration(
+          color: color,
+          border: Border.all(
+            color: isSelected ? Colors.black : Colors.grey.shade400,
+            width: isSelected ? 3 : 1,
+          ),
+          borderRadius: BorderRadius.circular(4),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFontButton(String fontName, String currentFont,
+      Function(String) onTap) {
+    final bool isSelected = fontName == currentFont;
+    return GestureDetector(
+      onTap: () => onTap(fontName),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.blue : Colors.grey.shade200,
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(
+            color: isSelected ? Colors.blue.shade700 : Colors.grey.shade400,
+            width: 1,
+          ),
+        ),
+        child: Text(
+          fontName,
+          style: TextStyle(
+            color: isSelected ? Colors.white : Colors.black87,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            fontFamily: fontName == 'Default' ? null : fontName,
+          ),
+        ),
       ),
     );
   }
