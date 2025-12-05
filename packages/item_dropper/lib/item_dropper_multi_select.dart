@@ -5,6 +5,7 @@ import 'package:item_dropper/src/multi/chip_measurement_helper.dart';
 import 'package:item_dropper/src/multi/multi_select_constants.dart';
 import 'package:item_dropper/src/multi/multi_select_focus_manager.dart';
 import 'package:item_dropper/src/multi/multi_select_layout_calculator.dart';
+import 'package:item_dropper/src/multi/multi_select_selection_manager.dart';
 import 'package:item_dropper/src/multi/smartwrap.dart' show SmartWrapWithFlexibleLast;
 import 'package:item_dropper/src/utils/item_dropper_add_item_utils.dart';
 import 'package:item_dropper/src/utils/dropdown_position_calculator.dart';
@@ -119,9 +120,9 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   final LayerLink _layerLink = LayerLink();
   final OverlayPortalController _overlayController = OverlayPortalController();
 
-  List<ItemDropperItem<T>> _selected = [];
-  // Set for O(1) lookups - kept in sync with _selected
-  Set<T> _selectedValues = {};
+  // Selection manager handles selected items state
+  late final MultiSelectSelectionManager<T> _selectionManager;
+
   int _keyboardHighlightIndex = ItemDropperConstants.kNoHighlight;
   int _hoverIndex = ItemDropperConstants.kNoHighlight;
   
@@ -164,8 +165,19 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       onFocusChanged: _handleFocusChange,
     );
 
-    _selected = List.from(widget.selectedItems);
-    _selectedValues = _selected.map((item) => item.value).toSet();
+    // Initialize selection manager with callbacks
+    _selectionManager = MultiSelectSelectionManager<T>(
+      maxSelected: widget.maxSelected,
+      onSelectionChanged: () {
+        // Selection changed - will notify parent via _handleSelectionChange
+      },
+      onFilterCacheInvalidated: () {
+        _filterUtils.clearCache();
+        _invalidateFilteredCache();
+      },
+    );
+    _selectionManager.syncItems(widget.selectedItems);
+
     _filterUtils.initializeItems(widget.items);
 
     _focusNode.onKeyEvent = _handleKeyEvent;
@@ -173,21 +185,21 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
 
   List<ItemDropperItem<T>> get _filtered {
     final String currentSearchText = _searchController.text;
-    final int currentSelectedCount = _selected.length;
-    
+    final int currentSelectedCount = _selectionManager.selectedCount;
+
     // Return cached result if search text and selected count haven't changed
     if (_cachedFilteredItems != null &&
         _lastFilteredSearchText == currentSearchText &&
         _lastFilteredSelectedCount == currentSelectedCount) {
       return _cachedFilteredItems!;
     }
-    
+
     // Filter out already selected items - use existing Set for O(1) lookups
     final result = _filterUtils.getFiltered(
       widget.items,
       currentSearchText,
       isUserEditing: true, // always filter in multi-select
-      excludeValues: _selectedValues,
+      excludeValues: _selectionManager.selectedValues,
     );
 
     // Add "add item" row if no matches, search text exists, and callback is provided
@@ -213,48 +225,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     _lastFilteredSelectedCount = -1;
   }
 
-  bool _isSelected(ItemDropperItem<T> item) {
-    return _selectedValues.contains(item.value);
-  }
 
-  /// Add an item to the selection (keeps both List and Set in sync)
-  void _addSelectedItem(ItemDropperItem<T> item) {
-    if (!_selectedValues.contains(item.value)) {
-      _selected.add(item);
-      _selectedValues.add(item.value);
-      // Clear filter caches since excludeValues changed
-      _filterUtils.clearCache();
-      _invalidateFilteredCache();
-    }
-  }
-
-  /// Remove an item from the selection (keeps both List and Set in sync)
-  void _removeSelectedItem(T value) {
-    if (_selectedValues.contains(value)) {
-      _selected.removeWhere((item) => item.value == value);
-      _selectedValues.remove(value);
-      // Clear filter caches since excludeValues changed
-      _filterUtils.clearCache();
-      _invalidateFilteredCache();
-    }
-  }
-
-  /// Sync selected items from external source (keeps both List and Set in sync)
-  void _syncSelectedItems(List<ItemDropperItem<T>> items) {
-    _selected = List.from(items);
-    _selectedValues = _selected.map((item) => item.value).toSet();
-  }
-
-  /// Check if maxSelected limit has been reached
-  bool _isMaxSelectedReached() {
-    return widget.maxSelected != null && 
-           _selected.length >= widget.maxSelected!;
-  }
-
-  /// Check if below maxSelected limit (or no limit set)
-  bool _isBelowMaxSelected() {
-    return widget.maxSelected == null || _selected.length < widget.maxSelected!;
-  }
 
   void _clearHighlights() {
     _keyboardHighlightIndex = ItemDropperConstants.kNoHighlight;
@@ -278,7 +249,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   }
 
   void _showOverlayIfFocusedAndBelowMax() {
-    if (_focusManager.isFocused && _isBelowMaxSelected()) {
+    if (_focusManager.isFocused && _selectionManager.isBelowMax()) {
       final filtered = _filtered;
       if (!_overlayController.isShowing && filtered.isNotEmpty) {
         _clearHighlights();
@@ -331,7 +302,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     // Use manual focus state for overlay logic
     if (_focusManager.isFocused) {
       // Don't show overlay if maxSelected is reached
-      if (_isMaxSelectedReached()) {
+      if (_selectionManager.isMaxReached()) {
         return;
       }
 
@@ -341,9 +312,9 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         if (!mounted || !_focusManager.isFocused) {
           return;
         }
-        
+
         // Check again if maxSelected is reached (might have changed)
-        if (_isMaxSelectedReached()) {
+        if (_selectionManager.isMaxReached()) {
           return;
         }
         
@@ -458,12 +429,12 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
           // Note: The parent should update widget.items to include the new item
           // For now, we'll just select it and let the parent handle adding to the list
           _updateSelection(() {
-            _addSelectedItem(newItem);
+            _selectionManager.addItem(newItem);
             _measurements.totalChipWidth = null;
             _searchController.clear();
-            
+
             // If we just reached the max, close the overlay
-            if (_isMaxSelectedReached()) {
+            if (_selectionManager.isMaxReached()) {
               _hideOverlayIfNeeded();
             }
           });
@@ -471,14 +442,14 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       }
       return;
     }
-    
+
     // Manual focus management - maintain focus state when clicking overlay items
     // Don't let Flutter lose focus - we control it manually
-    
-    final bool isCurrentlySelected = _isSelected(item);
-    
+
+    final bool isCurrentlySelected = _selectionManager.isSelected(item);
+
     // If maxSelected is set and already reached, only allow removal (toggle off)
-    if (_isMaxSelectedReached() && !isCurrentlySelected) {
+    if (_selectionManager.isMaxReached() && !isCurrentlySelected) {
       // Block adding new items when max is reached
       // Close the overlay and keep it closed
       if (_overlayController.isShowing) {
@@ -487,33 +458,33 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       return;
     }
     // Allow removing items even when max is reached (toggle behavior)
-    
+
     _updateSelection(() {
-      final bool wasAtMax = _isMaxSelectedReached();
-      
+      final bool wasAtMax = _selectionManager.isMaxReached();
+
       if (!isCurrentlySelected) {
-        _addSelectedItem(item);
-        
+        _selectionManager.addItem(item);
+
         // Reset totalChipWidth when selection count changes - will be remeasured correctly
         _measurements.totalChipWidth = null;
-        
+
         // Clear search text after selection for continued searching
         _searchController.clear();
-        
+
         // If we just reached the max, close the overlay
-        if (_isMaxSelectedReached()) {
+        if (_selectionManager.isMaxReached()) {
           _hideOverlayIfNeeded();
         }
       } else {
         // Item is already selected, remove it (toggle off)
-        _removeSelectedItem(item.value);
-        
+        _selectionManager.removeItem(item.value);
+
         // Reset totalChipWidth when selection count changes - will be remeasured correctly
         _measurements.totalChipWidth = null;
-        
+
         // FIX: Show overlay again if we're below maxSelected after removal
         // This handles the case where user removes an item after reaching max
-        if (wasAtMax && _isBelowMaxSelected() && _focusManager.isFocused) {
+        if (wasAtMax && _selectionManager.isBelowMax() && _focusManager.isFocused) {
           _showOverlayIfFocusedAndBelowMax();
         }
       }
@@ -531,7 +502,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     _handleSelectionChange(
       stateUpdate: () {
         // Update selection inside the rebuild callback
-        _removeSelectedItem(item.value);
+        _selectionManager.removeItem(item.value);
 
         // Reset totalChipWidth when selection count changes - will be remeasured correctly
         _measurements.totalChipWidth = null;
@@ -589,9 +560,9 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     }
 
     // If the item is currently selected, remove it from the selection.
-    if (_selectedValues.contains(item.value)) {
+    if (_selectionManager.isSelected(item)) {
       _safeSetState(() {
-        _removeSelectedItem(item.value);
+        _selectionManager.removeItem(item.value);
       });
     }
 
@@ -682,7 +653,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
 
   void _handleTextChanged(String value) {
     // Don't show overlay if maxSelected is reached
-    if (_isMaxSelectedReached()) {
+    if (_selectionManager.isMaxReached()) {
       _hideOverlayIfNeeded();
       return;
     }
@@ -763,7 +734,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         // Notify parent of change
-        widget.onChanged(List.from(_selected));
+        widget.onChanged(_selectionManager.selected);
         
         // Clear the internal change flag after parent's didUpdateWidget has run
         // (which happens synchronously when onChanged triggers parent rebuild)
@@ -790,8 +761,9 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     }
     
     // Sync selected items if parent changed them (and we didn't cause the change)
-    if (!_isInternalSelectionChange && !_areItemsEqual(widget.selectedItems, _selected)) {
-      _syncSelectedItems(widget.selectedItems);
+    if (!_isInternalSelectionChange && !_areItemsEqual(widget.selectedItems, _selectionManager
+        .selected)) {
+      _selectionManager.syncItems(widget.selectedItems);
       // Don't trigger rebuild here if we're already rebuilding
       // Parent change will be reflected in the current rebuild cycle
       _requestRebuildIfNotScheduled();
@@ -896,7 +868,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
               runSpacing: MultiSelectConstants.chipSpacing,
               children: [
                 // Selected chips
-                ..._selected.map((item) =>
+                ..._selectionManager.selected.map((item) =>
                     Container(
                       key: ValueKey('chip_${item.value}'),
                       // Unique key for each chip
@@ -914,7 +886,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
 
   Widget _buildChip(ItemDropperItem<T> item, [GlobalKey? chipKey, Key? valueKey]) {
     // Only measure the first chip (index 0) to avoid GlobalKey conflicts
-    final bool isFirstChip = _selected.isNotEmpty && _selected.first.value == item.value;
+    final bool isFirstChip = _selectionManager.selected.isNotEmpty &&
+        _selectionManager.selected.first.value == item.value;
     final GlobalKey? rowKey = isFirstChip ? _measurements.chipRowKey : null;
     
     return LayoutBuilder(
@@ -1116,7 +1089,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       // Not needed for simple height measurement
       lastChipContext: null,
       // Not needed for simple height measurement
-      selectedCount: _selected.length,
+      selectedCount: _selectionManager.selectedCount,
       chipSpacing: MultiSelectConstants.chipSpacing,
       minTextFieldWidth: MultiSelectConstants.minTextFieldWidth,
       calculatedTextFieldWidth: null,
@@ -1135,7 +1108,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       scrollController: _scrollController,
       layerLink: _layerLink,
       isSelected: (ItemDropperItem<T> item) =>
-          _selectedValues.contains(item.value),
+          _selectionManager.isSelected(item),
       builder: (BuildContext builderContext, ItemDropperItem<T> item,
           bool isSelected) {
         return ItemDropperRenderUtils.buildDropdownItemWithHover<T>(
