@@ -265,12 +265,29 @@ class ItemDropperRenderUtils {
     // Use actual measured field width to ensure overlay matches field width exactly
     // This accounts for borders, padding, and any layout differences
     final double actualFieldWidth = inputBox.size.width;
-    
-    final DropdownPositionResult position = DropdownPositionCalculator.calculate(
+
+    // Calculate the effective item height
+    final double effectiveItemHeight = itemHeight ??
+        ItemDropperConstants.kDropdownItemHeight;
+
+    // Calculate the ideal max height:
+    // 1. Start with maxDropdownHeight (or 200 if not provided)
+    // 2. Adjust to be a multiple of itemHeight
+    // 3. Truncate if there are fewer items than would fill the height
+    final double requestedMaxHeight = maxDropdownHeight;
+    final int maxVisibleItems = (requestedMaxHeight / effectiveItemHeight)
+        .floor();
+    final int actualVisibleItems = maxVisibleItems < items.length
+        ? maxVisibleItems
+        : items.length;
+    final double adjustedMaxHeight = actualVisibleItems * effectiveItemHeight;
+
+    final DropdownPositionResult position = DropdownPositionCalculator
+        .calculate(
       context: context,
       inputBox: inputBox,
       inputFieldHeight: inputFieldHeight,
-      maxDropdownHeight: maxDropdownHeight,
+      maxDropdownHeight: adjustedMaxHeight,
     );
 
     return CompositedTransformFollower(
@@ -306,8 +323,7 @@ class ItemDropperRenderUtils {
                     controller: scrollController,
                     padding: EdgeInsets.zero,
                     itemCount: items.length,
-                    itemExtent: itemHeight ??
-                        ItemDropperConstants.kDropdownItemHeight,
+                    itemExtent: effectiveItemHeight,
                     itemBuilder: (c, i) {
                       final item = items[i];
 
