@@ -19,7 +19,6 @@ class MultiSelectConstants {
   
   // TextField constraints
   static const double minTextFieldWidth = 100.0;
-  static const double defaultFontSize = 10.0;
   static const double textLineHeightMultiplier = 1.2;
   static const double textFieldPaddingOffset = 6.0; // Offset for text alignment
   

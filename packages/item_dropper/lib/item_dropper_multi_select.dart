@@ -961,7 +961,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
               _measurements.measureChip(
                 context: context,
                 rowKey: rowKey,
-                textSize: widget.fieldTextStyle?.fontSize ?? MultiSelectConstants.defaultFontSize,
+                textSize: widget.fieldTextStyle?.fontSize ??
+                    ItemDropperConstants.kDropdownItemFontSize,
                 chipVerticalPadding: MultiSelectConstants.chipVerticalPadding,
                 requestRebuild: _requestRebuild,
               );
@@ -1001,8 +1002,10 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
             children: [
               Text(
                 item.label,
-                style: (widget.fieldTextStyle ?? const TextStyle(fontSize: MultiSelectConstants.defaultFontSize)).copyWith(
-                  color: widget.enabled 
+                style: (widget.fieldTextStyle ?? const TextStyle(
+                    fontSize: ItemDropperConstants.kDropdownItemFontSize))
+                    .copyWith(
+                  color: widget.enabled
                       ? (widget.fieldTextStyle?.color ?? Colors.black)
                       : Colors.grey.shade500,
                 ),
@@ -1033,7 +1036,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       fontSize: widget.fieldTextStyle?.fontSize,
       chipVerticalPadding: MultiSelectConstants.chipVerticalPadding,
     );
-    final double fontSize = widget.fieldTextStyle?.fontSize ?? MultiSelectConstants.defaultFontSize;
+    final double fontSize = widget.fieldTextStyle?.fontSize ??
+        ItemDropperConstants.kDropdownItemFontSize;
     final padding = _calculateTextFieldPadding(
       chipHeight: chipHeight,
       fontSize: fontSize,
@@ -1051,7 +1055,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         child: TextField(
           controller: _searchController,
           focusNode: _focusNode,
-          style: widget.fieldTextStyle ?? const TextStyle(fontSize: MultiSelectConstants.defaultFontSize),
+          style: widget.fieldTextStyle ?? const TextStyle(fontSize: ItemDropperConstants
+              .kDropdownItemFontSize),
           decoration: InputDecoration(
             contentPadding: EdgeInsets.only(
               right: fontSize * MultiSelectConstants.textLineHeightMultiplier,
@@ -1088,9 +1093,9 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     // - Otherwise, calculate from popupTextStyle
     double calculateItemHeightFromStyle() {
       final TextStyle resolvedStyle = widget.popupTextStyle ??
-          const TextStyle(fontSize: MultiSelectConstants.defaultFontSize);
+          const TextStyle(fontSize: ItemDropperConstants.kDropdownItemFontSize);
       final double fontSize = resolvedStyle.fontSize ??
-          MultiSelectConstants.defaultFontSize;
+          ItemDropperConstants.kDropdownItemFontSize;
       final double lineHeight = fontSize * (resolvedStyle.height ??
           MultiSelectConstants.textLineHeightMultiplier);
       return lineHeight +
@@ -1219,7 +1224,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
             ),
             child: Text(
               MultiSelectConstants.emptyStateMessage,
-              style: (widget.popupTextStyle ?? widget.fieldTextStyle ?? const TextStyle(fontSize: MultiSelectConstants.defaultFontSize)).copyWith(
+              style: (widget.popupTextStyle ?? widget.fieldTextStyle ?? const TextStyle(fontSize: ItemDropperConstants
+                  .kDropdownItemFontSize)).copyWith(
                 color: Colors.grey.shade600,
               ),
             ),
