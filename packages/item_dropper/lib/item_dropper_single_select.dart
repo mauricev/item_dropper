@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:item_dropper/src/common/item_dropper_common.dart';
 import 'package:item_dropper/src/utils/item_dropper_add_item_utils.dart';
+import 'package:item_dropper/src/single/single_select_constants.dart';
 
 /// Single-select dropdown widget
 /// Allows selecting a single item from a searchable list
@@ -70,8 +71,8 @@ class SingleItemDropper<T> extends StatefulWidget {
     required this.onChanged,
     this.popupItemBuilder,
     required this.width,
-    this.maxDropdownHeight = 200.0,
-    this.elevation = 4.0,
+    this.maxDropdownHeight = SingleSelectConstants.kDefaultMaxDropdownHeight,
+    this.elevation = ItemDropperConstants.kDropdownElevation,
     this.showKeyboard = false,
     this.fieldTextStyle,
     this.popupTextStyle,
@@ -98,17 +99,6 @@ enum DropdownInteractionState {
 }
 
 class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
-  // UI Layout Constants
-  static const double _containerBorderRadius = 8.0;
-  static const double _textFieldVerticalPadding = 2.0;
-  static const double _textFieldHorizontalPadding = 12.0;
-  static const double _suffixIconWidth = 60.0;
-  static const double _iconSize = 16.0;
-  static const double _iconButtonSize = 24.0;
-  static const double _clearButtonRightPosition = 40.0;
-  static const double _arrowButtonRightPosition = 10.0;
-  static const double _scrollResetPosition = 0.0;
-
   final GlobalKey _internalFieldKey = GlobalKey();
   late final TextEditingController _controller;
   late final ScrollController _scrollController;
@@ -199,7 +189,7 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && _textScrollCtrl.hasClients) {
           try {
-            _textScrollCtrl.jumpTo(_scrollResetPosition);
+            _textScrollCtrl.jumpTo(SingleSelectConstants.kScrollResetPosition);
           } catch (_) {
             // no-op: jumpTo can throw if the position isn't attached yet
           }
@@ -399,15 +389,17 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
     final List<ItemDropperItem<T>> filteredItems = _filtered;
     if (_keyboardHighlightIndex >= 0 &&
         _keyboardHighlightIndex < filteredItems.length) {
-      final ItemDropperItem<T> selectedItem = filteredItems[_keyboardHighlightIndex];
+      final ItemDropperItem<
+          T> selectedItem = filteredItems[_keyboardHighlightIndex];
       // Skip group headers
       if (selectedItem.isGroupHeader) {
         return;
       }
-      
+
       // Handle add item selection
       if (ItemDropperAddItemUtils.isAddItem(selectedItem, widget.items)) {
-        final String searchText = ItemDropperAddItemUtils.extractSearchTextFromAddItem(selectedItem);
+        final String searchText = ItemDropperAddItemUtils
+            .extractSearchTextFromAddItem(selectedItem);
         if (searchText.isNotEmpty && widget.onAddItem != null) {
           final ItemDropperItem<T>? newItem = widget.onAddItem!(searchText);
           if (newItem != null) {
@@ -422,7 +414,7 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
         }
         return;
       }
-      
+
       _withSquelch(() {
         _controller.text = selectedItem.label;
         _controller.selection = const TextSelection.collapsed(offset: 0);
@@ -492,19 +484,23 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
       // No keyboard navigation, check for single item auto-select
       final filteredList = _filtered;
       // Find first selectable item
-      final selectableItems = filteredList.where((item) => !item.isGroupHeader).toList();
+      final selectableItems = filteredList
+          .where((item) => !item.isGroupHeader)
+          .toList();
       if (selectableItems.length == 1) {
         final item = selectableItems.first;
-        
+
         // Handle add item selection
         if (ItemDropperAddItemUtils.isAddItem(item, widget.items)) {
-          final String searchText = ItemDropperAddItemUtils.extractSearchTextFromAddItem(item);
+          final String searchText = ItemDropperAddItemUtils
+              .extractSearchTextFromAddItem(item);
           if (searchText.isNotEmpty && widget.onAddItem != null) {
             final ItemDropperItem<T>? newItem = widget.onAddItem!(searchText);
             if (newItem != null) {
               _withSquelch(() {
                 _controller.text = newItem.label;
-                _controller.selection = const TextSelection.collapsed(offset: 0);
+                _controller.selection =
+                const TextSelection.collapsed(offset: 0);
               });
               _setSelected(newItem);
               _isUserEditing = false;
@@ -513,7 +509,7 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
           }
           return;
         }
-        
+
         _withSquelch(() {
           _controller.text = item.label;
           _controller.selection = const TextSelection.collapsed(offset: 0);
@@ -544,7 +540,7 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
   Widget _buildDropdownOverlay() {
     // Don't build overlay if disabled
     if (!widget.enabled) return const SizedBox.shrink();
-    
+
     final List<ItemDropperItem<T>> filteredItems = _filtered;
 
     // Get the input field's context for proper positioning
@@ -577,17 +573,20 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
             if (item.isGroupHeader) {
               return;
             }
-            
+
             // Handle add item selection
             if (ItemDropperAddItemUtils.isAddItem(item, widget.items)) {
-              final String searchText = ItemDropperAddItemUtils.extractSearchTextFromAddItem(item);
+              final String searchText = ItemDropperAddItemUtils
+                  .extractSearchTextFromAddItem(item);
               if (searchText.isNotEmpty && widget.onAddItem != null) {
-                final ItemDropperItem<T>? newItem = widget.onAddItem!(searchText);
+                final ItemDropperItem<T>? newItem = widget.onAddItem!(
+                    searchText);
                 if (newItem != null) {
                   // Select the new item
                   _withSquelch(() {
                     _controller.text = newItem.label;
-                    _controller.selection = const TextSelection.collapsed(offset: 0);
+                    _controller.selection =
+                    const TextSelection.collapsed(offset: 0);
                   });
                   _setSelected(newItem);
                   _isUserEditing = false;
@@ -596,7 +595,7 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
               }
               return;
             }
-            
+
             _withSquelch(() {
               _controller.text = item.label;
               _controller.selection =
@@ -606,11 +605,13 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
             _dismissDropdown();
           },
           customBuilder: widget.popupItemBuilder ??
-              (context, item, isSelected) {
-                final int itemIndex = filteredItems.indexWhere((x) => x.value == item.value);
+                  (context, item, isSelected) {
+                final int itemIndex = filteredItems.indexWhere((x) =>
+                x.value == item.value);
                 final bool hasPrevious = itemIndex > 0;
-                final bool previousIsGroupHeader = hasPrevious && filteredItems[itemIndex - 1].isGroupHeader;
-                
+                final bool previousIsGroupHeader = hasPrevious &&
+                    filteredItems[itemIndex - 1].isGroupHeader;
+
                 return ItemDropperRenderUtils.defaultDropdownPopupItemBuilder(
                   context,
                   item,
@@ -684,7 +685,7 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted && _textScrollCtrl.hasClients) {
             try {
-              _textScrollCtrl.jumpTo(_scrollResetPosition);
+              _textScrollCtrl.jumpTo(SingleSelectConstants.kScrollResetPosition);
             } catch (_) {}
           }
         });
@@ -709,7 +710,8 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
             ),
-            borderRadius: BorderRadius.circular(_containerBorderRadius),
+            borderRadius: BorderRadius.circular(
+                SingleSelectConstants.kContainerBorderRadius),
           ),
           child: SizedBox(
             width: widget.width,
@@ -726,7 +728,8 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
                 readOnly: !widget.showKeyboard,
                 showCursor: true,
                 enableInteractiveSelection: false,
-                style: (widget.fieldTextStyle ?? const TextStyle(fontSize: 12.0)).copyWith(
+                style: (widget.fieldTextStyle ?? const TextStyle(fontSize: SingleSelectConstants
+                    .kFieldFontSize)).copyWith(
                   color: widget.enabled 
                       ? (widget.fieldTextStyle?.color ?? Colors.black)
                       : Colors.grey,
@@ -772,13 +775,14 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
                 ),
                 isDense: true,
                 contentPadding: const EdgeInsets.symmetric(
-                  vertical: _textFieldVerticalPadding,
-                  horizontal: _textFieldHorizontalPadding,
+                  vertical: SingleSelectConstants.kTextFieldVerticalPadding,
+                  horizontal: SingleSelectConstants.kTextFieldHorizontalPadding,
                 ),
                 suffixIconConstraints: BoxConstraints.tightFor(
-                  width: _suffixIconWidth,
-                  height: (widget.fieldTextStyle?.fontSize ?? 12.0) *
-                      3.2, // Match calculated suffix icon height
+                  width: SingleSelectConstants.kSuffixIconWidth,
+                  height: (widget.fieldTextStyle?.fontSize ??
+                      SingleSelectConstants.kFieldFontSize) *
+                      ItemDropperConstants.kSuffixIconHeightMultiplier,
                 ),
                 suffixIcon: ItemDropperSuffixIcons(
                   isDropdownShowing: _overlayController.isShowing,
@@ -798,12 +802,15 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
                       _focusNode.requestFocus();
                     }
                   },
-                  iconSize: _iconSize,
-                  suffixIconWidth: _suffixIconWidth,
-                  iconButtonSize: _iconButtonSize,
-                  clearButtonRightPosition: _clearButtonRightPosition,
-                  arrowButtonRightPosition: _arrowButtonRightPosition,
-                  textSize: widget.fieldTextStyle?.fontSize ?? 12.0, // Pass font size
+                  iconSize: SingleSelectConstants.kIconSize,
+                  suffixIconWidth: SingleSelectConstants.kSuffixIconWidth,
+                  iconButtonSize: SingleSelectConstants.kIconButtonSize,
+                  clearButtonRightPosition: SingleSelectConstants
+                      .kClearButtonRightPosition,
+                  arrowButtonRightPosition: SingleSelectConstants
+                      .kArrowButtonRightPosition,
+                  textSize: widget.fieldTextStyle?.fontSize ??
+                      SingleSelectConstants.kFieldFontSize,
                 ),
               ), // Close InputDecoration
                 ), // Close TextField

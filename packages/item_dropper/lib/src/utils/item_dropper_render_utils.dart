@@ -256,7 +256,7 @@ class ItemDropperRenderUtils {
     required bool Function(ItemDropperItem<T>) isSelected,
     required Widget Function(BuildContext, ItemDropperItem<T>, bool) builder,
     bool showScrollbar = true,
-    double scrollbarThickness = 6.0,
+    double scrollbarThickness = ItemDropperConstants.kDefaultScrollbarThickness,
     double? itemHeight, // Optional item height parameter
     double? preferredFieldHeight, // Use this height if provided (for accurate positioning during layout changes)
   }) {

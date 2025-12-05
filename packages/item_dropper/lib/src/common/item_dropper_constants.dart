@@ -27,4 +27,7 @@ class ItemDropperConstants {
 
   // Suffix icon constants
   static const double kSuffixIconHeightMultiplier = 3.2;
+
+  // Scrollbar constants
+  static const double kDefaultScrollbarThickness = 6.0;
 }

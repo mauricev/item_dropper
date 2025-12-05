@@ -92,10 +92,10 @@ class MultiItemDropper<T> extends StatefulWidget {
     this.fieldTextStyle,
     this.popupTextStyle,
     this.popupGroupHeaderStyle,
-    this.maxDropdownHeight = 300.0,
+    this.maxDropdownHeight = MultiSelectConstants.kDefaultMaxDropdownHeight,
     this.maxSelected,
     this.showScrollbar = true,
-    this.scrollbarThickness = 6.0,
+    this.scrollbarThickness = ItemDropperConstants.kDefaultScrollbarThickness,
     this.itemHeight, // Optional item height
     this.popupItemBuilder,
     this.elevation,

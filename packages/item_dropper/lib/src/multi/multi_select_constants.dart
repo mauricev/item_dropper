@@ -35,6 +35,6 @@ class MultiSelectConstants {
   static const int kListComparisonThreshold = 10;
 
   // Default dropdown height
-  static const double kDefaultMaxDropdownHeight = 200.0;
+  static const double kDefaultMaxDropdownHeight = 300.0;
 }
 
