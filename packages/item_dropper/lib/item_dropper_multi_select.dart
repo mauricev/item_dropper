@@ -5,6 +5,7 @@ import 'package:item_dropper/src/multi/chip_measurement_helper.dart';
 import 'package:item_dropper/src/multi/multi_select_constants.dart';
 import 'package:item_dropper/src/multi/multi_select_focus_manager.dart';
 import 'package:item_dropper/src/multi/multi_select_layout_calculator.dart';
+import 'package:item_dropper/src/multi/multi_select_overlay_manager.dart';
 import 'package:item_dropper/src/multi/multi_select_selection_manager.dart';
 import 'package:item_dropper/src/multi/smartwrap.dart' show SmartWrapWithFlexibleLast;
 import 'package:item_dropper/src/utils/item_dropper_add_item_utils.dart';
@@ -123,6 +124,9 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   // Selection manager handles selected items state
   late final MultiSelectSelectionManager<T> _selectionManager;
 
+  // Overlay manager handles overlay visibility
+  late final MultiSelectOverlayManager _overlayManager;
+
   int _keyboardHighlightIndex = ItemDropperConstants.kNoHighlight;
   int _hoverIndex = ItemDropperConstants.kNoHighlight;
   
@@ -177,6 +181,12 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       },
     );
     _selectionManager.syncItems(widget.selectedItems);
+
+    // Initialize overlay manager
+    _overlayManager = MultiSelectOverlayManager(
+      controller: _overlayController,
+      onClearHighlights: _clearHighlights,
+    );
 
     _filterUtils.initializeItems(widget.items);
 
@@ -234,29 +244,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
 
 
 
-  // Overlay management helpers
-  void _showOverlayIfNeeded() {
-    if (!_overlayController.isShowing) {
-      _clearHighlights();
-      _overlayController.show();
-    }
-  }
 
-  void _hideOverlayIfNeeded() {
-    if (_overlayController.isShowing) {
-      _overlayController.hide();
-    }
-  }
-
-  void _showOverlayIfFocusedAndBelowMax() {
-    if (_focusManager.isFocused && _selectionManager.isBelowMax()) {
-      final filtered = _filtered;
-      if (!_overlayController.isShowing && filtered.isNotEmpty) {
-        _clearHighlights();
-        _overlayController.show();
-      }
-    }
-  }
 
   // Rebuild check helper
   void _requestRebuildIfNotScheduled() {
@@ -319,8 +307,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         }
         
         final filtered = _filtered;
-        if (!_overlayController.isShowing && filtered.isNotEmpty) {
-          _showOverlayIfNeeded();
+        if (!_overlayManager.isShowing && filtered.isNotEmpty) {
+          _overlayManager.showIfNeeded();
         }
       });
     }
@@ -403,7 +391,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
           }
         } else {
           _clearHighlights();
-          _hideOverlayIfNeeded();
+          _overlayManager.hideIfNeeded();
         }
       },
       postRebuildCallback: () {
@@ -435,7 +423,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
 
             // If we just reached the max, close the overlay
             if (_selectionManager.isMaxReached()) {
-              _hideOverlayIfNeeded();
+              _overlayManager.hideIfNeeded();
             }
           });
         }
@@ -452,8 +440,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     if (_selectionManager.isMaxReached() && !isCurrentlySelected) {
       // Block adding new items when max is reached
       // Close the overlay and keep it closed
-      if (_overlayController.isShowing) {
-        _overlayController.hide();
+      if (_overlayManager.isShowing) {
+        _overlayManager.hideIfNeeded();
       }
       return;
     }
@@ -473,7 +461,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
 
         // If we just reached the max, close the overlay
         if (_selectionManager.isMaxReached()) {
-          _hideOverlayIfNeeded();
+          _overlayManager.hideIfNeeded();
         }
       } else {
         // Item is already selected, remove it (toggle off)
@@ -484,8 +472,13 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
 
         // FIX: Show overlay again if we're below maxSelected after removal
         // This handles the case where user removes an item after reaching max
-        if (wasAtMax && _selectionManager.isBelowMax() && _focusManager.isFocused) {
-          _showOverlayIfFocusedAndBelowMax();
+        if (wasAtMax && _selectionManager.isBelowMax() &&
+            _focusManager.isFocused) {
+          _overlayManager.showIfFocusedAndBelowMax<T>(
+            isFocused: _focusManager.isFocused,
+            isBelowMax: _selectionManager.isBelowMax(),
+            filteredItems: _filtered,
+          );
         }
       }
       // After selection change, clear highlights
@@ -514,7 +507,11 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         _focusManager.restoreFocusIfNeeded();
         
         // Show overlay if we're below maxSelected and focused
-        _showOverlayIfFocusedAndBelowMax();
+        _overlayManager.showIfFocusedAndBelowMax<T>(
+          isFocused: _focusManager.isFocused,
+          isBelowMax: _selectionManager.isBelowMax(),
+          filteredItems: _filtered,
+        );
       },
     );
   }
@@ -654,26 +651,26 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   void _handleTextChanged(String value) {
     // Don't show overlay if maxSelected is reached
     if (_selectionManager.isMaxReached()) {
-      _hideOverlayIfNeeded();
+      _overlayManager.hideIfNeeded();
       return;
     }
-    
+
     // Invalidate filtered cache since search text changed
     _invalidateFilteredCache();
-    
+
     // Filter utils already handles text-based cache invalidation automatically
     // Only need to clear highlights and trigger rebuild
     _safeSetState(() {
       _clearHighlights();
     });
-    
+
     // Show overlay if there are filtered items OR if user is searching (to show empty state)
     // Use manual focus state
     if (_focusManager.isFocused) {
-      _showOverlayIfNeeded();
+      _overlayManager.showIfNeeded();
     } else if (_filtered.isEmpty) {
       // Hide overlay if no filtered items and not focused
-      _hideOverlayIfNeeded();
+      _overlayManager.hideIfNeeded();
     }
   }
 
@@ -755,9 +752,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     // If widget became disabled, unfocus and hide overlay
     if (oldWidget.enabled && !widget.enabled) {
       _focusManager.loseFocus();
-      if (_overlayController.isShowing) {
-        _overlayController.hide();
-      }
+      _overlayManager.hideIfNeeded();
     }
     
     // Sync selected items if parent changed them (and we didn't cause the change)
@@ -837,7 +832,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       onDismiss: () {
         // Manual focus management - user clicked outside, unfocus
         _focusManager.loseFocus();
-        _hideOverlayIfNeeded();
+        _overlayManager.hideIfNeeded();
       },
       overlay: _buildDropdownOverlay(),
       inputField: _buildInputField(),
