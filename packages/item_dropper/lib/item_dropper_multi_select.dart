@@ -258,26 +258,30 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     required double chipHeight,
     required double fontSize,
   }) {
-    final double textLineHeight = fontSize * MultiSelectConstants.textLineHeightMultiplier;
-    
+    final double textLineHeight = fontSize * MultiSelectConstants.kTextLineHeightMultiplier;
+
     if (_measurements.chipTextTop != null) {
       // Use measured chip text center position to align TextField text
       // chipTextTop is already the text center (rowTop + rowHeight/2)
       final double chipTextCenter = _measurements.chipTextTop!;
       // Adjust for TextField's text rendering - needs offset upward
-      final double top = chipTextCenter - (textLineHeight / 2.0) - MultiSelectConstants.textFieldPaddingOffset;
+      final double top = chipTextCenter - (textLineHeight / 2.0) -
+          MultiSelectConstants.kTextFieldPaddingOffset;
       final double bottom = chipHeight - textLineHeight - top;
       return (top: top, bottom: bottom);
     } else {
       // Fallback: calculate same as chip structure
       // Chip text center = chipVerticalPadding + rowHeight/2
-      final double rowContentHeight = textLineHeight > MultiSelectConstants.iconHeight 
-          ? textLineHeight 
-          : MultiSelectConstants.iconHeight;
-      final double chipTextCenter = MultiSelectConstants.chipVerticalPadding + (rowContentHeight / 2.0);
-      
+      final double rowContentHeight = textLineHeight >
+          MultiSelectConstants.kIconHeight
+          ? textLineHeight
+          : MultiSelectConstants.kIconHeight;
+      final double chipTextCenter = MultiSelectConstants.kChipVerticalPadding +
+          (rowContentHeight / 2.0);
+
       // Same adjustment as measured case
-      final double top = chipTextCenter - (textLineHeight / 2.0) - MultiSelectConstants.textFieldPaddingOffset;
+      final double top = chipTextCenter - (textLineHeight / 2.0) -
+          MultiSelectConstants.kTextFieldPaddingOffset;
       final double bottom = chipHeight - textLineHeight - top;
       return (top: top, bottom: bottom);
     }
@@ -305,7 +309,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         if (_selectionManager.isMaxReached()) {
           return;
         }
-        
+
         final filtered = _filtered;
         if (!_overlayManager.isShowing && filtered.isNotEmpty) {
           _overlayManager.showIfNeeded();
@@ -313,7 +317,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       });
     }
   }
-  
+
   // Update visual state (border color) based on manual focus state
   void _updateFocusVisualState() {
     if (_rebuildScheduled) {
@@ -350,9 +354,10 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         ),
         border: Border.all(
           color: _focusManager.isFocused ? Colors.blue : Colors.grey.shade400,
-          width: MultiSelectConstants.containerBorderWidth,
+          width: MultiSelectConstants.kContainerBorderWidth,
         ),
-        borderRadius: BorderRadius.circular(MultiSelectConstants.containerBorderRadius),
+        borderRadius: BorderRadius.circular(
+            MultiSelectConstants.kContainerBorderRadius),
       );
     }
     return _cachedDecoration!;
@@ -360,18 +365,19 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
 
   void _updateSelection(void Function() selectionUpdate) {
     // Preserve keyboard highlight state - only reset if keyboard navigation was active
-    final bool wasKeyboardActive = _keyboardHighlightIndex != ItemDropperConstants.kNoHighlight;
+    final bool wasKeyboardActive = _keyboardHighlightIndex !=
+        ItemDropperConstants.kNoHighlight;
     final int previousHoverIndex = _hoverIndex;
-    
+
     // Use unified selection change handler
     _handleSelectionChange(
       stateUpdate: () {
         // Update selection inside the rebuild callback
         selectionUpdate();
-        
+
         // Update highlights based on filtered items
         final List<ItemDropperItem<T>> remainingFilteredItems = _filtered;
-        
+
         if (remainingFilteredItems.isNotEmpty) {
           // Only reset keyboard highlight if keyboard navigation was active
           if (wasKeyboardActive) {
@@ -381,7 +387,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
             // Clear keyboard highlight so mouse hover can work
             _keyboardHighlightIndex = ItemDropperConstants.kNoHighlight;
             // Don't clear hover index - preserve it so highlighting continues to work
-            if (previousHoverIndex >= 0 && previousHoverIndex < remainingFilteredItems.length) {
+            if (previousHoverIndex >= 0 &&
+                previousHoverIndex < remainingFilteredItems.length) {
               // Hover index is still valid, keep it
               _hoverIndex = previousHoverIndex;
             } else {
@@ -406,10 +413,11 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     if (item.isGroupHeader || !item.isEnabled) {
       return;
     }
-    
+
     // Handle add item selection
     if (ItemDropperAddItemUtils.isAddItem(item, widget.items)) {
-      final String searchText = ItemDropperAddItemUtils.extractSearchTextFromAddItem(item);
+      final String searchText = ItemDropperAddItemUtils
+          .extractSearchTextFromAddItem(item);
       if (searchText.isNotEmpty && widget.onAddItem != null) {
         final ItemDropperItem<T>? newItem = widget.onAddItem!(searchText);
         if (newItem != null) {
@@ -505,7 +513,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       postRebuildCallback: () {
         // Restore focus if needed after chip removal
         _focusManager.restoreFocusIfNeeded();
-        
+
         // Show overlay if we're below maxSelected and focused
         _overlayManager.showIfFocusedAndBelowMax<T>(
           isFocused: _focusManager.isFocused,
@@ -518,8 +526,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
 
   /// Handle delete requests coming from overlay items (right-click / long-press).
   /// Uses a simple built-in confirmation dialog before invoking onDeleteItem.
-  void _handleRequestDeleteFromOverlay(
-      BuildContext context, ItemDropperItem<T> item) {
+  void _handleRequestDeleteFromOverlay(BuildContext context,
+      ItemDropperItem<T> item) {
     // Only allow delete for items explicitly marked as deletable.
     if (!item.isDeletable) {
       return;
@@ -529,8 +537,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     _confirmAndDeleteItem(context, item);
   }
 
-  Future<void> _confirmAndDeleteItem(
-      BuildContext context, ItemDropperItem<T> item) async {
+  Future<void> _confirmAndDeleteItem(BuildContext context,
+      ItemDropperItem<T> item) async {
     // Show a simple confirmation dialog above the existing overlay/dialogs.
     final bool? confirmed = await showDialog<bool>(
       context: context,
@@ -593,14 +601,12 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     return KeyEventResult.ignored;
   }
 
-  void _handleArrowKeyNavigation(
-    int Function({
-      required int currentIndex,
-      required int hoverIndex,
-      required int itemCount,
-      List<ItemDropperItem<T>>? items,
-    }) navigationHandler,
-  ) {
+  void _handleArrowKeyNavigation(int Function({
+  required int currentIndex,
+  required int hoverIndex,
+  required int itemCount,
+  List<ItemDropperItem<T>>? items,
+  }) navigationHandler,) {
     final filtered = _filtered;
     _keyboardHighlightIndex = navigationHandler(
       currentIndex: _keyboardHighlightIndex,
@@ -639,12 +645,13 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       }
     } else {
       // Find first selectable item for auto-select
-      final selectableItems = filteredItems.where((item) => !item.isGroupHeader).toList();
+      final selectableItems = filteredItems
+          .where((item) => !item.isGroupHeader)
+          .toList();
       if (selectableItems.length == 1) {
         // No keyboard navigation, but exactly 1 selectable item - auto-select it
         _toggleItem(selectableItems[0]);
-      } else {
-      }
+      } else {}
     }
   }
 
@@ -689,15 +696,15 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     if (!mounted) {
       return;
     }
-    
+
     // If rebuild already in progress, ignore this request
     if (_rebuildScheduled) {
       return;
     }
-    
+
     // Mark that rebuild is scheduled and trigger it immediately
     _rebuildScheduled = true;
-    
+
     // Trigger immediate rebuild - state updates happen inside setState callback
     _safeSetState(() {
       // Execute state update callback if provided
@@ -705,7 +712,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         stateUpdate.call();
       }
     });
-    
+
     // After rebuild completes, reset flag to allow future rebuilds
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -722,21 +729,21 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   }) {
     // Mark that we're the source of this selection change
     _isInternalSelectionChange = true;
-    
+
     // Update selection and all related state inside rebuild
     _requestRebuild(stateUpdate);
-    
+
     // Single post-frame callback handles: parent notification, flag clearing, and optional callback
     // This consolidates what was previously multiple separate callbacks
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         // Notify parent of change
         widget.onChanged(_selectionManager.selected);
-        
+
         // Clear the internal change flag after parent's didUpdateWidget has run
         // (which happens synchronously when onChanged triggers parent rebuild)
         _isInternalSelectionChange = false;
-        
+
         // Execute optional post-rebuild callback (e.g., focus management, overlay updates)
         if (postRebuildCallback != null) {
           postRebuildCallback();
@@ -748,22 +755,23 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   @override
   void didUpdateWidget(covariant MultiItemDropper<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
-    
+
     // If widget became disabled, unfocus and hide overlay
     if (oldWidget.enabled && !widget.enabled) {
       _focusManager.loseFocus();
       _overlayManager.hideIfNeeded();
     }
-    
+
     // Sync selected items if parent changed them (and we didn't cause the change)
-    if (!_isInternalSelectionChange && !_areItemsEqual(widget.selectedItems, _selectionManager
-        .selected)) {
+    if (!_isInternalSelectionChange &&
+        !_areItemsEqual(widget.selectedItems, _selectionManager
+            .selected)) {
       _selectionManager.syncItems(widget.selectedItems);
       // Don't trigger rebuild here if we're already rebuilding
       // Parent change will be reflected in the current rebuild cycle
       _requestRebuildIfNotScheduled();
     }
-    
+
     // Invalidate filter cache if items list changed
     // Fast path: check reference equality first (O(1))
     if (!identical(widget.items, oldWidget.items)) {
@@ -773,7 +781,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         // Only do expensive comparison if reference changed but length is same
         itemsChanged = !_areItemsEqual(widget.items, oldWidget.items);
       }
-      
+
       if (itemsChanged) {
         _filterUtils.initializeItems(widget.items);
         _invalidateFilteredCache();
@@ -784,34 +792,34 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       }
     }
   }
-  
+
   // Helper to check if two item lists are equal (by value)
   // Optimized for performance: early returns and efficient Set-based comparison
   // Time complexity: O(n) where n is the length of the lists
   bool _areItemsEqual(List<ItemDropperItem<T>> a, List<ItemDropperItem<T>> b) {
     // Fast path: reference equality
     if (identical(a, b)) return true;
-    
+
     // Fast path: length check (O(1))
     if (a.length != b.length) return false;
-    
+
     // Fast path: empty lists
     if (a.isEmpty) return true;
-    
+
     // For small lists, use simple iteration (more cache-friendly)
-    if (a.length <= MultiSelectConstants.listComparisonThreshold) {
+    if (a.length <= MultiSelectConstants.kListComparisonThreshold) {
       final Set<T> bValues = b.map((item) => item.value).toSet();
       return a.every((item) => bValues.contains(item.value));
     }
-    
+
     // For larger lists, use Set-based comparison
     final Set<T> aValues = a.map((item) => item.value).toSet();
     final Set<T> bValues = b.map((item) => item.value).toSet();
-    
+
     // If lengths are equal and all a values are in b, then all b values must be in a
     // (since Set length equals list length when there are no duplicates)
-    return aValues.length == bValues.length && 
-           aValues.every((value) => bValues.contains(value));
+    return aValues.length == bValues.length &&
+        aValues.every((value) => bValues.contains(value));
   }
 
   @override
@@ -853,14 +861,14 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
           // Integrated chips and text field area
           Padding(
             padding: const EdgeInsets.fromLTRB(
-              MultiSelectConstants.containerPaddingLeft,
-              MultiSelectConstants.containerPaddingTop,
-              MultiSelectConstants.containerPaddingRight,
-              MultiSelectConstants.containerPaddingBottom,
+              MultiSelectConstants.kContainerPaddingLeft,
+              MultiSelectConstants.kContainerPaddingTop,
+              MultiSelectConstants.kContainerPaddingRight,
+              MultiSelectConstants.kContainerPaddingBottom,
             ),
             child: SmartWrapWithFlexibleLast(
-              spacing: MultiSelectConstants.chipSpacing,
-              runSpacing: MultiSelectConstants.chipSpacing,
+              spacing: MultiSelectConstants.kChipSpacing,
+              runSpacing: MultiSelectConstants.kChipSpacing,
               children: [
                 // Selected chips
                 ..._selectionManager.selected.map((item) =>
@@ -879,12 +887,13 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   }
 
 
-  Widget _buildChip(ItemDropperItem<T> item, [GlobalKey? chipKey, Key? valueKey]) {
+  Widget _buildChip(ItemDropperItem<T> item,
+      [GlobalKey? chipKey, Key? valueKey]) {
     // Only measure the first chip (index 0) to avoid GlobalKey conflicts
     final bool isFirstChip = _selectionManager.selected.isNotEmpty &&
         _selectionManager.selected.first.value == item.value;
     final GlobalKey? rowKey = isFirstChip ? _measurements.chipRowKey : null;
-    
+
     return LayoutBuilder(
       key: valueKey, // Use stable ValueKey for widget preservation
       builder: (context, constraints) {
@@ -894,25 +903,27 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         if (isFirstChip && rowKey != null && _measurements.chipHeight == null) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (!mounted) return;
-            
+
             // Re-check conditions in case they changed
-            if (_measurements.chipHeight == null && rowKey.currentContext != null) {
+            if (_measurements.chipHeight == null &&
+                rowKey.currentContext != null) {
               _measurements.measureChip(
                 context: context,
                 rowKey: rowKey,
                 textSize: widget.fieldTextStyle?.fontSize ??
                     ItemDropperConstants.kDropdownItemFontSize,
-                chipVerticalPadding: MultiSelectConstants.chipVerticalPadding,
+                chipVerticalPadding: MultiSelectConstants.kChipVerticalPadding,
                 requestRebuild: _requestRebuild,
               );
             }
           });
         }
-        
+
         // Determine chip decoration.
         // - If a custom BoxDecoration is provided, use it as-is.
         // - Otherwise, fall back to the default blue vertical gradient.
-        final BoxDecoration effectiveDecoration = widget.selectedChipDecoration ??
+        final BoxDecoration effectiveDecoration = widget
+            .selectedChipDecoration ??
             BoxDecoration(
               gradient: LinearGradient(
                 colors: [
@@ -923,17 +934,19 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
                 end: Alignment.bottomCenter,
               ),
               borderRadius:
-                  BorderRadius.circular(MultiSelectConstants.chipBorderRadius),
+              BorderRadius.circular(MultiSelectConstants.kChipBorderRadius),
             );
 
         return Container(
-          key: chipKey, // Use provided GlobalKey (for last chip) or null
+          key: chipKey,
+          // Use provided GlobalKey (for last chip) or null
           decoration: effectiveDecoration,
           padding: const EdgeInsets.symmetric(
-            horizontal: MultiSelectConstants.chipHorizontalPadding,
-            vertical: MultiSelectConstants.chipVerticalPadding,
+            horizontal: MultiSelectConstants.kChipHorizontalPadding,
+            vertical: MultiSelectConstants.kChipVerticalPadding,
           ),
-          margin: const EdgeInsets.only(right: MultiSelectConstants.chipMarginRight,),
+          margin: const EdgeInsets.only(
+            right: MultiSelectConstants.kChipMarginRight,),
           child: Row(
             key: rowKey, // Only first chip gets the key
             mainAxisSize: MainAxisSize.min,
@@ -951,14 +964,15 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
               ),
               if (widget.enabled)
                 Container(
-                  width: MultiSelectConstants.chipDeleteButtonSize,
-                  height: MultiSelectConstants.chipDeleteButtonSize,
+                  width: MultiSelectConstants.kChipDeleteButtonSize,
+                  height: MultiSelectConstants.kChipDeleteButtonSize,
                   alignment: Alignment.center,
                   child: GestureDetector(
                     onTap: () {
                       _removeChip(item);
                     },
-                    child: Icon(Icons.close, size: MultiSelectConstants.chipDeleteIconSize,
+                    child: Icon(Icons.close,
+                        size: MultiSelectConstants.kChipDeleteIconSize,
                         color: Colors.grey.shade700),
                   ),
                 ),
@@ -971,10 +985,11 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
 
   Widget _buildTextFieldChip(double width) {
     // Use measured chip dimensions if available, otherwise fall back to calculation
-    final double chipHeight = _measurements.chipHeight ?? MultiSelectLayoutCalculator.calculateTextFieldHeight(
-      fontSize: widget.fieldTextStyle?.fontSize,
-      chipVerticalPadding: MultiSelectConstants.chipVerticalPadding,
-    );
+    final double chipHeight = _measurements.chipHeight ??
+        MultiSelectLayoutCalculator.calculateTextFieldHeight(
+          fontSize: widget.fieldTextStyle?.fontSize,
+          chipVerticalPadding: MultiSelectConstants.kChipVerticalPadding,
+        );
     final double fontSize = widget.fieldTextStyle?.fontSize ??
         ItemDropperConstants.kDropdownItemFontSize;
     final padding = _calculateTextFieldPadding(
@@ -983,7 +998,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     );
     final double textFieldPaddingTop = padding.top;
     final double textFieldPaddingBottom = padding.bottom;
-    
+
     // Use Container with exact width - Wrap will use this for layout
     return SizedBox(
       key: _measurements.textFieldKey, // Key to measure TextField position
@@ -994,11 +1009,12 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         child: TextField(
           controller: _searchController,
           focusNode: _focusNode,
-          style: widget.fieldTextStyle ?? const TextStyle(fontSize: ItemDropperConstants
-              .kDropdownItemFontSize),
+          style: widget.fieldTextStyle ??
+              const TextStyle(fontSize: ItemDropperConstants
+                  .kDropdownItemFontSize),
           decoration: InputDecoration(
             contentPadding: EdgeInsets.only(
-              right: fontSize * MultiSelectConstants.textLineHeightMultiplier,
+              right: fontSize * MultiSelectConstants.kTextLineHeightMultiplier,
               top: textFieldPaddingTop,
               bottom: textFieldPaddingBottom,
             ),
@@ -1019,14 +1035,14 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   Widget _buildDropdownOverlay() {
     // Don't build overlay if disabled
     if (!widget.enabled) return const SizedBox.shrink();
-    
+
     final List<ItemDropperItem<T>> filteredItems = _filtered;
 
     // Get the input field's context for proper positioning
     final BuildContext? inputContext = (widget.inputKey ?? _fieldKey)
         .currentContext;
     if (inputContext == null) return const SizedBox.shrink();
-    
+
     // Calculate effective item height:
     // - If widget.itemHeight is provided, use it
     // - Otherwise, calculate from popupTextStyle
@@ -1036,7 +1052,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       final double fontSize = resolvedStyle.fontSize ??
           ItemDropperConstants.kDropdownItemFontSize;
       final double lineHeight = fontSize * (resolvedStyle.height ??
-          MultiSelectConstants.textLineHeightMultiplier);
+          MultiSelectConstants.kTextLineHeightMultiplier);
       return lineHeight +
           (ItemDropperConstants.kDropdownItemVerticalPadding * 2);
     }
@@ -1060,10 +1076,12 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       itemBuilder = widget.popupItemBuilder!;
     } else {
       itemBuilder = (context, item, isSelected) {
-        final int itemIndex = filteredItems.indexWhere((x) => x.value == item.value);
+        final int itemIndex = filteredItems.indexWhere((x) =>
+        x.value == item.value);
         final bool hasPrevious = itemIndex > 0;
-        final bool previousIsGroupHeader = hasPrevious && filteredItems[itemIndex - 1].isGroupHeader;
-        
+        final bool previousIsGroupHeader = hasPrevious &&
+            filteredItems[itemIndex - 1].isGroupHeader;
+
         return ItemDropperRenderUtils.defaultDropdownPopupItemBuilder(
           context,
           item,
@@ -1085,8 +1103,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       lastChipContext: null,
       // Not needed for simple height measurement
       selectedCount: _selectionManager.selectedCount,
-      chipSpacing: MultiSelectConstants.chipSpacing,
-      minTextFieldWidth: MultiSelectConstants.minTextFieldWidth,
+      chipSpacing: MultiSelectConstants.kChipSpacing,
+      minTextFieldWidth: MultiSelectConstants.kMinTextFieldWidth,
       calculatedTextFieldWidth: null,
       // Not needed for simple height measurement
       requestRebuild: _requestRebuild,
@@ -1097,7 +1115,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     return ItemDropperRenderUtils.buildDropdownOverlay(
       context: inputContext,
       items: filteredItems,
-      maxDropdownHeight: widget.maxDropdownHeight ?? MultiSelectConstants.defaultMaxDropdownHeight,
+      maxDropdownHeight: widget.maxDropdownHeight ?? MultiSelectConstants.kDefaultMaxDropdownHeight,
       width: widget.width,
       controller: _overlayController,
       scrollController: _scrollController,
@@ -1132,14 +1150,15 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   Widget _buildEmptyStateOverlay(BuildContext inputContext) {
     // Don't build overlay if disabled
     if (!widget.enabled) return const SizedBox.shrink();
-    
+
     final RenderBox? inputBox = inputContext.findRenderObject() as RenderBox?;
     if (inputBox == null) return const SizedBox.shrink();
 
     final double inputFieldHeight = inputBox.size.height;
     // Use actual measured field width to ensure overlay matches field width exactly
     final double actualFieldWidth = inputBox.size.width;
-    final double maxDropdownHeight = widget.maxDropdownHeight ?? MultiSelectConstants.defaultMaxDropdownHeight;
+    final double maxDropdownHeight = widget.maxDropdownHeight ??
+        MultiSelectConstants.kDefaultMaxDropdownHeight;
     
     final position = DropdownPositionCalculator.calculate(
       context: inputContext,
@@ -1158,11 +1177,11 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
           elevation: ItemDropperConstants.kDropdownElevation,
           child: Container(
             padding: const EdgeInsets.symmetric(
-              horizontal: MultiSelectConstants.emptyStatePaddingHorizontal,
-              vertical: MultiSelectConstants.emptyStatePaddingVertical,
+              horizontal: MultiSelectConstants.kEmptyStatePaddingHorizontal,
+              vertical: MultiSelectConstants.kEmptyStatePaddingVertical,
             ),
             child: Text(
-              MultiSelectConstants.emptyStateMessage,
+              MultiSelectConstants.kEmptyStateMessage,
               style: (widget.popupTextStyle ?? widget.fieldTextStyle ?? const TextStyle(fontSize: ItemDropperConstants
                   .kDropdownItemFontSize)).copyWith(
                 color: Colors.grey.shade600,

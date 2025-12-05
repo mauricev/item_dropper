@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'item_dropper_constants.dart';
 
 /// Shared suffix icon widget for dropdown fields
 /// Displays clear and dropdown arrow buttons
@@ -32,7 +33,7 @@ class ItemDropperSuffixIcons extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: suffixIconWidth,
-      height: textSize * 3.2,
+      height: textSize * ItemDropperConstants.kSuffixIconHeightMultiplier,
       child: Stack(
         alignment: Alignment.centerRight,
         clipBehavior: Clip.none,

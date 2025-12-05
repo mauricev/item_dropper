@@ -24,4 +24,7 @@ class ItemDropperConstants {
   static const double kDropdownSeparatorWidth = 1.0;
   static const double kDropdownDeleteIconSize = 16.0;
   static const double kDropdownTextToDeleteIconSpacing = 8.0;
+
+  // Suffix icon constants
+  static const double kSuffixIconHeightMultiplier = 3.2;
 }
