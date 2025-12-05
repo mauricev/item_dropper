@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:item_dropper/src/common/item_dropper_common.dart';
 import 'package:item_dropper/src/multi/chip_measurement_helper.dart';
 import 'package:item_dropper/src/multi/multi_select_constants.dart';
+import 'package:item_dropper/src/multi/multi_select_focus_manager.dart';
 import 'package:item_dropper/src/multi/multi_select_layout_calculator.dart';
 import 'package:item_dropper/src/multi/smartwrap.dart' show SmartWrapWithFlexibleLast;
 import 'package:item_dropper/src/utils/item_dropper_add_item_utils.dart';
@@ -141,8 +142,9 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   bool _rebuildScheduled = false;
   // Track when we're the source of selection changes to prevent didUpdateWidget from rebuilding
   bool _isInternalSelectionChange = false;
-  // Manual focus management - track focus state ourselves instead of relying on Flutter
-  bool _manualFocusState = false;
+
+  // Focus manager for manual focus state tracking
+  late final MultiSelectFocusManager _focusManager;
 
   // Use shared filter utils
   final ItemDropperFilterUtils<T> _filterUtils = ItemDropperFilterUtils<T>();
@@ -153,8 +155,14 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
 
     _searchController = TextEditingController();
     _scrollController = ScrollController();
-    _focusNode = FocusNode()
-      ..addListener(_handleFocusChange);
+    _focusNode = FocusNode();
+
+    // Initialize focus manager with callback for visual state updates
+    _focusManager = MultiSelectFocusManager(
+      focusNode: _focusNode,
+      onFocusVisualStateChanged: _updateFocusVisualState,
+      onFocusChanged: _handleFocusChange,
+    );
 
     _selected = List.from(widget.selectedItems);
     _selectedValues = _selected.map((item) => item.value).toSet();
@@ -253,30 +261,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     _hoverIndex = ItemDropperConstants.kNoHighlight;
   }
 
-  // Focus management helpers
-  /// Request focus and set manual focus state
-  void _gainFocus() {
-    if (!_manualFocusState) {
-      _manualFocusState = true;
-      _focusNode.requestFocus();
-      _updateFocusVisualState();
-    }
-  }
 
-  /// Clear manual focus state and unfocus
-  void _loseFocus() {
-    _manualFocusState = false;
-    _updateFocusVisualState();
-    _focusNode.unfocus();
-  }
-
-  /// Restore focus if manual state indicates we should be focused
-  /// Called after operations that might cause focus loss (e.g., selection changes)
-  void _restoreFocusIfNeeded() {
-    if (_manualFocusState && !_focusNode.hasFocus) {
-      _focusNode.requestFocus();
-    }
-  }
 
   // Overlay management helpers
   void _showOverlayIfNeeded() {
@@ -293,7 +278,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   }
 
   void _showOverlayIfFocusedAndBelowMax() {
-    if (_manualFocusState && _isBelowMaxSelected()) {
+    if (_focusManager.isFocused && _isBelowMaxSelected()) {
       final filtered = _filtered;
       if (!_overlayController.isShowing && filtered.isNotEmpty) {
         _clearHighlights();
@@ -340,32 +325,20 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   }
 
   void _handleFocusChange() {
-    // Manual focus management - only update our manual state when Flutter's focus changes
-    // But we control the visual state (border color) based on our manual state
-    final bool flutterHasFocus = _focusNode.hasFocus;
-    
-    // Only update manual focus state if Flutter gained focus (user clicked TextField)
-    if (flutterHasFocus && !_manualFocusState) {
-      _manualFocusState = true;
-      _updateFocusVisualState();
-    }
-    // If Flutter lost focus, clear manual state - no restoration attempts
-    else if (!flutterHasFocus && _manualFocusState) {
-      _manualFocusState = false;
-      _updateFocusVisualState();
-    }
-    
+    // Focus change is now handled by the FocusManager
+    // This method is kept for additional overlay logic
+
     // Use manual focus state for overlay logic
-    if (_manualFocusState) {
+    if (_focusManager.isFocused) {
       // Don't show overlay if maxSelected is reached
       if (_isMaxSelectedReached()) {
         return;
       }
-      
+
       // Show overlay when focused if there are any filtered items available
       // Use a post-frame callback to ensure input context is available
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted || !_manualFocusState) {
+        if (!mounted || !_focusManager.isFocused) {
           return;
         }
         
@@ -407,8 +380,9 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
 
     // Otherwise use default decoration with focus-based border color
     // Only recreate if cache is null or focus state changed
-    if (_cachedDecoration == null || _cachedFocusState != _manualFocusState) {
-      _cachedFocusState = _manualFocusState;
+    if (_cachedDecoration == null || _cachedFocusState != _focusManager
+        .isFocused) {
+      _cachedFocusState = _focusManager.isFocused;
       _cachedDecoration = BoxDecoration(
         gradient: LinearGradient(
           colors: [Colors.white, Colors.grey.shade200],
@@ -416,7 +390,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
           end: Alignment.bottomCenter,
         ),
         border: Border.all(
-          color: _manualFocusState ? Colors.blue : Colors.grey.shade400,
+          color: _focusManager.isFocused ? Colors.blue : Colors.grey.shade400,
           width: MultiSelectConstants.containerBorderWidth,
         ),
         borderRadius: BorderRadius.circular(MultiSelectConstants.containerBorderRadius),
@@ -463,7 +437,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       },
       postRebuildCallback: () {
         // Restore focus if needed after selection update
-        _restoreFocusIfNeeded();
+        _focusManager.restoreFocusIfNeeded();
       },
     );
   }
@@ -539,7 +513,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         
         // FIX: Show overlay again if we're below maxSelected after removal
         // This handles the case where user removes an item after reaching max
-        if (wasAtMax && _isBelowMaxSelected() && _manualFocusState) {
+        if (wasAtMax && _isBelowMaxSelected() && _focusManager.isFocused) {
           _showOverlayIfFocusedAndBelowMax();
         }
       }
@@ -551,22 +525,22 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   void _removeChip(ItemDropperItem<T> item) {
     // Focus the field and set manual focus state when removing a chip (even if unfocused)
     // This allows users to remove chips and immediately see the dropdown
-    _gainFocus();
-    
+    _focusManager.gainFocus();
+
     // Use unified selection change handler
     _handleSelectionChange(
       stateUpdate: () {
         // Update selection inside the rebuild callback
         _removeSelectedItem(item.value);
-        
+
         // Reset totalChipWidth when selection count changes - will be remeasured correctly
         _measurements.totalChipWidth = null;
-        
+
         _clearHighlights();
       },
       postRebuildCallback: () {
         // Restore focus if needed after chip removal
-        _restoreFocusIfNeeded();
+        _focusManager.restoreFocusIfNeeded();
         
         // Show overlay if we're below maxSelected and focused
         _showOverlayIfFocusedAndBelowMax();
@@ -644,7 +618,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       return KeyEventResult.handled;
     } else if (event.logicalKey == LogicalKeyboardKey.escape) {
       // Manual focus management - user explicitly unfocused with Escape
-      _loseFocus();
+      _focusManager.loseFocus();
       return KeyEventResult.handled;
     }
 
@@ -724,7 +698,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     
     // Show overlay if there are filtered items OR if user is searching (to show empty state)
     // Use manual focus state
-    if (_manualFocusState) {
+    if (_focusManager.isFocused) {
       _showOverlayIfNeeded();
     } else if (_filtered.isEmpty) {
       // Hide overlay if no filtered items and not focused
@@ -809,10 +783,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     
     // If widget became disabled, unfocus and hide overlay
     if (oldWidget.enabled && !widget.enabled) {
-      if (_focusNode.hasFocus) {
-        _focusNode.unfocus();
-      }
-      _manualFocusState = false;
+      _focusManager.loseFocus();
       if (_overlayController.isShowing) {
         _overlayController.hide();
       }
@@ -878,7 +849,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
 
   @override
   void dispose() {
-    _focusNode.removeListener(_handleFocusChange);
+    _focusManager.dispose();
     _focusNode.dispose();
     _searchController.dispose();
     _scrollController.dispose();
@@ -893,7 +864,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       fieldKey: widget.inputKey ?? _fieldKey,
       onDismiss: () {
         // Manual focus management - user clicked outside, unfocus
-        _loseFocus();
+        _focusManager.loseFocus();
         _hideOverlayIfNeeded();
       },
       overlay: _buildDropdownOverlay(),
