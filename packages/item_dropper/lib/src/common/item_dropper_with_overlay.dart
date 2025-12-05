@@ -27,6 +27,59 @@ class _ItemDropperWithOverlayState extends State<ItemDropperWithOverlay> {
   // GlobalKey to track overlay bounds for dismiss detection
   final GlobalKey _overlayKey = GlobalKey();
 
+  /// Check if a pointer event occurred within the overlay bounds
+  bool _isClickOnOverlay(PointerDownEvent event) {
+    final RenderBox? overlayRenderBox =
+    _overlayKey.currentContext?.findRenderObject() as RenderBox?;
+
+    if (overlayRenderBox == null) return false;
+
+    final RenderBox? fieldRenderBox =
+    widget.fieldKey.currentContext?.findRenderObject() as RenderBox?;
+
+    if (fieldRenderBox == null) return false;
+
+    final Offset fieldGlobalPos = fieldRenderBox.localToGlobal(Offset.zero);
+    final double fieldHeight = fieldRenderBox.size.height;
+    final Offset estimatedOverlayPos = Offset(
+      fieldGlobalPos.dx,
+      fieldGlobalPos.dy + fieldHeight,
+    );
+    final Size overlaySize = overlayRenderBox.size;
+    final Rect estimatedOverlayRect = estimatedOverlayPos & overlaySize;
+
+    return estimatedOverlayRect.contains(event.position);
+  }
+
+  /// Check if a pointer event occurred outside the field bounds
+  bool _isClickOutsideField(PointerDownEvent event) {
+    final RenderBox? renderBox =
+    widget.fieldKey.currentContext?.findRenderObject() as RenderBox?;
+
+    if (renderBox == null) return false;
+
+    final Offset fieldOffset = renderBox.localToGlobal(Offset.zero);
+    final Size fieldSize = renderBox.size;
+    final Rect fieldRect = fieldOffset & fieldSize;
+
+    return !fieldRect.contains(event.position);
+  }
+
+  /// Handle pointer down events for dismissal logic
+  void _handlePointerDown(PointerDownEvent event) {
+    // Check if click is on overlay first - dismiss after item interaction
+    if (_isClickOnOverlay(event)) {
+      widget.onDismiss();
+      return;
+    }
+
+    // Check if click is outside the field - dismiss immediately
+    if (_isClickOutsideField(event)) {
+      widget.onDismiss();
+      return;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return CompositedTransformTarget(
@@ -37,50 +90,11 @@ class _ItemDropperWithOverlayState extends State<ItemDropperWithOverlay> {
             Stack(
               children: [
                 // Dismiss dropdown when clicking outside the text field AND outside the overlay
-                // Defer dismiss check to allow child widgets (like InkWell) to handle taps first
-                Positioned.fill(
-                  child: Listener(
-                    behavior: HitTestBehavior.translucent,
-                    onPointerDown: (event) {
-                      // CRITICAL FIX: Check if click is on overlay FIRST, before doing anything else
-                      // If it's on the overlay, return early to allow event to propagate to items
-                      final RenderBox? overlayRenderBox = 
-                          _overlayKey.currentContext?.findRenderObject() as RenderBox?;
-                      
-                      if (overlayRenderBox != null) {
-                        final RenderBox? fieldRenderBox = widget.fieldKey.currentContext?.findRenderObject() as RenderBox?;
-                        if (fieldRenderBox != null) {
-                          final Offset fieldGlobalPos = fieldRenderBox.localToGlobal(Offset.zero);
-                          final double fieldHeight = fieldRenderBox.size.height;
-                          final Offset estimatedOverlayPos = Offset(fieldGlobalPos.dx, fieldGlobalPos.dy + fieldHeight);
-                          final Size overlaySize = overlayRenderBox.size;
-                          final Rect estimatedOverlayRect = estimatedOverlayPos & overlaySize;
-
-                          // If click is on overlay, we should dismiss unless it's on an interactive item
-                          // For now, let's dismiss on overlay taps to see if this fixes the issue
-                          if (estimatedOverlayRect.contains(event.position)) {
-                            widget
-                                .onDismiss(); // Dismiss when tapping on overlay
-                            return;
-                          }
-                        }
-                      }
-                      // Use the field's render box for dismissal detection
-                      final RenderBox? renderBox =
-                      widget.fieldKey.currentContext?.findRenderObject() as RenderBox?;
-                      if (renderBox != null) {
-                        final Offset fieldOffset = renderBox.localToGlobal(Offset.zero);
-                        final Size fieldSize = renderBox.size;
-                        final Rect fieldRect = fieldOffset & fieldSize;
-                        final bool isOutsideField = !fieldRect.contains(event.position);
-
-                        if (isOutsideField) {
-                          widget
-                              .onDismiss(); // Dismiss immediately instead of deferring
-                          return; // Don't continue with post-frame logic
-                        }
-                      }
-                    },
+                // Listener uses translucent behavior to allow child widgets to handle taps first
+            Positioned.fill(
+              child: Listener(
+                behavior: HitTestBehavior.translucent,
+                onPointerDown: _handlePointerDown,
                   ),
                 ),
                 CompositedTransformFollower(
