@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:item_dropper/src/common/item_dropper_common.dart';
 import 'package:item_dropper/src/common/item_dropper_semantics.dart';
 import 'package:item_dropper/src/common/live_region_manager.dart';

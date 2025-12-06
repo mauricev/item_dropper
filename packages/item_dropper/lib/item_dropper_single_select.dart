@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:item_dropper/src/common/item_dropper_common.dart';
 import 'package:item_dropper/src/utils/item_dropper_add_item_utils.dart';
 import 'package:item_dropper/src/single/single_select_constants.dart';

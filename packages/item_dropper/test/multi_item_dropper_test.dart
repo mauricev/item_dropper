@@ -3,17 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:item_dropper/item_dropper.dart';
 
-/// Helper class to track callback invocations across widget rebuilds
-class _MultiCallbackTracker<T> {
-  int callCount = 0;
-  List<T>? lastValue;
-  
-  void record(List<T> value) {
-    callCount++;
-    lastValue = List.from(value);
-  }
-}
-
 /// Helper to track delete callback invocations
 class _DeleteCallbackTracker<T> {
   int callCount = 0;

@@ -3,19 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:item_dropper/item_dropper.dart';
 
-/// Helper class to track callback invocations across widget rebuilds
-class _CallbackTracker<T> {
-  bool wasCalledWithNull = false;
-  T? lastValue;
-  int callCount = 0;
-  
-  void record(T? value) {
-    callCount++;
-    lastValue = value;
-    wasCalledWithNull = (value == null);
-  }
-}
-
 void main() {
   group('SingleItemDropper - Basic Functionality', () {
     testWidgets('should display items list', (WidgetTester tester) async {

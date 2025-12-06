@@ -25,7 +25,9 @@ class KeyboardNavigationManager<T> {
   int _keyboardHighlightIndex = ItemDropperConstants.kNoHighlight;
 
   /// Current hover-highlighted item index (-1 if none)
-  int _hoverIndex = ItemDropperConstants.kNoHighlight;
+  ///
+  /// Can be read and written by external code to track mouse hover state.
+  int hoverIndex = ItemDropperConstants.kNoHighlight;
 
   /// Callback to trigger widget rebuild
   final VoidCallback onRequestRebuild;
@@ -38,16 +40,8 @@ class KeyboardNavigationManager<T> {
     required this.onEscape,
   });
 
-  /// Current keyboard highlight index
+  /// Current keyboard highlight index (read-only)
   int get keyboardHighlightIndex => _keyboardHighlightIndex;
-
-  /// Current hover highlight index
-  int get hoverIndex => _hoverIndex;
-
-  /// Set hover index (used by mouse hover)
-  set hoverIndex(int value) {
-    _hoverIndex = value;
-  }
 
   /// Handles keyboard events (Arrow keys, Escape)
   /// 
@@ -94,13 +88,13 @@ class KeyboardNavigationManager<T> {
   }) {
     _keyboardHighlightIndex = ItemDropperKeyboardNavigation.handleArrowDown<T>(
       currentIndex: _keyboardHighlightIndex,
-      hoverIndex: _hoverIndex,
+      hoverIndex: hoverIndex,
       itemCount: filteredItems.length,
       items: filteredItems,
     );
 
     // Clear hover when keyboard nav becomes active
-    _hoverIndex = ItemDropperConstants.kNoHighlight;
+    hoverIndex = ItemDropperConstants.kNoHighlight;
     onRequestRebuild();
 
     // Scroll to highlighted item
@@ -119,13 +113,13 @@ class KeyboardNavigationManager<T> {
   }) {
     _keyboardHighlightIndex = ItemDropperKeyboardNavigation.handleArrowUp<T>(
       currentIndex: _keyboardHighlightIndex,
-      hoverIndex: _hoverIndex,
+      hoverIndex: hoverIndex,
       itemCount: filteredItems.length,
       items: filteredItems,
     );
 
     // Clear hover when keyboard nav becomes active
-    _hoverIndex = ItemDropperConstants.kNoHighlight;
+    hoverIndex = ItemDropperConstants.kNoHighlight;
     onRequestRebuild();
 
     // Scroll to highlighted item
@@ -139,6 +133,6 @@ class KeyboardNavigationManager<T> {
   /// Clears both keyboard and hover highlights
   void clearHighlights() {
     _keyboardHighlightIndex = ItemDropperConstants.kNoHighlight;
-    _hoverIndex = ItemDropperConstants.kNoHighlight;
+    hoverIndex = ItemDropperConstants.kNoHighlight;
   }
 }
