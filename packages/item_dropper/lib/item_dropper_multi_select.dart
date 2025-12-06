@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:item_dropper/src/common/item_dropper_common.dart';
 import 'package:item_dropper/src/common/item_dropper_semantics.dart';
+import 'package:item_dropper/src/common/live_region_manager.dart';
 import 'package:item_dropper/src/multi/chip_measurement_helper.dart';
 import 'package:item_dropper/src/multi/multi_select_constants.dart';
 import 'package:item_dropper/src/multi/multi_select_focus_manager.dart';
@@ -155,6 +157,9 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   // Use shared filter utils
   final ItemDropperFilterUtils<T> _filterUtils = ItemDropperFilterUtils<T>();
 
+  // Live region for screen reader announcements
+  late final LiveRegionManager _liveRegionManager;
+
   @override
   void initState() {
     super.initState();
@@ -187,6 +192,11 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     _overlayManager = MultiSelectOverlayManager(
       controller: _overlayController,
       onClearHighlights: _clearHighlights,
+    );
+
+    // Initialize live region manager
+    _liveRegionManager = LiveRegionManager(
+      onUpdate: () => _safeSetState(() {}),
     );
 
     _filterUtils.initializeItems(widget.items);
@@ -468,9 +478,21 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         // Clear search text after selection for continued searching
         _searchController.clear();
 
+        // Announce selection to screen readers
+        _liveRegionManager.announce(
+          ItemDropperSemantics.announceItemSelected(item.label),
+        );
+
         // If we just reached the max, close the overlay
         if (_selectionManager.isMaxReached()) {
           _overlayManager.hideIfNeeded();
+          // Announce max reached
+          if (widget.maxSelected != null) {
+            _liveRegionManager.announce(
+              ItemDropperSemantics.announceMaxSelectionReached(
+                  widget.maxSelected!),
+            );
+          }
         }
       } else {
         // Item is already selected, remove it (toggle off)
@@ -499,6 +521,11 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     // Focus the field and set manual focus state when removing a chip (even if unfocused)
     // This allows users to remove chips and immediately see the dropdown
     _focusManager.gainFocus();
+
+    // Announce removal to screen readers
+    _liveRegionManager.announce(
+      ItemDropperSemantics.announceItemRemoved(item.label),
+    );
 
     // Use unified selection change handler
     _handleSelectionChange(
@@ -825,6 +852,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
 
   @override
   void dispose() {
+    _liveRegionManager.dispose();
     _focusManager.dispose();
     _focusNode.dispose();
     _searchController.dispose();
@@ -834,17 +862,23 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
 
   @override
   Widget build(BuildContext context) {
-    return ItemDropperWithOverlay(
-      layerLink: _layerLink,
-      overlayController: _overlayController,
-      fieldKey: widget.inputKey ?? _fieldKey,
-      onDismiss: () {
-        // Manual focus management - user clicked outside, unfocus
-        _focusManager.loseFocus();
-        _overlayManager.hideIfNeeded();
-      },
-      overlay: _buildDropdownOverlay(),
-      inputField: _buildInputField(),
+    return Stack(
+      children: [
+        ItemDropperWithOverlay(
+          layerLink: _layerLink,
+          overlayController: _overlayController,
+          fieldKey: widget.inputKey ?? _fieldKey,
+          onDismiss: () {
+            // Manual focus management - user clicked outside, unfocus
+            _focusManager.loseFocus();
+            _overlayManager.hideIfNeeded();
+          },
+          overlay: _buildDropdownOverlay(),
+          inputField: _buildInputField(),
+        ),
+        // Live region for screen reader announcements
+        _liveRegionManager.build(),
+      ],
     );
   }
 

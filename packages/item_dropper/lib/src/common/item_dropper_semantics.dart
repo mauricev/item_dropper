@@ -53,4 +53,30 @@ class ItemDropperSemantics {
       label.length - SemanticsConsts.addItemSuffix.length,
     );
   }
+
+  // Live region announcements
+
+  /// Creates announcement for item selection.
+  ///
+  /// Example: announceItemSelected('Apple') → 'Apple selected'
+  static String announceItemSelected(String itemLabel) {
+    return '$itemLabel${SemanticsConsts.itemSelectedSuffix}';
+  }
+
+  /// Creates announcement for item removal.
+  ///
+  /// Example: announceItemRemoved('Apple') → 'Apple removed'
+  static String announceItemRemoved(String itemLabel) {
+    return '$itemLabel${SemanticsConsts.itemRemovedSuffix}';
+  }
+
+  /// Creates announcement for maximum selection reached.
+  ///
+  /// Example: announceMaxSelectionReached(5) → 'Maximum 5 items selected'
+  static String announceMaxSelectionReached(int maxCount) {
+    return '${SemanticsConsts.maxSelectionReachedPrefix}$maxCount${SemanticsConsts.maxSelectionReachedSuffix}';
+  }
+
+  /// Announcement for dropdown closed.
+  static String get announceDropdownClosed => SemanticsConsts.dropdownClosed;
 }

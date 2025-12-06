@@ -5,6 +5,7 @@ import 'package:item_dropper/src/common/item_dropper_common.dart';
 import 'package:item_dropper/src/utils/item_dropper_add_item_utils.dart';
 import 'package:item_dropper/src/single/single_select_constants.dart';
 import 'package:item_dropper/src/common/item_dropper_semantics.dart';
+import 'package:item_dropper/src/common/live_region_manager.dart';
 
 /// Single-select dropdown widget
 /// Allows selecting a single item from a searchable list
@@ -123,6 +124,9 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
   // Scroll debouncing
   Timer? _scrollDebounceTimer;
 
+  // Live region for screen reader announcements
+  late final LiveRegionManager _liveRegionManager;
+
   bool get _isUserEditing =>
       _interactionState == DropdownInteractionState.editing;
 
@@ -167,6 +171,11 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
     _selected = widget.selectedItem;
     _filterUtils.initializeItems(widget.items);
 
+    // Initialize live region manager
+    _liveRegionManager = LiveRegionManager(
+      onUpdate: () => _safeSetState(() {}),
+    );
+
     _controller.addListener(() {
       if (_focusNode.hasFocus) {
         if (!_isUserEditing) _isUserEditing = true;
@@ -203,6 +212,13 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
     if (_selected?.value != newVal?.value) {
       _selected = newVal;
       widget.onChanged(newVal);
+
+      // Announce selection to screen readers
+      if (newVal != null) {
+        _liveRegionManager.announce(
+          ItemDropperSemantics.announceItemSelected(newVal.label),
+        );
+      }
     }
   }
 
@@ -640,6 +656,7 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
   @override
   void dispose() {
     _scrollDebounceTimer?.cancel();
+    _liveRegionManager.dispose();
     _removeOverlay();
     _focusNode.removeListener(_handleFocusChange);
     _focusNode.removeListener(_handleFocusSnapScroll);
@@ -698,7 +715,9 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
   Widget build(BuildContext context) {
     final bool hasSelection = _selected != null;
 
-    return ItemDropperWithOverlay(
+    return Stack(
+      children: [
+      ItemDropperWithOverlay(
       layerLink: _layerLink,
       overlayController: _overlayController,
       fieldKey: widget.inputKey ?? _internalFieldKey,
@@ -819,6 +838,10 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
             ), // Close IgnorePointer
           ), // Close SizedBox
       ), // Close Container
+      ), // Close ItemDropperWithOverlay
+        // Live region for screen reader announcements
+        _liveRegionManager.build(),
+      ],
     );
   }
 }

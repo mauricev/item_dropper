@@ -27,4 +27,22 @@ class SemanticsConsts {
 
   /// Suffix for "add item" labels.
   static const String addItemSuffix = '"';
+
+  // Live region announcements (confirmation feedback)
+
+  /// Announced when an item is selected.
+  /// Example: "Apple" + " selected" = "Apple selected"
+  static const String itemSelectedSuffix = ' selected';
+
+  /// Announced when a chip is removed.
+  /// Example: "Apple" + " removed" = "Apple removed"
+  static const String itemRemovedSuffix = ' removed';
+
+  /// Announced when maximum selection is reached.
+  /// Example: "Maximum " + "5" + " items selected" = "Maximum 5 items selected"
+  static const String maxSelectionReachedPrefix = 'Maximum ';
+  static const String maxSelectionReachedSuffix = ' items selected';
+
+  /// Announced when dropdown closes.
+  static const String dropdownClosed = 'Dropdown closed';
 }
