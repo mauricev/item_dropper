@@ -7,6 +7,9 @@ class SingleSelectConstants {
   static const double kTextFieldVerticalPadding = 2.0;
   static const double kTextFieldHorizontalPadding = 12.0;
 
+  // TextField padding when border is on Container (compensates for removed OutlineInputBorder)
+  static const double kTextFieldVerticalPaddingNoBorder = 18.0;
+
   // Suffix icon layout
   static const double kSuffixIconWidth = 60.0;
   static const double kIconSize = 16.0;
@@ -14,8 +17,7 @@ class SingleSelectConstants {
   static const double kClearButtonRightPosition = 40.0;
   static const double kArrowButtonRightPosition = 10.0;
 
-  // Font size
-  static const double kFieldFontSize = 12.0;
+  // Font size: Uses ItemDropperConstants.kDropdownItemFontSize for consistency
 
   // Scroll
   static const double kScrollResetPosition = 0.0;

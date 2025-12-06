@@ -707,8 +707,8 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
                 readOnly: !widget.showKeyboard,
                 showCursor: true,
                 enableInteractiveSelection: false,
-                style: (widget.fieldTextStyle ?? const TextStyle(fontSize: SingleSelectConstants
-                    .kFieldFontSize)).copyWith(
+                style: (widget.fieldTextStyle ?? const TextStyle(fontSize: ItemDropperConstants
+                    .kDropdownItemFontSize)).copyWith(
                   color: widget.enabled 
                       ? (widget.fieldTextStyle?.color ?? Colors.black)
                       : Colors.grey,
@@ -747,13 +747,14 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
                 focusedBorder: InputBorder.none,
                 isDense: true,
                 contentPadding: const EdgeInsets.symmetric(
-                  vertical: SingleSelectConstants.kTextFieldVerticalPadding,
+                  vertical: SingleSelectConstants
+                      .kTextFieldVerticalPaddingNoBorder,
                   horizontal: SingleSelectConstants.kTextFieldHorizontalPadding,
                 ),
                 suffixIconConstraints: BoxConstraints.tightFor(
                   width: SingleSelectConstants.kSuffixIconWidth,
                   height: (widget.fieldTextStyle?.fontSize ??
-                      SingleSelectConstants.kFieldFontSize) *
+                      ItemDropperConstants.kDropdownItemFontSize) *
                       ItemDropperConstants.kSuffixIconHeightMultiplier,
                 ),
                 suffixIcon: ItemDropperSuffixIcons(
@@ -782,7 +783,7 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
                   arrowButtonRightPosition: SingleSelectConstants
                       .kArrowButtonRightPosition,
                   textSize: widget.fieldTextStyle?.fontSize ??
-                      SingleSelectConstants.kFieldFontSize,
+                      ItemDropperConstants.kDropdownItemFontSize,
                 ),
               ), // Close InputDecoration
                 ), // Close TextField
