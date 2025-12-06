@@ -335,7 +335,6 @@ Built-in keyboard support:
 | `fieldDecoration`       | `BoxDecoration?`                        | `null`   | Custom field container decoration |
 | `popupItemBuilder`      | `Widget Function(...)?`                 | `null`   | Custom popup item builder         |
 | `onAddItem`             | `ItemDropperItem<T>? Function(String)?` | `null`   | Callback for adding new items     |
-| `allowDelete`           | `bool`                                  | `false`  | Show delete buttons in popup      |
 | `onDeleteItem`          | `Function(ItemDropperItem<T>)?`         | `null`   | Callback when item deleted        |
 | `inputKey`              | `GlobalKey?`                            | `null`   | Key for programmatic access       |
 
@@ -361,7 +360,6 @@ Built-in keyboard support:
 | `fieldDecoration`        | `BoxDecoration?`                        | `null`   | Custom field container decoration    |
 | `popupItemBuilder`       | `Widget Function(...)?`                 | `null`   | Custom popup item builder            |
 | `onAddItem`              | `ItemDropperItem<T>? Function(String)?` | `null`   | Callback for adding new items        |
-| `allowDelete`            | `bool`                                  | `false`  | Show delete buttons in popup         |
 | `onDeleteItem`           | `Function(ItemDropperItem<T>)?`         | `null`   | Callback when item deleted           |
 | `inputKey`               | `GlobalKey?`                            | `null`   | Key for programmatic access          |
 

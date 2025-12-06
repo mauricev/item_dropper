@@ -66,9 +66,10 @@ class MultiItemDropper<T> extends StatefulWidget {
   /// Receives the search text and should return a new ItemDropperItem to add to the list.
   /// If null, the add row will not appear.
   final ItemDropperItem<T>? Function(String searchText)? onAddItem;
-  final bool allowDelete; // Allow deleting items from the list
-  final void Function(ItemDropperItem<
-      T> item)? onDeleteItem; // Callback when item is deleted
+
+  /// Callback invoked when user deletes an item from the dropdown.
+  /// If null, delete buttons will not appear in the dropdown.
+  final void Function(ItemDropperItem<T> item)? onDeleteItem;
   /// Optional custom decoration for selected chips.
   ///
   /// - If provided, this BoxDecoration is used as-is for each selected chip.
@@ -104,7 +105,6 @@ class MultiItemDropper<T> extends StatefulWidget {
     this.popupItemBuilder,
     this.elevation,
     this.onAddItem,
-    this.allowDelete = false,
     this.onDeleteItem,
     this.selectedChipDecoration,
     this.fieldDecoration,
