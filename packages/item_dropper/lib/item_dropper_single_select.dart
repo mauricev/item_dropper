@@ -742,16 +742,9 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
               },
               decoration: InputDecoration(
                 filled: false,
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(
-                      color: widget.enabled ? Colors.black45 : Colors.grey
-                          .shade400),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(
-                      color: widget.enabled ? Colors.blue : Colors.grey
-                          .shade400),
-                ),
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
                 isDense: true,
                 contentPadding: const EdgeInsets.symmetric(
                   vertical: SingleSelectConstants.kTextFieldVerticalPadding,
