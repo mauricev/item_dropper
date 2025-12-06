@@ -5,6 +5,7 @@ import 'package:item_dropper/src/common/item_dropper_common.dart';
 import 'package:item_dropper/src/common/item_dropper_semantics.dart';
 import 'package:item_dropper/src/common/live_region_manager.dart';
 import 'package:item_dropper/src/common/keyboard_navigation_manager.dart';
+import 'package:item_dropper/src/common/decoration_cache_manager.dart';
 import 'package:item_dropper/src/multi/chip_measurement_helper.dart';
 import 'package:item_dropper/src/multi/multi_select_constants.dart';
 import 'package:item_dropper/src/multi/multi_select_focus_manager.dart';
@@ -143,10 +144,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   // Measurement helper
   final ChipMeasurementHelper _measurements = ChipMeasurementHelper();
   
-  // Cache decoration to prevent recreation on every build
-  // Only recreate when focus state actually changes
-  BoxDecoration? _cachedDecoration;
-  bool? _cachedFocusState;
+  // Decoration cache manager
+  final DecorationCacheManager _decorationManager = DecorationCacheManager();
 
   bool _rebuildScheduled = false;
   // Track when we're the source of selection changes to prevent didUpdateWidget from rebuilding
@@ -350,40 +349,10 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       return;
     }
     // Invalidate decoration cache - will be recreated on next build with new focus state
-    _cachedDecoration = null;
-    _cachedFocusState = null;
+    _decorationManager.invalidate();
     _safeSetState(() {
       // Trigger rebuild to apply new decoration
     });
-  }
-
-  /// Get cached decoration, recreating only if focus state changed
-  BoxDecoration _getCachedDecoration() {
-    // If custom decoration provided, use it as-is (no caching or focus-based changes)
-    if (widget.fieldDecoration != null) {
-      return widget.fieldDecoration!;
-    }
-
-    // Otherwise use default decoration with focus-based border color
-    // Only recreate if cache is null or focus state changed
-    if (_cachedDecoration == null || _cachedFocusState != _focusManager
-        .isFocused) {
-      _cachedFocusState = _focusManager.isFocused;
-      _cachedDecoration = BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.white, Colors.grey.shade200],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
-        border: Border.all(
-          color: _focusManager.isFocused ? Colors.blue : Colors.grey.shade400,
-          width: MultiSelectConstants.kContainerBorderWidth,
-        ),
-        borderRadius: BorderRadius.circular(
-            MultiSelectConstants.kContainerBorderRadius),
-      );
-    }
-    return _cachedDecoration!;
   }
 
   void _updateSelection(void Function() selectionUpdate) {
@@ -848,7 +817,12 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       key: widget.inputKey ?? _fieldKey,
       width: widget.width, // Constrain to 500px
       // Let content determine height naturally to prevent overflow
-      decoration: _getCachedDecoration(),
+      decoration: _decorationManager.get(
+        isFocused: _focusManager.isFocused,
+        customDecoration: widget.fieldDecoration,
+        borderRadius: MultiSelectConstants.kContainerBorderRadius,
+        borderWidth: MultiSelectConstants.kContainerBorderWidth,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         // Fill available space instead of min

@@ -7,6 +7,7 @@ import 'package:item_dropper/src/single/single_select_constants.dart';
 import 'package:item_dropper/src/common/item_dropper_semantics.dart';
 import 'package:item_dropper/src/common/live_region_manager.dart';
 import 'package:item_dropper/src/common/keyboard_navigation_manager.dart';
+import 'package:item_dropper/src/common/decoration_cache_manager.dart';
 
 /// Single-select dropdown widget
 /// Allows selecting a single item from a searchable list
@@ -124,6 +125,9 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
 
   // Keyboard navigation manager
   late final KeyboardNavigationManager<T> _keyboardNavManager;
+
+  // Decoration cache manager
+  final DecorationCacheManager _decorationManager = DecorationCacheManager();
 
   // Live region for screen reader announcements
   late final LiveRegionManager _liveRegionManager;
@@ -292,6 +296,9 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
   }
 
   void _handleFocusChange() {
+    // Invalidate decoration cache when focus changes to update border color
+    _decorationManager.invalidate();
+
     if (_focusNode.hasFocus) {
       if (!_overlayController.isShowing) {
         _showOverlay();
@@ -681,14 +688,10 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
       onDismiss: _dismissDropdown,
       overlay: _buildDropdownOverlay(),
       inputField: Container(
-          decoration: widget.fieldDecoration ?? BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Colors.white, Colors.grey.shade200],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-            ),
-            borderRadius: BorderRadius.circular(
-                SingleSelectConstants.kContainerBorderRadius),
+          decoration: _decorationManager.get(
+            isFocused: _focusNode.hasFocus,
+            customDecoration: widget.fieldDecoration,
+            borderRadius: SingleSelectConstants.kContainerBorderRadius,
           ),
           child: SizedBox(
             width: widget.width,
