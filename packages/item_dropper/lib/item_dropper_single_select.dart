@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:item_dropper/src/common/item_dropper_common.dart';
 import 'package:item_dropper/src/utils/item_dropper_add_item_utils.dart';
 import 'package:item_dropper/src/single/single_select_constants.dart';
+import 'package:item_dropper/src/common/item_dropper_semantics.dart';
 
 /// Single-select dropdown widget
 /// Allows selecting a single item from a searchable list
@@ -718,7 +719,7 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
             child: IgnorePointer(
               ignoring: !widget.enabled,
               child: Semantics(
-                label: 'Search dropdown',
+                label: ItemDropperSemantics.singleSelectFieldLabel,
                 textField: true,
                 child: TextField(
                   key: widget.inputKey ?? _internalFieldKey,

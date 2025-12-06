@@ -1,4 +1,5 @@
 import '../common/item_dropper_item.dart';
+import '../common/item_dropper_semantics.dart';
 
 /// Shared utilities for "add item" functionality in dropdowns
 class ItemDropperAddItemUtils {
@@ -7,8 +8,8 @@ class ItemDropperAddItemUtils {
     ItemDropperItem<T> item,
     List<ItemDropperItem<T>> originalItems,
   ) {
-    // Check label pattern: must start with 'Add "' and end with '"'
-    if (!item.label.startsWith('Add "') || !item.label.endsWith('"')) {
+    // Check label pattern using semantics constants
+    if (!ItemDropperSemantics.isAddItemLabel(item.label)) {
       return false;
     }
     // Also verify it's not in the original items list (safety check)
@@ -21,10 +22,7 @@ class ItemDropperAddItemUtils {
   /// Extract search text from add item label
   /// Label format: 'Add "search text"'
   static String extractSearchTextFromAddItem<T>(ItemDropperItem<T> item) {
-    if (item.label.startsWith('Add "') && item.label.endsWith('"')) {
-      return item.label.substring(5, item.label.length - 1);
-    }
-    return '';
+    return ItemDropperSemantics.extractSearchTextFromAddItemLabel(item.label);
   }
   
   /// Create an "add item" for the given search text
@@ -55,7 +53,7 @@ class ItemDropperAddItemUtils {
     
     return ItemDropperItem<T>(
       value: addItemValue,
-      label: 'Add "$searchText"',
+      label: ItemDropperSemantics.formatAddItemLabel(searchText),
       isGroupHeader: false,
     );
   }

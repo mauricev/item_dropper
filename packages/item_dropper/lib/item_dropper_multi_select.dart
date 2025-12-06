@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:item_dropper/src/common/item_dropper_common.dart';
+import 'package:item_dropper/src/common/item_dropper_semantics.dart';
 import 'package:item_dropper/src/multi/chip_measurement_helper.dart';
 import 'package:item_dropper/src/multi/multi_select_constants.dart';
 import 'package:item_dropper/src/multi/multi_select_focus_manager.dart';
@@ -938,7 +939,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
             );
 
         return Semantics(
-          label: '${item.label}, selected',
+          label: ItemDropperSemantics.formatSelectedChipLabel(item.label),
           button: true,
           excludeSemantics: true,
           child: Container(
@@ -1012,7 +1013,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       child: IgnorePointer(
         ignoring: !widget.enabled,
         child: Semantics(
-          label: 'Search and add items',
+          label: ItemDropperSemantics.multiSelectFieldLabel,
           textField: true,
           child: TextField(
             controller: _searchController,
