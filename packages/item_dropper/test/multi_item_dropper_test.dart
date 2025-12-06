@@ -719,7 +719,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Confirm dialog should appear
-      expect(find.text('Delete \"Deletable 1\"?'), findsOneWidget);
+      expect(find.text('Delete "Deletable 1"?'), findsOneWidget);
 
       // Tap the Delete button
       await tester.tap(find.text('Delete'));
@@ -763,7 +763,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Confirm dialog should appear
-      expect(find.text('Delete \"Deletable 1\"?'), findsOneWidget);
+      expect(find.text('Delete "Deletable 1"?'), findsOneWidget);
 
       // Tap the Cancel button
       await tester.tap(find.text('Cancel'));
@@ -805,7 +805,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // No confirmation dialog should appear
-      expect(find.textContaining('Delete \"Keep 1\"?'), findsNothing);
+      expect(find.textContaining('Delete "Keep 1"?'), findsNothing);
       // And no delete callback
       expect(tracker.callCount, equals(0));
     });

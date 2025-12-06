@@ -12,6 +12,7 @@ void main() {
         ItemDropperItem<String>(value: '3', label: 'Item 3'),
       ];
 
+      // ignore: unused_local_variable
       ItemDropperItem<String>? selectedItem;
 
       await tester.pumpWidget(
