@@ -340,39 +340,39 @@ Built-in keyboard support:
 
 ### MultiItemDropper Parameters
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `items` | `List<ItemDropperItem<T>>` | required | List of items to display |
-| `selectedItems` | `List<ItemDropperItem<T>>` | required | Currently selected items |
-| `onChanged` | `Function(List<ItemDropperItem<T>>)` | required | Callback when selection changes |
-| `width` | `double` | required | Width of the dropdown field |
-| `enabled` | `bool` | `true` | Whether dropdown is interactive |
-| `maxSelected` | `int?` | `null` | Maximum number of selections allowed |
-| `maxDropdownHeight` | `double?` | `200.0` | Maximum height of popup |
-| `elevation` | `double?` | `4.0` | Shadow elevation of popup |
-| `showScrollbar` | `bool` | `true` | Show scrollbar in popup |
-| `scrollbarThickness` | `double` | `6.0` | Thickness of scrollbar |
-| `fieldTextStyle` | `TextStyle?` | `null` | Style for field text and chips |
-| `popupTextStyle` | `TextStyle?` | `null` | Style for popup items |
-| `popupGroupHeaderStyle` | `TextStyle?` | `null` | Style for group headers |
-| `itemHeight` | `double?` | `null` | Height of each popup item |
-| `selectedChipDecoration` | `BoxDecoration?` | `null` | Custom chip decoration |
-| `fieldDecoration` | `BoxDecoration?` | `null` | Custom field container decoration |
-| `popupItemBuilder` | `Widget Function(...)?` | `null` | Custom popup item builder |
-| `onAddItem` | `ItemDropperItem<T>? Function(String)?` | `null` | Callback for adding new items |
-| `allowDelete` | `bool` | `false` | Show delete buttons in popup |
-| `onDeleteItem` | `Function(ItemDropperItem<T>)?` | `null` | Callback when item deleted |
-| `inputKey` | `GlobalKey?` | `null` | Key for programmatic access |
+| Parameter                | Type                                    | Default  | Description                          |
+|--------------------------|-----------------------------------------|----------|--------------------------------------|
+| `items`                  | `List<ItemDropperItem<T>>`              | required | List of items to display             |
+| `selectedItems`          | `List<ItemDropperItem<T>>`              | required | Currently selected items             |
+| `onChanged`              | `Function(List<ItemDropperItem<T>>)`    | required | Callback when selection changes      |
+| `width`                  | `double`                                | required | Width of the dropdown field          |
+| `enabled`                | `bool`                                  | `true`   | Whether dropdown is interactive      |
+| `maxSelected`            | `int?`                                  | `null`   | Maximum number of selections allowed |
+| `maxDropdownHeight`      | `double?`                               | `200.0`  | Maximum height of popup              |
+| `elevation`              | `double?`                               | `4.0`    | Shadow elevation of popup            |
+| `showScrollbar`          | `bool`                                  | `true`   | Show scrollbar in popup              |
+| `scrollbarThickness`     | `double`                                | `6.0`    | Thickness of scrollbar               |
+| `fieldTextStyle`         | `TextStyle?`                            | `null`   | Style for field text and chips       |
+| `popupTextStyle`         | `TextStyle?`                            | `null`   | Style for popup items                |
+| `popupGroupHeaderStyle`  | `TextStyle?`                            | `null`   | Style for group headers              |
+| `itemHeight`             | `double?`                               | `null`   | Height of each popup item            |
+| `selectedChipDecoration` | `BoxDecoration?`                        | `null`   | Custom chip decoration               |
+| `fieldDecoration`        | `BoxDecoration?`                        | `null`   | Custom field container decoration    |
+| `popupItemBuilder`       | `Widget Function(...)?`                 | `null`   | Custom popup item builder            |
+| `onAddItem`              | `ItemDropperItem<T>? Function(String)?` | `null`   | Callback for adding new items        |
+| `allowDelete`            | `bool`                                  | `false`  | Show delete buttons in popup         |
+| `onDeleteItem`           | `Function(ItemDropperItem<T>)?`         | `null`   | Callback when item deleted           |
+| `inputKey`               | `GlobalKey?`                            | `null`   | Key for programmatic access          |
 
 ### ItemDropperItem Properties
 
-| Property | Type | Default | Description |
-|----------|------|---------|-------------|
-| `value` | `T` | required | Unique identifier for the item |
-| `label` | `String` | required | Display text |
-| `isGroupHeader` | `bool` | `false` | Whether item is a group header |
-| `isEnabled` | `bool` | `true` | Whether item can be selected |
-| `isDeletable` | `bool` | `false` | Whether item can be deleted |
+| Property        | Type     | Default  | Description                    |
+|-----------------|----------|----------|--------------------------------|
+| `value`         | `T`      | required | Unique identifier for the item |
+| `label`         | `String` | required | Display text                   |
+| `isGroupHeader` | `bool`   | `false`  | Whether item is a group header |
+| `isEnabled`     | `bool`   | `true`   | Whether item can be selected   |
+| `isDeletable`   | `bool`   | `false`  | Whether item can be deleted    |
 
 ---
 
