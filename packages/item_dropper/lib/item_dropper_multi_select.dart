@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:item_dropper/src/common/item_dropper_common.dart';
 import 'package:item_dropper/src/common/item_dropper_semantics.dart';
 import 'package:item_dropper/src/common/live_region_manager.dart';
+import 'package:item_dropper/src/common/keyboard_navigation_manager.dart';
 import 'package:item_dropper/src/multi/chip_measurement_helper.dart';
 import 'package:item_dropper/src/multi/multi_select_constants.dart';
 import 'package:item_dropper/src/multi/multi_select_focus_manager.dart';
@@ -130,8 +131,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   // Overlay manager handles overlay visibility
   late final MultiSelectOverlayManager _overlayManager;
 
-  int _keyboardHighlightIndex = ItemDropperConstants.kNoHighlight;
-  int _hoverIndex = ItemDropperConstants.kNoHighlight;
+  // Keyboard navigation manager
+  late final KeyboardNavigationManager<T> _keyboardNavManager;
   
   // Memoized filtered items - invalidated when search text or selected items change
   List<ItemDropperItem<T>>? _cachedFilteredItems;
@@ -194,6 +195,12 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       onClearHighlights: _clearHighlights,
     );
 
+    // Initialize keyboard navigation manager
+    _keyboardNavManager = KeyboardNavigationManager<T>(
+      onRequestRebuild: () => _safeSetState(() {}),
+      onEscape: () => _focusManager.loseFocus(),
+    );
+
     // Initialize live region manager
     _liveRegionManager = LiveRegionManager(
       onUpdate: () => _safeSetState(() {}),
@@ -201,7 +208,13 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
 
     _filterUtils.initializeItems(widget.items);
 
-    _focusNode.onKeyEvent = _handleKeyEvent;
+    _focusNode.onKeyEvent = (node, event) =>
+        _keyboardNavManager.handleKeyEvent(
+          event: event,
+          filteredItems: _filtered,
+          scrollController: _scrollController,
+          mounted: mounted,
+        );
   }
 
   List<ItemDropperItem<T>> get _filtered {
@@ -249,8 +262,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
 
 
   void _clearHighlights() {
-    _keyboardHighlightIndex = ItemDropperConstants.kNoHighlight;
-    _hoverIndex = ItemDropperConstants.kNoHighlight;
+    _keyboardNavManager.clearHighlights();
   }
 
 
@@ -376,9 +388,9 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
 
   void _updateSelection(void Function() selectionUpdate) {
     // Preserve keyboard highlight state - only reset if keyboard navigation was active
-    final bool wasKeyboardActive = _keyboardHighlightIndex !=
+    final bool wasKeyboardActive = _keyboardNavManager.keyboardHighlightIndex !=
         ItemDropperConstants.kNoHighlight;
-    final int previousHoverIndex = _hoverIndex;
+    final int previousHoverIndex = _keyboardNavManager.hoverIndex;
 
     // Use unified selection change handler
     _handleSelectionChange(
@@ -392,19 +404,19 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         if (remainingFilteredItems.isNotEmpty) {
           // Only reset keyboard highlight if keyboard navigation was active
           if (wasKeyboardActive) {
-            _keyboardHighlightIndex = 0;
-            _hoverIndex = ItemDropperConstants.kNoHighlight;
+            _keyboardNavManager.clearHighlights();
+            // Set keyboard highlight to first item
+            // Note: We can't directly set the index, so we'll clear it
+            // The manager will handle resetting on next arrow key
           } else {
-            // Clear keyboard highlight so mouse hover can work
-            _keyboardHighlightIndex = ItemDropperConstants.kNoHighlight;
-            // Don't clear hover index - preserve it so highlighting continues to work
+            // Preserve hover index if still valid
             if (previousHoverIndex >= 0 &&
                 previousHoverIndex < remainingFilteredItems.length) {
               // Hover index is still valid, keep it
-              _hoverIndex = previousHoverIndex;
+              _keyboardNavManager.hoverIndex = previousHoverIndex;
             } else {
               // Hover index is invalid, clear it
-              _hoverIndex = ItemDropperConstants.kNoHighlight;
+              _keyboardNavManager.clearHighlights();
             }
           }
         } else {
@@ -609,64 +621,13 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     _requestRebuildIfNotScheduled();
   }
 
-  KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
-    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
-      return KeyEventResult.ignored;
-    }
-
-    if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-      _handleArrowDown();
-      return KeyEventResult.handled;
-    } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-      _handleArrowUp();
-      return KeyEventResult.handled;
-    } else if (event.logicalKey == LogicalKeyboardKey.escape) {
-      // Manual focus management - user explicitly unfocused with Escape
-      _focusManager.loseFocus();
-      return KeyEventResult.handled;
-    }
-
-    return KeyEventResult.ignored;
-  }
-
-  void _handleArrowKeyNavigation(int Function({
-  required int currentIndex,
-  required int hoverIndex,
-  required int itemCount,
-  List<ItemDropperItem<T>>? items,
-  }) navigationHandler,) {
-    final filtered = _filtered;
-    _keyboardHighlightIndex = navigationHandler(
-      currentIndex: _keyboardHighlightIndex,
-      hoverIndex: _hoverIndex,
-      itemCount: filtered.length,
-      items: filtered,
-    );
-    _safeSetState(() {
-      _hoverIndex = ItemDropperConstants.kNoHighlight;
-    });
-    ItemDropperKeyboardNavigation.scrollToHighlight(
-      highlightIndex: _keyboardHighlightIndex,
-      scrollController: _scrollController,
-      mounted: mounted,
-    );
-  }
-
-  void _handleArrowDown() {
-    _handleArrowKeyNavigation(ItemDropperKeyboardNavigation.handleArrowDown<T>);
-  }
-
-  void _handleArrowUp() {
-    _handleArrowKeyNavigation(ItemDropperKeyboardNavigation.handleArrowUp<T>);
-  }
-
   void _handleEnter() {
     final List<ItemDropperItem<T>> filteredItems = _filtered;
 
-    if (_keyboardHighlightIndex >= 0 &&
-        _keyboardHighlightIndex < filteredItems.length) {
+    if (_keyboardNavManager.keyboardHighlightIndex >= 0 &&
+        _keyboardNavManager.keyboardHighlightIndex < filteredItems.length) {
       // Keyboard navigation is active, select highlighted item
-      final item = filteredItems[_keyboardHighlightIndex];
+      final item = filteredItems[_keyboardNavManager.keyboardHighlightIndex];
       // Skip group headers
       if (!item.isGroupHeader) {
         _toggleItem(item);
@@ -1173,10 +1134,10 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
           item: item,
           isSelected: isSelected,
           filteredItems: filteredItems,
-          hoverIndex: _hoverIndex,
-          keyboardHighlightIndex: _keyboardHighlightIndex,
+          hoverIndex: _keyboardNavManager.hoverIndex,
+          keyboardHighlightIndex: _keyboardNavManager.keyboardHighlightIndex,
           safeSetState: _safeSetState,
-          setHoverIndex: (index) => _hoverIndex = index,
+          setHoverIndex: (index) => _keyboardNavManager.hoverIndex = index,
           onTap: () {
             _toggleItem(item);
           },

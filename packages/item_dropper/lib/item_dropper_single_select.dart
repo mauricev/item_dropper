@@ -6,6 +6,7 @@ import 'package:item_dropper/src/utils/item_dropper_add_item_utils.dart';
 import 'package:item_dropper/src/single/single_select_constants.dart';
 import 'package:item_dropper/src/common/item_dropper_semantics.dart';
 import 'package:item_dropper/src/common/live_region_manager.dart';
+import 'package:item_dropper/src/common/keyboard_navigation_manager.dart';
 
 /// Single-select dropdown widget
 /// Allows selecting a single item from a searchable list
@@ -110,9 +111,6 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
   final LayerLink _layerLink = LayerLink();
   final OverlayPortalController _overlayController = OverlayPortalController();
 
-  int _hoverIndex = ItemDropperConstants.kNoHighlight;
-  int _keyboardHighlightIndex = ItemDropperConstants.kNoHighlight;
-
   // Use shared filter utils
   final ItemDropperFilterUtils<T> _filterUtils = ItemDropperFilterUtils<T>();
 
@@ -123,6 +121,9 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
 
   // Scroll debouncing
   Timer? _scrollDebounceTimer;
+
+  // Keyboard navigation manager
+  late final KeyboardNavigationManager<T> _keyboardNavManager;
 
   // Live region for screen reader announcements
   late final LiveRegionManager _liveRegionManager;
@@ -171,6 +172,12 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
     _selected = widget.selectedItem;
     _filterUtils.initializeItems(widget.items);
 
+    // Initialize keyboard navigation manager
+    _keyboardNavManager = KeyboardNavigationManager<T>(
+      onRequestRebuild: () => _safeSetState(() {}),
+      onEscape: _dismissDropdown,
+    );
+
     // Initialize live region manager
     _liveRegionManager = LiveRegionManager(
       onUpdate: () => _safeSetState(() {}),
@@ -186,7 +193,13 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
     });
 
     // Attach keyboard event handler for arrow key navigation
-    _focusNode.onKeyEvent = _handleKeyEvent;
+    _focusNode.onKeyEvent = (node, event) =>
+        _keyboardNavManager.handleKeyEvent(
+          event: event,
+          filteredItems: _filtered,
+          scrollController: _scrollController,
+          mounted: mounted,
+        );
 
     // Minimal hook: when the field loses focus, reset horizontal scroll to start
     _focusNode.addListener(_handleFocusSnapScroll);
@@ -305,7 +318,7 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
     }
 
     // Reset keyboard highlight when search results change
-    _keyboardHighlightIndex = ItemDropperConstants.kNoHighlight;
+    _keyboardNavManager.clearHighlights();
     _safeSetState(() {});
 
     // Debounced scroll animation
@@ -343,8 +356,7 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
     if (_filtered.isEmpty) return;
     _waitThenScrollToSelected();
     _safeSetState(() {
-      _hoverIndex = ItemDropperConstants.kNoHighlight;
-      _keyboardHighlightIndex = ItemDropperConstants.kNoHighlight;
+      _keyboardNavManager.clearHighlights();
     });
     _overlayController.show();
   }
@@ -353,8 +365,7 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
     _focusNode.unfocus();
     _removeOverlay();
     _safeSetState(() {
-      _hoverIndex = ItemDropperConstants.kNoHighlight;
-      _keyboardHighlightIndex = ItemDropperConstants.kNoHighlight;
+      _keyboardNavManager.clearHighlights();
     });
   }
 
@@ -362,52 +373,15 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
     if (_overlayController.isShowing) {
       _overlayController.hide();
     }
-    _hoverIndex = ItemDropperConstants.kNoHighlight;
-    _keyboardHighlightIndex = ItemDropperConstants.kNoHighlight;
-  }
-
-  void _handleArrowDown() {
-    final filtered = _filtered;
-    _keyboardHighlightIndex = ItemDropperKeyboardNavigation.handleArrowDown<T>(
-      currentIndex: _keyboardHighlightIndex,
-      hoverIndex: _hoverIndex,
-      itemCount: filtered.length,
-      items: filtered,
-    );
-    _safeSetState(() {
-      _hoverIndex = ItemDropperConstants.kNoHighlight;
-    });
-    ItemDropperKeyboardNavigation.scrollToHighlight(
-      highlightIndex: _keyboardHighlightIndex,
-      scrollController: _scrollController,
-      mounted: mounted,
-    );
-  }
-
-  void _handleArrowUp() {
-    final filtered = _filtered;
-    _keyboardHighlightIndex = ItemDropperKeyboardNavigation.handleArrowUp<T>(
-      currentIndex: _keyboardHighlightIndex,
-      hoverIndex: _hoverIndex,
-      itemCount: filtered.length,
-      items: filtered,
-    );
-    _safeSetState(() {
-      _hoverIndex = ItemDropperConstants.kNoHighlight;
-    });
-    ItemDropperKeyboardNavigation.scrollToHighlight(
-      highlightIndex: _keyboardHighlightIndex,
-      scrollController: _scrollController,
-      mounted: mounted,
-    );
+    _keyboardNavManager.clearHighlights();
   }
 
   void _selectKeyboardHighlightedItem() {
     final List<ItemDropperItem<T>> filteredItems = _filtered;
-    if (_keyboardHighlightIndex >= 0 &&
-        _keyboardHighlightIndex < filteredItems.length) {
+    if (_keyboardNavManager.keyboardHighlightIndex >= 0 &&
+        _keyboardNavManager.keyboardHighlightIndex < filteredItems.length) {
       final ItemDropperItem<
-          T> selectedItem = filteredItems[_keyboardHighlightIndex];
+          T> selectedItem = filteredItems[_keyboardNavManager.keyboardHighlightIndex];
       // Skip group headers
       if (selectedItem.isGroupHeader) {
         return;
@@ -494,7 +468,7 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
 
   void _handleSubmit(String value) {
     // When Enter is pressed, select keyboard-highlighted item or the single item
-    if (_keyboardHighlightIndex >= 0) {
+    if (_keyboardNavManager.keyboardHighlightIndex >= 0) {
       // Keyboard navigation is active, select highlighted item
       _selectKeyboardHighlightedItem();
     } else {
@@ -537,23 +511,6 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
     }
   }
 
-  KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
-    // Handle both KeyDownEvent (initial press) and KeyRepeatEvent (auto-repeat when held)
-    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
-      return KeyEventResult.ignored;
-    }
-
-    if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-      _handleArrowDown();
-      return KeyEventResult.handled;
-    } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-      _handleArrowUp();
-      return KeyEventResult.handled;
-    }
-
-    return KeyEventResult.ignored;
-  }
-
   Widget _buildDropdownOverlay() {
     // Don't build overlay if disabled
     if (!widget.enabled) return const SizedBox.shrink();
@@ -581,10 +538,10 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
           item: item,
           isSelected: isSelected,
           filteredItems: filteredItems,
-          hoverIndex: _hoverIndex,
-          keyboardHighlightIndex: _keyboardHighlightIndex,
+          hoverIndex: _keyboardNavManager.hoverIndex,
+          keyboardHighlightIndex: _keyboardNavManager.keyboardHighlightIndex,
           safeSetState: _safeSetState,
-          setHoverIndex: (index) => _hoverIndex = index,
+          setHoverIndex: (index) => _keyboardNavManager.hoverIndex = index,
           onTap: () {
             // Skip group headers
             if (item.isGroupHeader) {
@@ -812,7 +769,7 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
                     _attemptSelectByInput('');
                     if (mounted) {
                       setState(() =>
-                      _hoverIndex = ItemDropperConstants.kNoHighlight);
+                      _keyboardNavManager.hoverIndex = ItemDropperConstants.kNoHighlight);
                     }
                   },
                   onArrowPressed: () {
