@@ -39,6 +39,8 @@ class SingleItemDropper<T> extends StatefulWidget {
   final double width;
   final double maxDropdownHeight;
   final double elevation;
+  final bool showScrollbar;
+  final double scrollbarThickness;
   final bool showKeyboard;
   /// TextStyle for input field text.
   /// If null, defaults to fontSize 12 with black color.
@@ -76,6 +78,8 @@ class SingleItemDropper<T> extends StatefulWidget {
     required this.width,
     this.maxDropdownHeight = SingleSelectConstants.kDefaultMaxDropdownHeight,
     this.elevation = ItemDropperConstants.kDropdownElevation,
+    this.showScrollbar = true,
+    this.scrollbarThickness = ItemDropperConstants.kDefaultScrollbarThickness,
     this.showKeyboard = false,
     this.fieldTextStyle,
     this.popupTextStyle,
@@ -536,6 +540,8 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
       controller: _overlayController,
       scrollController: _scrollController,
       layerLink: _layerLink,
+      showScrollbar: widget.showScrollbar,
+      scrollbarThickness: widget.scrollbarThickness,
       isSelected: (ItemDropperItem<T> item) => item.value == _selected?.value,
       builder: (BuildContext builderContext, ItemDropperItem<T> item,
           bool isSelected) {

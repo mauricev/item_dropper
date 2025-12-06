@@ -315,26 +315,28 @@ Built-in keyboard support:
 
 ### SingleItemDropper Parameters
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `items` | `List<ItemDropperItem<T>>` | required | List of items to display |
-| `selectedItem` | `ItemDropperItem<T>?` | `null` | Currently selected item |
-| `onChanged` | `Function(ItemDropperItem<T>?)` | required | Callback when selection changes |
-| `width` | `double` | required | Width of the dropdown field |
-| `enabled` | `bool` | `true` | Whether dropdown is interactive |
-| `maxDropdownHeight` | `double` | `200.0` | Maximum height of popup |
-| `elevation` | `double` | `4.0` | Shadow elevation of popup |
-| `showKeyboard` | `bool` | `false` | Show mobile keyboard when focused |
-| `fieldTextStyle` | `TextStyle?` | `null` | Style for field text |
-| `popupTextStyle` | `TextStyle?` | `null` | Style for popup items |
-| `popupGroupHeaderStyle` | `TextStyle?` | `null` | Style for group headers |
-| `itemHeight` | `double?` | `null` | Height of each popup item |
-| `fieldDecoration` | `BoxDecoration?` | `null` | Custom field container decoration |
-| `popupItemBuilder` | `Widget Function(...)?` | `null` | Custom popup item builder |
-| `onAddItem` | `ItemDropperItem<T>? Function(String)?` | `null` | Callback for adding new items |
-| `allowDelete` | `bool` | `false` | Show delete buttons in popup |
-| `onDeleteItem` | `Function(ItemDropperItem<T>)?` | `null` | Callback when item deleted |
-| `inputKey` | `GlobalKey?` | `null` | Key for programmatic access |
+| Parameter               | Type                                    | Default  | Description                       |
+|-------------------------|-----------------------------------------|----------|-----------------------------------|
+| `items`                 | `List<ItemDropperItem<T>>`              | required | List of items to display          |
+| `selectedItem`          | `ItemDropperItem<T>?`                   | `null`   | Currently selected item           |
+| `onChanged`             | `Function(ItemDropperItem<T>?)`         | required | Callback when selection changes   |
+| `width`                 | `double`                                | required | Width of the dropdown field       |
+| `enabled`               | `bool`                                  | `true`   | Whether dropdown is interactive   |
+| `maxDropdownHeight`     | `double`                                | `200.0`  | Maximum height of popup           |
+| `elevation`             | `double`                                | `4.0`    | Shadow elevation of popup         |
+| `showScrollbar`         | `bool`                                  | `true`   | Show scrollbar in popup           |
+| `scrollbarThickness`    | `double`                                | `6.0`    | Thickness of scrollbar            |
+| `showKeyboard`          | `bool`                                  | `false`  | Show mobile keyboard when focused |
+| `fieldTextStyle`        | `TextStyle?`                            | `null`   | Style for field text              |
+| `popupTextStyle`        | `TextStyle?`                            | `null`   | Style for popup items             |
+| `popupGroupHeaderStyle` | `TextStyle?`                            | `null`   | Style for group headers           |
+| `itemHeight`            | `double?`                               | `null`   | Height of each popup item         |
+| `fieldDecoration`       | `BoxDecoration?`                        | `null`   | Custom field container decoration |
+| `popupItemBuilder`      | `Widget Function(...)?`                 | `null`   | Custom popup item builder         |
+| `onAddItem`             | `ItemDropperItem<T>? Function(String)?` | `null`   | Callback for adding new items     |
+| `allowDelete`           | `bool`                                  | `false`  | Show delete buttons in popup      |
+| `onDeleteItem`          | `Function(ItemDropperItem<T>)?`         | `null`   | Callback when item deleted        |
+| `inputKey`              | `GlobalKey?`                            | `null`   | Key for programmatic access       |
 
 ### MultiItemDropper Parameters
 
