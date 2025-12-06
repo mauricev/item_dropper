@@ -28,6 +28,7 @@ capabilities, built-in search filtering, and full keyboard navigation support.
 - ✅ **Real-time Search** - Filter items as you type
 - ✅ **Keyboard Navigation** - Full support for arrow keys, Enter, and Escape
 - ✅ **Add New Items** - Allow users to create new items on-the-fly
+- ✅ **Delete Items** - Optional delete buttons for managing the item list
 - ✅ **Group Headers** - Organize items with visual separators
 - ✅ **Smart Positioning** - Automatically positions dropdown above or below based on screen space
 
