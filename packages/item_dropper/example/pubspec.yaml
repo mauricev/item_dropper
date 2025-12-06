@@ -1,0 +1,15 @@
+name: item_dropper_example
+description: Example app demonstrating item_dropper package usage.
+publish_to: 'none'
+
+environment:
+  sdk: ^3.10.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+  item_dropper:
+    path: ../
+
+flutter:
+  uses-material-design: true
