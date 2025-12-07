@@ -4,9 +4,9 @@ description: >-
   real-time search filtering, keyboard navigation, and accessibility features.
   Includes add/delete items, group headers, and extensive styling options.
 version: 0.0.1
-homepage: https://github.com/YOUR_USERNAME/dropdown_tester
-repository: https://github.com/YOUR_USERNAME/dropdown_tester
-issue_tracker: https://github.com/YOUR_USERNAME/dropdown_tester/issues
+homepage: https://github.com/mauricev/item_dropper
+repository: https://github.com/mauricev/item_dropper
+issue_tracker: https://github.com/mauricev/item_dropper/issues
 
 environment:
   sdk: ^3.10.1

@@ -9,13 +9,13 @@ capabilities, built-in search filtering, and full keyboard navigation support.
 
 ### Single-Select Dropdown
 
-![Single-Select Demo](https://raw.githubusercontent.com/YOUR_USERNAME/dropdown_tester/main/packages/item_dropper/screenshots/single_select_demo.png)
-*Replace YOUR_USERNAME with your GitHub username and add screenshot to `screenshots/` folder*
+![Single-Select Demo](https://raw.githubusercontent.com/mauricev/item_dropper/main/packages/item_dropper/screenshots/single_select_demo.png)
+*Add screenshots to `packages/item_dropper/screenshots/` folder*
 
 ### Multi-Select Dropdown with Chips
 
-![Multi-Select Demo](https://raw.githubusercontent.com/YOUR_USERNAME/dropdown_tester/main/packages/item_dropper/screenshots/multi_select_demo.png)
-*Replace YOUR_USERNAME with your GitHub username and add screenshot to `screenshots/` folder*
+![Multi-Select Demo](https://raw.githubusercontent.com/mauricev/item_dropper/main/packages/item_dropper/screenshots/multi_select_demo.png)
+*Add screenshots to `packages/item_dropper/screenshots/` folder*
 
 ---
 
@@ -380,7 +380,7 @@ Built-in keyboard support:
 - **[Complete Working Examples](../../lib/main.dart)** - See comprehensive examples in the demo app
 - **[API Documentation](https://pub.dev/documentation/item_dropper/latest/)** - Auto-generated API
   reference
-- **[GitHub Repository](https://github.com/YOUR_USERNAME/dropdown_tester)** - View source code and
+- **[GitHub Repository](https://github.com/mauricev/item_dropper)** - View source code and
   contribute
 
 ---
@@ -400,7 +400,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## 🐛 Issues
 
 Found a bug or have a feature request?
-Please [open an issue](https://github.com/YOUR_USERNAME/dropdown_tester/issues) on GitHub.
+Please [open an issue](https://github.com/mauricev/item_dropper/issues) on GitHub.
 
 ---
 
@@ -426,7 +426,7 @@ See [CHANGELOG.md](CHANGELOG.md) for a list of changes in each version.
 ## ⭐ Show Your Support
 
 If you find this package useful, please give it a ⭐
-on [GitHub](https://github.com/YOUR_USERNAME/dropdown_tester)!
+on [GitHub](https://github.com/mauricev/item_dropper)!
 
 ---
 

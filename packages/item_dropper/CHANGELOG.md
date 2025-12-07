@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.0.1] - 2025-12-06
+## [0.0.1] - 2024-12-06
 
 ### Added
 
@@ -84,7 +84,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Future Releases
 
-See [GitHub Issues](https://github.com/YOUR_USERNAME/dropdown_tester/issues) for planned features
+See [GitHub Issues](https://github.com/mauricev/item_dropper/issues) for planned features
 and bug reports.
 
-[0.0.1]: https://github.com/YOUR_USERNAME/dropdown_tester/releases/tag/v0.0.1
+[0.0.1]: https://github.com/mauricev/item_dropper/releases/tag/v0.0.1
