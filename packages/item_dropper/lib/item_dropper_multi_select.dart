@@ -433,7 +433,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     }
 
     // Manual focus management - maintain focus state when clicking overlay items
-    // Don't let Flutter lose focus - we control it manually
+    // Explicitly ensure focus state is maintained for this interaction
+    _focusManager.gainFocus();
 
     final bool isCurrentlySelected = _selectionManager.isSelected(item);
 
