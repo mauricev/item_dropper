@@ -7,6 +7,7 @@ class MultiSelectFocusManager {
   final VoidCallback? onFocusChanged;
 
   bool _manualFocusState = false;
+  bool _disposed = false;
 
   MultiSelectFocusManager({
     required this.focusNode,
@@ -45,6 +46,8 @@ class MultiSelectFocusManager {
 
   /// Handle focus change events from FocusNode
   void _handleFocusChange() {
+    if (_disposed) return;
+    
     final bool flutterHasFocus = focusNode.hasFocus;
 
     // Only update manual focus state if Flutter gained focus (user clicked TextField)
@@ -63,6 +66,8 @@ class MultiSelectFocusManager {
 
   /// Clean up resources
   void dispose() {
+    if (_disposed) return;
+    _disposed = true;
     focusNode.removeListener(_handleFocusChange);
   }
 }

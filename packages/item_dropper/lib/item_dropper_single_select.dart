@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:item_dropper/src/common/item_dropper_common.dart';
 import 'package:item_dropper/src/utils/item_dropper_add_item_utils.dart';
+import 'package:item_dropper/src/utils/item_dropper_selection_handler.dart';
 import 'package:item_dropper/src/single/single_select_constants.dart';
 import 'package:item_dropper/src/common/item_dropper_semantics.dart';
 import 'package:item_dropper/src/common/live_region_manager.dart';
@@ -395,22 +396,23 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
         return;
       }
 
-      // Handle add item selection
-      if (ItemDropperAddItemUtils.isAddItem(selectedItem, widget.items)) {
-        final String searchText = ItemDropperAddItemUtils
-            .extractSearchTextFromAddItem(selectedItem);
-        if (searchText.isNotEmpty && widget.onAddItem != null) {
-          final ItemDropperItem<T>? newItem = widget.onAddItem!(searchText);
-          if (newItem != null) {
-            _withSquelch(() {
-              _controller.text = newItem.label;
-              _controller.selection = const TextSelection.collapsed(offset: 0);
-            });
-            _setSelected(newItem);
-            _isUserEditing = false;
-            _dismissDropdown();
-          }
-        }
+      // Handle add item selection using shared handler
+      final addItemResult = ItemDropperSelectionHandler.handleAddItemIfNeeded<T>(
+        item: selectedItem,
+        originalItems: widget.items,
+        onAddItem: widget.onAddItem,
+        onItemCreated: (newItem) {
+          _withSquelch(() {
+            _controller.text = newItem.label;
+            _controller.selection = const TextSelection.collapsed(offset: 0);
+          });
+          _setSelected(newItem);
+          _isUserEditing = false;
+          _dismissDropdown();
+        },
+      );
+      
+      if (addItemResult.handled) {
         return;
       }
 
@@ -489,23 +491,24 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
       if (selectableItems.length == 1) {
         final item = selectableItems.first;
 
-        // Handle add item selection
-        if (ItemDropperAddItemUtils.isAddItem(item, widget.items)) {
-          final String searchText = ItemDropperAddItemUtils
-              .extractSearchTextFromAddItem(item);
-          if (searchText.isNotEmpty && widget.onAddItem != null) {
-            final ItemDropperItem<T>? newItem = widget.onAddItem!(searchText);
-            if (newItem != null) {
-              _withSquelch(() {
-                _controller.text = newItem.label;
-                _controller.selection =
-                const TextSelection.collapsed(offset: 0);
-              });
-              _setSelected(newItem);
-              _isUserEditing = false;
-              _dismissDropdown();
-            }
-          }
+        // Handle add item selection using shared handler
+        final addItemResult = ItemDropperSelectionHandler.handleAddItemIfNeeded<T>(
+          item: item,
+          originalItems: widget.items,
+          onAddItem: widget.onAddItem,
+          onItemCreated: (newItem) {
+            _withSquelch(() {
+              _controller.text = newItem.label;
+              _controller.selection =
+              const TextSelection.collapsed(offset: 0);
+            });
+            _setSelected(newItem);
+            _isUserEditing = false;
+            _dismissDropdown();
+          },
+        );
+        
+        if (addItemResult.handled) {
           return;
         }
 
@@ -558,25 +561,24 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
               return;
             }
 
-            // Handle add item selection
-            if (ItemDropperAddItemUtils.isAddItem(item, widget.items)) {
-              final String searchText = ItemDropperAddItemUtils
-                  .extractSearchTextFromAddItem(item);
-              if (searchText.isNotEmpty && widget.onAddItem != null) {
-                final ItemDropperItem<T>? newItem = widget.onAddItem!(
-                    searchText);
-                if (newItem != null) {
-                  // Select the new item
-                  _withSquelch(() {
-                    _controller.text = newItem.label;
-                    _controller.selection =
-                    const TextSelection.collapsed(offset: 0);
-                  });
-                  _setSelected(newItem);
-                  _isUserEditing = false;
-                  _dismissDropdown();
-                }
-              }
+            // Handle add item selection using shared handler
+            final addItemResult = ItemDropperSelectionHandler.handleAddItemIfNeeded<T>(
+              item: item,
+              originalItems: widget.items,
+              onAddItem: widget.onAddItem,
+              onItemCreated: (newItem) {
+                _withSquelch(() {
+                  _controller.text = newItem.label;
+                  _controller.selection =
+                  const TextSelection.collapsed(offset: 0);
+                });
+                _setSelected(newItem);
+                _isUserEditing = false;
+                _dismissDropdown();
+              },
+            );
+            
+            if (addItemResult.handled) {
               return;
             }
 
@@ -622,12 +624,18 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
 
   @override
   void dispose() {
+    // Cancel and clear timer to prevent memory leaks
     _scrollDebounceTimer?.cancel();
+    _scrollDebounceTimer = null;
+    
     _liveRegionManager.dispose();
     _removeOverlay();
+    
+    // Remove listeners before disposing focus node
     _focusNode.removeListener(_handleFocusChange);
     _focusNode.removeListener(_handleFocusSnapScroll);
     _focusNode.dispose();
+    
     _controller.dispose();
     _scrollController.dispose();
     _textScrollCtrl.dispose();

@@ -69,5 +69,6 @@ class LiveRegionManager {
   /// Should be called in the parent widget's dispose method.
   void dispose() {
     _clearTimer?.cancel();
+    _clearTimer = null;
   }
 }

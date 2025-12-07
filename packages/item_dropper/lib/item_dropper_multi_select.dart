@@ -13,6 +13,7 @@ import 'package:item_dropper/src/multi/multi_select_overlay_manager.dart';
 import 'package:item_dropper/src/multi/multi_select_selection_manager.dart';
 import 'package:item_dropper/src/multi/smartwrap.dart' show SmartWrapWithFlexibleLast;
 import 'package:item_dropper/src/utils/item_dropper_add_item_utils.dart';
+import 'package:item_dropper/src/utils/item_dropper_selection_handler.dart';
 import 'package:item_dropper/src/utils/dropdown_position_calculator.dart';
 
 /// Multi-select dropdown widget
@@ -405,28 +406,29 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       return;
     }
 
-    // Handle add item selection
-    if (ItemDropperAddItemUtils.isAddItem(item, widget.items)) {
-      final String searchText = ItemDropperAddItemUtils
-          .extractSearchTextFromAddItem(item);
-      if (searchText.isNotEmpty && widget.onAddItem != null) {
-        final ItemDropperItem<T>? newItem = widget.onAddItem!(searchText);
-        if (newItem != null) {
-          // Add the new item to the list and select it
-          // Note: The parent should update widget.items to include the new item
-          // For now, we'll just select it and let the parent handle adding to the list
-          _updateSelection(() {
-            _selectionManager.addItem(newItem);
-            _measurements.totalChipWidth = null;
-            _searchController.clear();
+    // Handle add item selection using shared handler
+    final addItemResult = ItemDropperSelectionHandler.handleAddItemIfNeeded<T>(
+      item: item,
+      originalItems: widget.items,
+      onAddItem: widget.onAddItem,
+      onItemCreated: (newItem) {
+        // Add the new item to the list and select it
+        // Note: The parent should update widget.items to include the new item
+        // For now, we'll just select it and let the parent handle adding to the list
+        _updateSelection(() {
+          _selectionManager.addItem(newItem);
+          _measurements.totalChipWidth = null;
+          _searchController.clear();
 
-            // If we just reached the max, close the overlay
-            if (_selectionManager.isMaxReached()) {
-              _overlayManager.hideIfNeeded();
-            }
-          });
-        }
-      }
+          // If we just reached the max, close the overlay
+          if (_selectionManager.isMaxReached()) {
+            _overlayManager.hideIfNeeded();
+          }
+        });
+      },
+    );
+    
+    if (addItemResult.handled) {
       return;
     }
 
@@ -690,22 +692,30 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     // Update selection and all related state inside rebuild
     _requestRebuild(stateUpdate);
 
-    // Single post-frame callback handles: parent notification, flag clearing, and optional callback
-    // This consolidates what was previously multiple separate callbacks
+    // Use a post-frame callback to notify parent after current frame completes
+    // This ensures our rebuild completes before parent is notified
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        // Notify parent of change
-        widget.onChanged(_selectionManager.selected);
+      if (!mounted) return;
 
-        // Clear the internal change flag after parent's didUpdateWidget has run
-        // (which happens synchronously when onChanged triggers parent rebuild)
-        _isInternalSelectionChange = false;
+      // Notify parent of change (this triggers parent rebuild synchronously)
+      // Our didUpdateWidget will run as part of the parent rebuild, and will see
+      // _isInternalSelectionChange = true, preventing unnecessary sync
+      widget.onChanged(_selectionManager.selected);
 
-        // Execute optional post-rebuild callback (e.g., focus management, overlay updates)
-        if (postRebuildCallback != null) {
-          postRebuildCallback();
+      // Clear the flag AFTER notifying parent, but use a microtask to ensure
+      // didUpdateWidget has completed its synchronous execution first
+      // This prevents race conditions where didUpdateWidget might check the flag
+      // after it's been cleared but during the same synchronous execution
+      Future.microtask(() {
+        if (mounted) {
+          _isInternalSelectionChange = false;
+
+          // Execute optional post-rebuild callback (e.g., focus management, overlay updates)
+          if (postRebuildCallback != null) {
+            postRebuildCallback();
+          }
         }
-      }
+      });
     });
   }
 
