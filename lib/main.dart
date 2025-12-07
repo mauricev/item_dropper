@@ -393,7 +393,7 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('SearchDropdown Tester'),
+        title: const Text('ItemDropper Tester'),
         backgroundColor: Theme
             .of(context)
             .colorScheme

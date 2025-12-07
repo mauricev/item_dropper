@@ -1,6 +1,6 @@
 {
-    "name": "dropdown_tester",
-    "short_name": "dropdown_tester",
+  "name": "item_dropper_demo",
+  "short_name": "item_dropper_demo",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
