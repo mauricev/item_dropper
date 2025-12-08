@@ -418,7 +418,7 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
                 ),
                 const SizedBox(height: 32),
 
-                // Four-column layout
+                // Five-column layout
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -1301,6 +1301,57 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
                                     ? null
                                     : itemFontFamily,
                               ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(width: 32),
+
+                    // Fifth column: Additional dropdowns
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Fruits dropdown
+                          _buildDropdownSection(
+                            title: 'Fruits (8 items)',
+                            description: 'Small list for basic functionality testing',
+                            selectedValue: selectedFruit?.label,
+                            dropdown: dropDown<String>(
+                              width: 300,
+                              listItems: fruits,
+                              initiallySelected: selectedFruit,
+                              onChanged: (item) {
+                                setState(() {
+                                  selectedFruit = item;
+                                });
+                              },
+                              hintText: 'Select a fruit...',
+                              showKeyboard: true,
+                              maxDropdownHeight: 220,
+                            ),
+                          ),
+
+                          const SizedBox(height: 250),
+
+                          // Multi-Select States dropdown
+                          _buildMultiDropdownSection(
+                            title: 'Multi-Select States (50 items)',
+                            description: 'Select multiple US states with chip-based display',
+                            selectedValues: selectedStates.map((e) => e.label).join(', '),
+                            dropdown: multiDropDown<String>(
+                              width: 500,
+                              listItems: states,
+                              initiallySelected: selectedStates,
+                              onChanged: (items) {
+                                setState(() {
+                                  selectedStates = items;
+                                });
+                              },
+                              hintText: 'Select states...',
+                              maxDropdownHeight: 250,
                             ),
                           ),
                         ],
