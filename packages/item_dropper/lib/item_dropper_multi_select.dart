@@ -20,87 +20,73 @@ import 'package:item_dropper/src/single/single_select_constants.dart';
 /// Multi-select dropdown widget
 /// Allows selecting multiple items with chip-based display
 class MultiItemDropper<T> extends StatefulWidget {
-  /// Optional GlobalKey for the input field container.
-  /// 
-  /// If provided, allows external access to the input field for:
-  /// - Programmatic focus control
-  /// - Integration with form libraries
-  /// - Testing and widget finding
-  /// - Layout measurement and positioning
-  /// 
-  /// If not provided, an internal key is used automatically.
-  /// 
-  /// Example usage:
-  /// ```dart
-  /// final key = GlobalKey();
-  /// MultiItemDropper(
-  ///   inputKey: key,
-  ///   // ... other parameters
-  /// );
-  /// // Later, access the input field:
-  /// final context = key.currentContext;
-  /// ```
-  final GlobalKey<State<StatefulWidget>>? inputKey;
+  /// The items to display in the dropdown (required).
   final List<ItemDropperItem<T>> items;
+
+  /// The currently selected items (required for controlled usage).
   final List<ItemDropperItem<T>> selectedItems;
+
+  /// Called when the selection changes (required).
   final void Function(List<ItemDropperItem<T>>) onChanged;
+
+  /// Optional custom builder for popup items.
   final Widget Function(BuildContext, ItemDropperItem<T>, bool)? popupItemBuilder;
+
+  /// The width of the dropdown field (required).
   final double width;
-  final double? itemHeight; // Optional item height parameter
+
+  /// Whether the dropdown is enabled (defaults to true).
   final bool enabled;
-  /// TextStyle for input field text and chips.
-  /// If null, defaults to fontSize 10 with black color.
-  final TextStyle? fieldTextStyle;
-  /// TextStyle for popup dropdown items (used by default popupItemBuilder).
-  /// If null, defaults to fontSize 10.
-  /// Ignored if custom popupItemBuilder is provided.
-  final TextStyle? popupTextStyle;
-  /// TextStyle for group headers in popup (used by default popupItemBuilder).
-  /// If null, defaults to fontSize 9, bold, with reduced opacity.
-  /// Ignored if custom popupItemBuilder is provided.
-  final TextStyle? popupGroupHeaderStyle;
-  final int? maxSelected;
-  final double? maxDropdownHeight; // Change back to maxDropdownHeight
-  final bool showScrollbar;
-  final double scrollbarThickness;
-  final double? elevation;
-  /// Callback invoked when user wants to add a new item.
-  /// Receives the search text and should return a new ItemDropperItem to add to the list.
-  /// If null, the add row will not appear.
-  final ItemDropperItem<T>? Function(String searchText)? onAddItem;
 
-  /// Callback invoked when user deletes an item from the dropdown.
-  /// If null, delete buttons will not appear in the dropdown.
-  final void Function(ItemDropperItem<T> item)? onDeleteItem;
-  /// Optional custom decoration for selected chips.
-  ///
-  /// - If provided, this BoxDecoration is used as-is for each selected chip.
-  /// - If null, a default blue vertical gradient and radius are applied.
-  final BoxDecoration? selectedChipDecoration;
-
-  /// Optional custom decoration for the dropdown field container.
-  ///
-  /// - If provided, this BoxDecoration is used as-is for the field container.
-  /// - If null, a default white-to-grey gradient with focus-responsive border is applied.
-  /// 
-  /// Note: When providing a custom decoration, you are responsible for handling
-  /// focus state styling if desired. The default decoration changes border color
-  /// based on focus state (blue when focused, grey when not).
-  final BoxDecoration? fieldDecoration;
-
-  /// Optional hint text to display in the input field.
-  /// If null, no hint will be shown.
+  /// Hint/placeholder text for input field (if null, no hint).
   final String? hintText;
 
-  /// Whether to show the dropdown position icon (arrow up/down).
-  /// When true, displays an arrow icon that toggles the dropdown visibility.
-  /// Defaults to true.
+  /// Maximum number of items selectable (null means unlimited).
+  final int? maxSelected;
+
+  /// Callback for adding new items based on search text (optional).
+  final ItemDropperItem<T>? Function(String searchText)? onAddItem;
+
+  /// Callback for deleting items, provides the deleted item (optional).
+  final void Function(ItemDropperItem<T> item)? onDeleteItem;
+
+  /// Optional GlobalKey for the input field container.
+  final GlobalKey<State<StatefulWidget>>? inputKey;
+
+  /// Maximum dropdown popup height.
+  final double? maxDropdownHeight;
+
+  /// Whether to show a vertical scrollbar in popup.
+  final bool showScrollbar;
+
+  /// Popup vertical scrollbar thickness.
+  final double scrollbarThickness;
+
+  /// Height for popup dropdown items.
+  final double? itemHeight;
+
+  /// Text style for popup dropdown items.
+  final TextStyle? popupTextStyle;
+
+  /// Text style for group headers in popup.
+  final TextStyle? popupGroupHeaderStyle;
+
+  /// Text style for input/search field and chips.
+  final TextStyle? fieldTextStyle;
+
+  /// Custom BoxDecoration for selected chips.
+  final BoxDecoration? selectedChipDecoration;
+
+  /// Optional BoxDecoration for the main field/container.
+  final BoxDecoration? fieldDecoration;
+
+  /// Popup shadow elevation.
+  final double? elevation;
+
+  /// Whether to show the dropdown position arrow (defaults to true).
   final bool showDropdownPositionIcon;
 
-  /// Whether to show the delete all icon (clear/X button).
-  /// When true, displays a clear button that clears search text (or all selections
-  /// if search is empty) in multi-select mode.
-  /// Defaults to true.
+  /// Whether to show the clear/X icon (defaults to true).
   final bool showDeleteAllIcon;
 
   const MultiItemDropper({
@@ -108,24 +94,24 @@ class MultiItemDropper<T> extends StatefulWidget {
     required this.items,
     required this.selectedItems,
     required this.onChanged,
-    this.inputKey,
+    this.popupItemBuilder,
     required this.width,
     this.enabled = true,
     this.hintText,
-    this.fieldTextStyle,
-    this.popupTextStyle,
-    this.popupGroupHeaderStyle,
     this.maxSelected,
     this.onAddItem,
     this.onDeleteItem,
+    this.inputKey,
     this.maxDropdownHeight = MultiSelectConstants.kDefaultMaxDropdownHeight,
     this.showScrollbar = true,
     this.scrollbarThickness = ItemDropperConstants.kDefaultScrollbarThickness,
     this.itemHeight,
-    this.popupItemBuilder,
-    this.elevation,
+    this.popupTextStyle,
+    this.popupGroupHeaderStyle,
+    this.fieldTextStyle,
     this.selectedChipDecoration,
     this.fieldDecoration,
+    this.elevation,
     this.showDropdownPositionIcon = true,
     this.showDeleteAllIcon = true,
   }) : assert(maxSelected == null ||

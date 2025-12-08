@@ -12,6 +12,36 @@ import 'package:item_dropper/src/common/decoration_cache_manager.dart';
 /// Single-select dropdown widget
 /// Allows selecting a single item from a searchable list
 class SingleItemDropper<T> extends StatefulWidget {
+  /// The items to display in the dropdown (required).
+  final List<ItemDropperItem<T>> items;
+
+  /// The currently selected item (optional for controlled usage).
+  final ItemDropperItem<T>? selectedItem;
+
+  /// Called when the selection changes (required).
+  final ItemDropperItemCallback<T> onChanged;
+
+  /// Hint/placeholder text for input field (if null, no hint).
+  final String? hintText;
+
+  /// Optional custom builder for popup items.
+  final Widget Function(BuildContext, ItemDropperItem<
+      T>, bool)? popupItemBuilder;
+
+  /// The width of the dropdown field (required).
+  final double width;
+
+  /// Whether the dropdown is enabled (defaults to true).
+  final bool enabled;
+
+  /// Whether to show the mobile keyboard (defaults to false).
+  final bool showKeyboard;
+
+  /// Callback for adding new items based on search text (optional).
+  final ItemDropperItem<T>? Function(String searchText)? onAddItem;
+
+  /// Callback for deleting items, provides the deleted item (optional).
+  final void Function(ItemDropperItem<T> item)? onDeleteItem;
   /// Optional GlobalKey for the input field.
   /// 
   /// If provided, allows external access to the input field for:
@@ -33,35 +63,34 @@ class SingleItemDropper<T> extends StatefulWidget {
   /// final context = key.currentContext;
   /// ```
   final GlobalKey? inputKey;
-  final List<ItemDropperItem<T>> items;
-  final ItemDropperItem<T>? selectedItem;
-  final ItemDropperItemCallback<T> onChanged;
-  final Widget Function(BuildContext, ItemDropperItem<T>, bool)? popupItemBuilder;
-  final double width;
-  final bool enabled;
-  final String? hintText;
-  final bool showKeyboard;
 
-  /// Callback invoked when user wants to add a new item.
-  /// Receives the search text and should return a new ItemDropperItem to add to the list.
-  /// If null, the add row will not appear.
-  final ItemDropperItem<T>? Function(String searchText)? onAddItem;
-  final void Function(ItemDropperItem<T> item)? onDeleteItem;
+  /// Maximum dropdown popup height.
   final double maxDropdownHeight;
+
+  /// Popup shadow elevation.
   final double elevation;
+
+  /// Whether to show a vertical scrollbar in popup.
   final bool showScrollbar;
+
+  /// Popup vertical scrollbar thickness.
   final double scrollbarThickness;
-  /// TextStyle for input field text.
+
+  /// Text style for input/search field.
   /// If null, defaults to fontSize 12 with black color.
   final TextStyle? fieldTextStyle;
-  /// TextStyle for popup dropdown items (used by default popupItemBuilder).
+
+  /// Text style for popup dropdown items (used by default popupItemBuilder).
   /// If null, defaults to fontSize 10.
   /// Ignored if custom popupItemBuilder is provided.
   final TextStyle? popupTextStyle;
-  /// TextStyle for group headers in popup (used by default popupItemBuilder).
+
+  /// Text style for group headers in popup (used by default popupItemBuilder).
   /// If null, defaults to fontSize 9, bold, with reduced opacity.
   /// Ignored if custom popupItemBuilder is provided.
   final TextStyle? popupGroupHeaderStyle;
+
+  /// Height for popup dropdown items.
   final double? itemHeight;
   /// Optional custom decoration for the dropdown field container.
   ///
@@ -79,17 +108,17 @@ class SingleItemDropper<T> extends StatefulWidget {
 
   const SingleItemDropper({
     super.key,
-    this.inputKey, // Optional: provide a GlobalKey for external access to the input field
     required this.items,
     this.selectedItem,
     required this.onChanged,
+    this.hintText,
     this.popupItemBuilder,
     required this.width,
     this.enabled = true,
-    this.hintText,
     this.showKeyboard = false,
     this.onAddItem,
     this.onDeleteItem,
+    this.inputKey,
     this.maxDropdownHeight = SingleSelectConstants.kDefaultMaxDropdownHeight,
     this.elevation = ItemDropperConstants.kDropdownElevation,
     this.showScrollbar = true,
