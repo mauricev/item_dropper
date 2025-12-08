@@ -336,6 +336,8 @@ Built-in keyboard support:
 | `onDeleteItem`          | `Function(ItemDropperItem<T>)?`         | `null`   | Callback when item deleted        |
 | `hintText`              | `String?`                               | `null`   | Placeholder text for input field  |
 | `inputKey`              | `GlobalKey?`                            | `null`   | Key for programmatic access       |
+| `showDropdownPositionIcon` | `bool`                              | `true`   | Show dropdown arrow icon (up/down) |
+| `showDeleteAllIcon`     | `bool`                                  | `true`   | Show clear/delete all icon (X)     |
 
 ### MultiItemDropper Parameters
 
@@ -362,6 +364,8 @@ Built-in keyboard support:
 | `onDeleteItem`           | `Function(ItemDropperItem<T>)?`         | `null`   | Callback when item deleted           |
 | `hintText`               | `String?`                               | `null`   | Placeholder text for input field     |
 | `inputKey`               | `GlobalKey?`                            | `null`   | Key for programmatic access          |
+| `showDropdownPositionIcon` | `bool`                              | `true`   | Show dropdown arrow icon (up/down)   |
+| `showDeleteAllIcon`      | `bool`                                  | `true`   | Show clear icon (clears search/all selections) |
 
 ### ItemDropperItem Properties
 

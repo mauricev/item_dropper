@@ -72,6 +72,16 @@ class SingleItemDropper<T> extends StatefulWidget {
   /// If null, no hint will be shown.
   final String? hintText;
 
+  /// Whether to show the dropdown position icon (arrow up/down).
+  /// When true, displays an arrow icon that toggles the dropdown visibility.
+  /// Defaults to true.
+  final bool showDropdownPositionIcon;
+
+  /// Whether to show the delete all icon (clear/X button).
+  /// When true, displays a clear button that clears the current selection.
+  /// Defaults to true.
+  final bool showDeleteAllIcon;
+
   const SingleItemDropper({
     super.key,
     this.inputKey, // Optional: provide a GlobalKey for external access to the input field
@@ -94,6 +104,8 @@ class SingleItemDropper<T> extends StatefulWidget {
     this.onAddItem,
     this.fieldDecoration,
     this.hintText,
+    this.showDropdownPositionIcon = true,
+    this.showDeleteAllIcon = true,
   });
 
   @override
@@ -768,40 +780,46 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
                       .kTextFieldVerticalPaddingNoBorder,
                   horizontal: SingleSelectConstants.kTextFieldHorizontalPadding,
                 ),
-                suffixIconConstraints: BoxConstraints.tightFor(
-                  width: SingleSelectConstants.kSuffixIconWidth,
-                  height: (widget.fieldTextStyle?.fontSize ??
-                      ItemDropperConstants.kDropdownItemFontSize) *
-                      ItemDropperConstants.kSuffixIconHeightMultiplier,
-                ),
-                suffixIcon: ItemDropperSuffixIcons(
-                  isDropdownShowing: _overlayController.isShowing,
-                  enabled: widget.enabled,
-                  onClearPressed: () {
-                    _withSquelch(() => _controller.clear());
-                    _attemptSelectByInput('');
-                    if (mounted) {
-                      setState(() =>
-                      _keyboardNavManager.hoverIndex = ItemDropperConstants.kNoHighlight);
-                    }
-                  },
-                  onArrowPressed: () {
-                    if (_overlayController.isShowing) {
-                      _dismissDropdown();
-                    } else {
-                      _focusNode.requestFocus();
-                    }
-                  },
-                  iconSize: SingleSelectConstants.kIconSize,
-                  suffixIconWidth: SingleSelectConstants.kSuffixIconWidth,
-                  iconButtonSize: SingleSelectConstants.kIconButtonSize,
-                  clearButtonRightPosition: SingleSelectConstants
-                      .kClearButtonRightPosition,
-                  arrowButtonRightPosition: SingleSelectConstants
-                      .kArrowButtonRightPosition,
-                  textSize: widget.fieldTextStyle?.fontSize ??
-                      ItemDropperConstants.kDropdownItemFontSize,
-                ),
+                suffixIconConstraints: (widget.showDropdownPositionIcon || widget.showDeleteAllIcon)
+                    ? BoxConstraints.tightFor(
+                        width: SingleSelectConstants.kSuffixIconWidth,
+                        height: (widget.fieldTextStyle?.fontSize ??
+                            ItemDropperConstants.kDropdownItemFontSize) *
+                            ItemDropperConstants.kSuffixIconHeightMultiplier,
+                      )
+                    : null,
+                suffixIcon: (widget.showDropdownPositionIcon || widget.showDeleteAllIcon)
+                    ? ItemDropperSuffixIcons(
+                        isDropdownShowing: _overlayController.isShowing,
+                        enabled: widget.enabled,
+                        onClearPressed: () {
+                          _withSquelch(() => _controller.clear());
+                          _attemptSelectByInput('');
+                          if (mounted) {
+                            setState(() =>
+                            _keyboardNavManager.hoverIndex = ItemDropperConstants.kNoHighlight);
+                          }
+                        },
+                        onArrowPressed: () {
+                          if (_overlayController.isShowing) {
+                            _dismissDropdown();
+                          } else {
+                            _focusNode.requestFocus();
+                          }
+                        },
+                        iconSize: SingleSelectConstants.kIconSize,
+                        suffixIconWidth: SingleSelectConstants.kSuffixIconWidth,
+                        iconButtonSize: SingleSelectConstants.kIconButtonSize,
+                        clearButtonRightPosition: SingleSelectConstants
+                            .kClearButtonRightPosition,
+                        arrowButtonRightPosition: SingleSelectConstants
+                            .kArrowButtonRightPosition,
+                        textSize: widget.fieldTextStyle?.fontSize ??
+                            ItemDropperConstants.kDropdownItemFontSize,
+                        showDropdownPositionIcon: widget.showDropdownPositionIcon,
+                        showDeleteAllIcon: widget.showDeleteAllIcon,
+                      )
+                    : null,
                 hintText: widget.hintText,
               ), // Close InputDecoration
                 ), // Close TextField

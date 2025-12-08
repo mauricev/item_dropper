@@ -5,6 +5,7 @@ import 'package:item_dropper/src/common/item_dropper_semantics.dart';
 import 'package:item_dropper/src/common/live_region_manager.dart';
 import 'package:item_dropper/src/common/keyboard_navigation_manager.dart';
 import 'package:item_dropper/src/common/decoration_cache_manager.dart';
+import 'package:item_dropper/src/common/item_dropper_suffix_icons.dart';
 import 'package:item_dropper/src/multi/chip_measurement_helper.dart';
 import 'package:item_dropper/src/multi/multi_select_constants.dart';
 import 'package:item_dropper/src/multi/multi_select_focus_manager.dart';
@@ -15,6 +16,7 @@ import 'package:item_dropper/src/multi/smartwrap.dart' show SmartWrapWithFlexibl
 import 'package:item_dropper/src/utils/item_dropper_add_item_utils.dart';
 import 'package:item_dropper/src/utils/item_dropper_selection_handler.dart';
 import 'package:item_dropper/src/utils/dropdown_position_calculator.dart';
+import 'package:item_dropper/src/single/single_select_constants.dart';
 
 /// Multi-select dropdown widget
 /// Allows selecting multiple items with chip-based display
@@ -91,6 +93,17 @@ class MultiItemDropper<T> extends StatefulWidget {
   /// If null, no hint will be shown.
   final String? hintText;
 
+  /// Whether to show the dropdown position icon (arrow up/down).
+  /// When true, displays an arrow icon that toggles the dropdown visibility.
+  /// Defaults to true.
+  final bool showDropdownPositionIcon;
+
+  /// Whether to show the delete all icon (clear/X button).
+  /// When true, displays a clear button that clears search text (or all selections
+  /// if search is empty) in multi-select mode.
+  /// Defaults to true.
+  final bool showDeleteAllIcon;
+
   const MultiItemDropper({
     super.key,
     required this.items,
@@ -114,6 +127,8 @@ class MultiItemDropper<T> extends StatefulWidget {
     this.selectedChipDecoration,
     this.fieldDecoration,
     this.hintText,
+    this.showDropdownPositionIcon = true,
+    this.showDeleteAllIcon = true,
   }) : assert(maxSelected == null ||
       maxSelected >= 2, 'maxSelected must be null or >= 2');
 
@@ -620,6 +635,42 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     }
   }
 
+  /// Handle clear button press with two-stage behavior:
+  /// 1. If search text exists, clear search text
+  /// 2. If search text is empty, clear all selections
+  void _handleClearPressed() {
+    if (_searchController.text.isNotEmpty) {
+      // Stage 1: Clear search text
+      _searchController.clear();
+      _invalidateFilteredCache();
+      _safeSetState(() {
+        _clearHighlights();
+      });
+    } else {
+      // Stage 2: Clear all selections
+      if (_selectionManager.selectedCount > 0) {
+        _updateSelection(() {
+          _selectionManager.clear();
+          _measurements.totalChipWidth = null;
+        });
+      }
+    }
+  }
+
+  /// Handle arrow button press - toggle dropdown
+  void _handleArrowPressed() {
+    if (_overlayController.isShowing) {
+      _focusManager.loseFocus();
+      _overlayManager.hideIfNeeded();
+    } else {
+      // Show dropdown if not at max selection
+      if (!_selectionManager.isMaxReached()) {
+        _focusManager.gainFocus();
+        _overlayManager.showIfNeeded();
+      }
+    }
+  }
+
   void _handleTextChanged(String value) {
     // Don't show overlay if maxSelected is reached
     if (_selectionManager.isMaxReached()) {
@@ -828,6 +879,18 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   }
 
   Widget _buildInputField() {
+    // Calculate first row height for icon alignment
+    final double chipHeight = _measurements.chipHeight ??
+        MultiSelectLayoutCalculator.calculateTextFieldHeight(
+          fontSize: widget.fieldTextStyle?.fontSize,
+          chipVerticalPadding: MultiSelectConstants.kChipVerticalPadding,
+        );
+    final double firstRowHeight = chipHeight;
+    final double fontSize = widget.fieldTextStyle?.fontSize ??
+        ItemDropperConstants.kDropdownItemFontSize;
+    final double iconContainerHeight = fontSize *
+        ItemDropperConstants.kSuffixIconHeightMultiplier;
+    
     return Container(
       key: widget.inputKey ?? _fieldKey,
       width: widget.width, // Constrain to 500px
@@ -838,34 +901,64 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         borderRadius: MultiSelectConstants.kContainerBorderRadius,
         borderWidth: MultiSelectConstants.kContainerBorderWidth,
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        // Fill available space instead of min
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: Stack(
+        clipBehavior: Clip.none,
         children: [
-          // Integrated chips and text field area
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              MultiSelectConstants.kContainerPaddingLeft,
-              MultiSelectConstants.kContainerPaddingTop,
-              MultiSelectConstants.kContainerPaddingRight,
-              MultiSelectConstants.kContainerPaddingBottom,
-            ),
-            child: SmartWrapWithFlexibleLast(
-              spacing: MultiSelectConstants.kChipSpacing,
-              runSpacing: MultiSelectConstants.kChipSpacing,
-              children: [
-                // Selected chips
-                ..._selectionManager.selected.map((item) =>
-                    Container(
-                      key: ValueKey('chip_${item.value}'),
-                      // Unique key for each chip
-                      child: _buildChip(item),
-                    )),
-                _buildTextFieldChip(double.infinity),
-              ],
-            ),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            // Fill available space instead of min
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Integrated chips and text field area
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  MultiSelectConstants.kContainerPaddingLeft,
+                  MultiSelectConstants.kContainerPaddingTop,
+                  // Add extra right padding to reserve space for suffix icons (if any are shown)
+                  MultiSelectConstants.kContainerPaddingRight +
+                      ((widget.showDropdownPositionIcon || widget.showDeleteAllIcon)
+                          ? SingleSelectConstants.kSuffixIconWidth
+                          : 0.0),
+                  MultiSelectConstants.kContainerPaddingBottom,
+                ),
+                child: SmartWrapWithFlexibleLast(
+                  spacing: MultiSelectConstants.kChipSpacing,
+                  runSpacing: MultiSelectConstants.kChipSpacing,
+                  children: [
+                    // Selected chips
+                    ..._selectionManager.selected.map((item) =>
+                        Container(
+                          key: ValueKey('chip_${item.value}'),
+                          // Unique key for each chip
+                          child: _buildChip(item),
+                        )),
+                    _buildTextFieldChip(double.infinity),
+                  ],
+                ),
+              ),
+            ],
           ),
+          // Container-level suffix icons aligned with first row (only if at least one icon is enabled)
+          if (widget.showDropdownPositionIcon || widget.showDeleteAllIcon)
+            Positioned(
+              top: MultiSelectConstants.kContainerPaddingTop +
+                  (firstRowHeight - iconContainerHeight) / 2,
+              right: MultiSelectConstants.kContainerPaddingRight,
+              child: ItemDropperSuffixIcons(
+                isDropdownShowing: _overlayController.isShowing,
+                enabled: widget.enabled,
+                onClearPressed: _handleClearPressed,
+                onArrowPressed: _handleArrowPressed,
+                iconSize: SingleSelectConstants.kIconSize,
+                suffixIconWidth: SingleSelectConstants.kSuffixIconWidth,
+                iconButtonSize: SingleSelectConstants.kIconButtonSize,
+                clearButtonRightPosition: SingleSelectConstants.kClearButtonRightPosition,
+                arrowButtonRightPosition: SingleSelectConstants.kArrowButtonRightPosition,
+                textSize: fontSize,
+                showDropdownPositionIcon: widget.showDropdownPositionIcon,
+                showDeleteAllIcon: widget.showDeleteAllIcon,
+              ),
+            ),
         ],
       ),
     );
@@ -1007,7 +1100,10 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
                   .kDropdownItemFontSize),
           decoration: InputDecoration(
             contentPadding: EdgeInsets.only(
-              right: fontSize * MultiSelectConstants.kTextLineHeightMultiplier,
+              right: ((widget.showDropdownPositionIcon || widget.showDeleteAllIcon)
+                      ? SingleSelectConstants.kSuffixIconWidth
+                      : 0.0) +
+                  MultiSelectConstants.kContainerPaddingRight,
               top: textFieldPaddingTop,
               bottom: textFieldPaddingBottom,
             ),
