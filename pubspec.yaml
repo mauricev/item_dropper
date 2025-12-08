@@ -36,7 +36,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   
   # Window management for desktop platforms (does not interact with dropdown code)
-  window_manager: ^0.4.3
+  window_manager: ^0.5.1
   item_dropper:
     path: packages/item_dropper
 
