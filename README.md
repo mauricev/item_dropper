@@ -54,11 +54,11 @@ flutter run
 
 ### Single-Select Dropdown
 
-![Single-Select Demo](packages/item_dropper/movies/single-select.gif)
+![Single-Select Demo](movies/single-select.gif)
 
 ### Multi-Select Dropdown with Chips
 
-![Multi-Select Demo](packages/item_dropper/movies/multi-select.gif)
+![Multi-Select Demo](movies/multi-select.gif)
 
 ---
 
