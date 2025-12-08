@@ -334,6 +334,7 @@ Built-in keyboard support:
 | `popupItemBuilder`      | `Widget Function(...)?`                 | `null`   | Custom popup item builder         |
 | `onAddItem`             | `ItemDropperItem<T>? Function(String)?` | `null`   | Callback for adding new items     |
 | `onDeleteItem`          | `Function(ItemDropperItem<T>)?`         | `null`   | Callback when item deleted        |
+| `hintText`              | `String?`                               | `null`   | Placeholder text for input field  |
 | `inputKey`              | `GlobalKey?`                            | `null`   | Key for programmatic access       |
 
 ### MultiItemDropper Parameters
@@ -359,6 +360,7 @@ Built-in keyboard support:
 | `popupItemBuilder`       | `Widget Function(...)?`                 | `null`   | Custom popup item builder            |
 | `onAddItem`              | `ItemDropperItem<T>? Function(String)?` | `null`   | Callback for adding new items        |
 | `onDeleteItem`           | `Function(ItemDropperItem<T>)?`         | `null`   | Callback when item deleted           |
+| `hintText`               | `String?`                               | `null`   | Placeholder text for input field     |
 | `inputKey`               | `GlobalKey?`                            | `null`   | Key for programmatic access          |
 
 ### ItemDropperItem Properties

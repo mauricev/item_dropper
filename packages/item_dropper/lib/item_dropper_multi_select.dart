@@ -87,6 +87,10 @@ class MultiItemDropper<T> extends StatefulWidget {
   /// based on focus state (blue when focused, grey when not).
   final BoxDecoration? fieldDecoration;
 
+  /// Optional hint text to display in the input field.
+  /// If null, no hint will be shown.
+  final String? hintText;
+
   const MultiItemDropper({
     super.key,
     required this.items,
@@ -109,6 +113,7 @@ class MultiItemDropper<T> extends StatefulWidget {
     this.onDeleteItem,
     this.selectedChipDecoration,
     this.fieldDecoration,
+    this.hintText,
   }) : assert(maxSelected == null ||
       maxSelected >= 2, 'maxSelected must be null or >= 2');
 
@@ -1007,7 +1012,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
               bottom: textFieldPaddingBottom,
             ),
             border: InputBorder.none,
-            hintText: 'Search',
+            hintText: widget.hintText,
           ),
           onChanged: (value) => _handleTextChanged(value),
           onSubmitted: (value) => _handleEnter(),

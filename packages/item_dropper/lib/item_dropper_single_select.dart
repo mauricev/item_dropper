@@ -68,6 +68,10 @@ class SingleItemDropper<T> extends StatefulWidget {
   /// - If null, a default white-to-grey gradient with rounded corners is applied.
   final BoxDecoration? fieldDecoration;
 
+  /// Optional hint text to display in the input field.
+  /// If null, no hint will be shown.
+  final String? hintText;
+
   const SingleItemDropper({
     super.key,
     this.inputKey, // Optional: provide a GlobalKey for external access to the input field
@@ -89,6 +93,7 @@ class SingleItemDropper<T> extends StatefulWidget {
     this.onDeleteItem,
     this.onAddItem,
     this.fieldDecoration,
+    this.hintText,
   });
 
   @override
@@ -797,6 +802,7 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
                   textSize: widget.fieldTextStyle?.fontSize ??
                       ItemDropperConstants.kDropdownItemFontSize,
                 ),
+                hintText: widget.hintText,
               ), // Close InputDecoration
                 ), // Close TextField
               ), // Close Semantics
