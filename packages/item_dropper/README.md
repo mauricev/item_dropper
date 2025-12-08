@@ -314,30 +314,30 @@ Built-in keyboard support:
 
 ### SingleItemDropper Parameters
 
-| Parameter                  | Type                                    | Default  | Description                        |
-|----------------------------|-----------------------------------------|----------|------------------------------------|
-| `items`                    | `List<ItemDropperItem<T>>`              | required | List of items to display           |
-| `selectedItem`             | `ItemDropperItem<T>?`                   | `null`   | Currently selected item            |
-| `onChanged`                | `Function(ItemDropperItem<T>?)`         | required | Callback when selection changes    |
-| `width`                    | `double`                                | required | Width of the dropdown field        |
-| `enabled`                  | `bool`                                  | `true`   | Whether dropdown is interactive    |
-| `maxDropdownHeight`        | `double`                                | `200.0`  | Maximum height of popup            |
-| `elevation`                | `double`                                | `4.0`    | Shadow elevation of popup          |
-| `showScrollbar`            | `bool`                                  | `true`   | Show scrollbar in popup            |
-| `scrollbarThickness`       | `double`                                | `6.0`    | Thickness of scrollbar             |
-| `showKeyboard`             | `bool`                                  | `false`  | Show mobile keyboard when focused  |
-| `fieldTextStyle`           | `TextStyle?`                            | `null`   | Style for field text               |
-| `popupTextStyle`           | `TextStyle?`                            | `null`   | Style for popup items              |
-| `popupGroupHeaderStyle`    | `TextStyle?`                            | `null`   | Style for group headers            |
-| `itemHeight`               | `double?`                               | `null`   | Height of each popup item          |
-| `fieldDecoration`          | `BoxDecoration?`                        | `null`   | Custom field container decoration  |
-| `popupItemBuilder`         | `Widget Function(...)?`                 | `null`   | Custom popup item builder          |
-| `onAddItem`                | `ItemDropperItem<T>? Function(String)?` | `null`   | Callback for adding new items      |
-| `onDeleteItem`             | `Function(ItemDropperItem<T>)?`         | `null`   | Callback when item deleted         |
-| `hintText`                 | `String?`                               | `null`   | Placeholder text for input field   |
-| `inputKey`                 | `GlobalKey?`                            | `null`   | Key for programmatic access        |
-| `showDropdownPositionIcon` | `bool`                                  | `true`   | Show dropdown arrow icon (up/down) |
-| `showDeleteAllIcon`        | `bool`                                  | `true`   | Show clear/delete all icon (X)     |
+| Parameter                  | Type                                    | Default  | Description                       |
+|----------------------------|-----------------------------------------|----------|-----------------------------------|
+| `items`                    | `List<ItemDropperItem<T>>`              | required | List of items to display          |
+| `selectedItem`             | `ItemDropperItem<T>?`                   | `null`   | Currently selected item           |
+| `onChanged`                | `Function(ItemDropperItem<T>?)`         | required | Callback when selection changes   |
+| `width`                    | `double`                                | required | Width of the dropdown field       |
+| `enabled`                  | `bool`                                  | `true`   | Whether dropdown is interactive   |
+| `hintText`                 | `String?`                               | `null`   | Placeholder text for input field  |
+| `showKeyboard`             | `bool`                                  | `false`  | Show mobile keyboard when focused |
+| `onAddItem`                | `ItemDropperItem<T>? Function(String)?` | `null`   | Callback for adding new items     |
+| `onDeleteItem`             | `Function(ItemDropperItem<T>)?`         | `null`   | Callback when item deleted        |
+| `popupItemBuilder`         | `Widget Function(...)?`                 | `null`   | Custom popup item builder         |
+| `maxDropdownHeight`        | `double`                                | `200.0`  | Maximum height of popup           |
+| `elevation`                | `double`                                | `4.0`    | Shadow elevation of popup         |
+| `showScrollbar`            | `bool`                                  | `true`   | Show scrollbar in popup           |
+| `scrollbarThickness`       | `double`                                | `6.0`    | Thickness of scrollbar            |
+| `fieldTextStyle`           | `TextStyle?`                            | `null`   | Style for field text              |
+| `popupTextStyle`           | `TextStyle?`                            | `null`   | Style for popup items             |
+| `popupGroupHeaderStyle`    | `TextStyle?`                            | `null`   | Style for group headers           |
+| `itemHeight`               | `double?`                               | `null`   | Height of each popup item         |
+| `fieldDecoration`          | `BoxDecoration?`                        | `null`   | Custom field container decoration |
+| `showDropdownPositionIcon` | `bool`                                  | `true`   | Show the dropdown arrow icon      |
+| `showDeleteAllIcon`        | `bool`                                  | `true`   | Show the clear (X) icon           |
+| `inputKey`                 | `GlobalKey?`                            | `null`   | Key for programmatic access       |
 
 ### MultiItemDropper Parameters
 
@@ -348,23 +348,23 @@ Built-in keyboard support:
 | `onChanged`                | `Function(List<ItemDropperItem<T>>)`    | required | Callback when selection changes                |
 | `width`                    | `double`                                | required | Width of the dropdown field                    |
 | `enabled`                  | `bool`                                  | `true`   | Whether dropdown is interactive                |
+| `hintText`                 | `String?`                               | `null`   | Placeholder text for input field               |
 | `maxSelected`              | `int?`                                  | `null`   | Maximum number of selections allowed           |
-| `maxDropdownHeight`        | `double?`                               | `200.0`  | Maximum height of popup                        |
-| `elevation`                | `double?`                               | `4.0`    | Shadow elevation of popup                      |
-| `showScrollbar`            | `bool`                                  | `true`   | Show scrollbar in popup                        |
-| `scrollbarThickness`       | `double`                                | `6.0`    | Thickness of scrollbar                         |
-| `fieldTextStyle`           | `TextStyle?`                            | `null`   | Style for field text and chips                 |
-| `popupTextStyle`           | `TextStyle?`                            | `null`   | Style for popup items                          |
-| `popupGroupHeaderStyle`    | `TextStyle?`                            | `null`   | Style for group headers                        |
-| `itemHeight`               | `double?`                               | `null`   | Height of each popup item                      |
-| `selectedChipDecoration`   | `BoxDecoration?`                        | `null`   | Custom chip decoration                         |
-| `fieldDecoration`          | `BoxDecoration?`                        | `null`   | Custom field container decoration              |
-| `popupItemBuilder`         | `Widget Function(...)?`                 | `null`   | Custom popup item builder                      |
 | `onAddItem`                | `ItemDropperItem<T>? Function(String)?` | `null`   | Callback for adding new items                  |
 | `onDeleteItem`             | `Function(ItemDropperItem<T>)?`         | `null`   | Callback when item deleted                     |
-| `hintText`                 | `String?`                               | `null`   | Placeholder text for input field               |
+| `popupItemBuilder`         | `Widget Function(...)?`                 | `null`   | Custom popup item builder                      |
+| `maxDropdownHeight`        | `double?`                               | `200.0`  | Maximum height of popup                        |
+| `showScrollbar`            | `bool`                                  | `true`   | Show scrollbar in popup                        |
+| `scrollbarThickness`       | `double`                                | `6.0`    | Thickness of scrollbar                         |
+| `itemHeight`               | `double?`                               | `null`   | Height of each popup item                      |
+| `popupTextStyle`           | `TextStyle?`                            | `null`   | Style for popup items                          |
+| `popupGroupHeaderStyle`    | `TextStyle?`                            | `null`   | Style for group headers                        |
+| `fieldTextStyle`           | `TextStyle?`                            | `null`   | Style for field text and chips                 |
+| `selectedChipDecoration`   | `BoxDecoration?`                        | `null`   | Custom chip decoration                         |
+| `fieldDecoration`          | `BoxDecoration?`                        | `null`   | Custom field container decoration              |
+| `elevation`                | `double?`                               | `4.0`    | Shadow elevation of popup                      |
 | `inputKey`                 | `GlobalKey?`                            | `null`   | Key for programmatic access                    |
-| `showDropdownPositionIcon` | `bool`                                  | `true`   | Show dropdown arrow icon (up/down)             |
+| `showDropdownPositionIcon` | `bool`                                  | `true`   | Show the dropdown arrow icon (up/down)         |
 | `showDeleteAllIcon`        | `bool`                                  | `true`   | Show clear icon (clears search/all selections) |
 
 ### ItemDropperItem Properties

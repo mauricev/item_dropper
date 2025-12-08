@@ -38,11 +38,19 @@ class SingleItemDropper<T> extends StatefulWidget {
   final ItemDropperItemCallback<T> onChanged;
   final Widget Function(BuildContext, ItemDropperItem<T>, bool)? popupItemBuilder;
   final double width;
+  final bool enabled;
+  final String? hintText;
+  final bool showKeyboard;
+
+  /// Callback invoked when user wants to add a new item.
+  /// Receives the search text and should return a new ItemDropperItem to add to the list.
+  /// If null, the add row will not appear.
+  final ItemDropperItem<T>? Function(String searchText)? onAddItem;
+  final void Function(ItemDropperItem<T> item)? onDeleteItem;
   final double maxDropdownHeight;
   final double elevation;
   final bool showScrollbar;
   final double scrollbarThickness;
-  final bool showKeyboard;
   /// TextStyle for input field text.
   /// If null, defaults to fontSize 12 with black color.
   final TextStyle? fieldTextStyle;
@@ -55,28 +63,15 @@ class SingleItemDropper<T> extends StatefulWidget {
   /// Ignored if custom popupItemBuilder is provided.
   final TextStyle? popupGroupHeaderStyle;
   final double? itemHeight;
-  final bool enabled;
-  final void Function(ItemDropperItem<T> item)? onDeleteItem;
-  /// Callback invoked when user wants to add a new item.
-  /// Receives the search text and should return a new ItemDropperItem to add to the list.
-  /// If null, the add row will not appear.
-  final ItemDropperItem<T>? Function(String searchText)? onAddItem;
-
   /// Optional custom decoration for the dropdown field container.
   ///
   /// - If provided, this BoxDecoration is used as-is for the field container.
   /// - If null, a default white-to-grey gradient with rounded corners is applied.
   final BoxDecoration? fieldDecoration;
-
-  /// Optional hint text to display in the input field.
-  /// If null, no hint will be shown.
-  final String? hintText;
-
   /// Whether to show the dropdown position icon (arrow up/down).
   /// When true, displays an arrow icon that toggles the dropdown visibility.
   /// Defaults to true.
   final bool showDropdownPositionIcon;
-
   /// Whether to show the delete all icon (clear/X button).
   /// When true, displays a clear button that clears the current selection.
   /// Defaults to true.
@@ -90,20 +85,20 @@ class SingleItemDropper<T> extends StatefulWidget {
     required this.onChanged,
     this.popupItemBuilder,
     required this.width,
+    this.enabled = true,
+    this.hintText,
+    this.showKeyboard = false,
+    this.onAddItem,
+    this.onDeleteItem,
     this.maxDropdownHeight = SingleSelectConstants.kDefaultMaxDropdownHeight,
     this.elevation = ItemDropperConstants.kDropdownElevation,
     this.showScrollbar = true,
     this.scrollbarThickness = ItemDropperConstants.kDefaultScrollbarThickness,
-    this.showKeyboard = false,
     this.fieldTextStyle,
     this.popupTextStyle,
     this.popupGroupHeaderStyle,
     this.itemHeight,
-    this.enabled = true,
-    this.onDeleteItem,
-    this.onAddItem,
     this.fieldDecoration,
-    this.hintText,
     this.showDropdownPositionIcon = true,
     this.showDeleteAllIcon = true,
   });
