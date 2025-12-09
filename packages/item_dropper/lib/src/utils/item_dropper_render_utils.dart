@@ -18,7 +18,7 @@ class ItemDropperRenderUtils {
     required void Function(int) setHoverIndex,
     required VoidCallback onTap,
     required Widget Function(BuildContext, ItemDropperItem<T>, bool) customBuilder,
-    double? itemHeight, // Optional item height parameter
+    required double itemHeight, // Required item height parameter (calculated from style)
     void Function(BuildContext context, ItemDropperItem<T> item)?
         onRequestDelete, // Optional delete handler (right-click/long-press)
   }) {
@@ -80,7 +80,7 @@ class ItemDropperRenderUtils {
     required bool isGroupHeader,
     required VoidCallback onTap,
     required Widget Function(BuildContext, ItemDropperItem<T>, bool) builder,
-    double? itemHeight, // Optional item height parameter
+    required double itemHeight, // Required item height parameter (calculated from style)
     void Function(BuildContext context, ItemDropperItem<T> item)?
         onRequestDelete, // Optional delete handler (right-click/long-press)
   }) {
@@ -137,7 +137,7 @@ class ItemDropperRenderUtils {
           ? () => onRequestDelete(context, item)
           : null,
       child: SizedBox(
-        height: itemHeight ?? ItemDropperConstants.kDropdownItemHeight,
+        height: itemHeight,
         child: ColoredBox(
           color: background ?? Colors.transparent,
           child: Align(
@@ -257,7 +257,7 @@ class ItemDropperRenderUtils {
     required Widget Function(BuildContext, ItemDropperItem<T>, bool) builder,
     bool showScrollbar = true,
     double scrollbarThickness = ItemDropperConstants.kDefaultScrollbarThickness,
-    double? itemHeight, // Optional item height parameter
+    required double itemHeight, // Required item height parameter (calculated from style)
     double? preferredFieldHeight, // Use this height if provided (for accurate positioning during layout changes)
   }) {
     if (items.isEmpty) return const SizedBox.shrink();
@@ -274,9 +274,8 @@ class ItemDropperRenderUtils {
     // This accounts for borders, padding, and any layout differences
     final double actualFieldWidth = inputBox.size.width;
 
-    // Calculate the effective item height
-    final double effectiveItemHeight = itemHeight ??
-        ItemDropperConstants.kDropdownItemHeight;
+    // Use the provided item height (already calculated from style)
+    final double effectiveItemHeight = itemHeight;
 
     // Calculate the ideal max height:
     // 1. Start with maxDropdownHeight (or 200 if not provided)
