@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:item_dropper/src/common/item_dropper_common.dart';
 import 'package:item_dropper/src/utils/item_dropper_add_item_utils.dart';
 import 'package:item_dropper/src/utils/item_dropper_selection_handler.dart';
@@ -223,6 +224,7 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
     _keyboardNavManager = KeyboardNavigationManager<T>(
       onRequestRebuild: () => _safeSetState(() {}),
       onEscape: _dismissDropdown,
+      onOpenDropdown: _showOverlay,
     );
 
     // Initialize live region manager
@@ -240,13 +242,29 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
     });
 
     // Attach keyboard event handler for arrow key navigation
-    _focusNode.onKeyEvent = (node, event) =>
-        _keyboardNavManager.handleKeyEvent(
-          event: event,
-          filteredItems: _filtered,
-          scrollController: _scrollController,
-          mounted: mounted,
-        );
+    _focusNode.onKeyEvent = (node, event) {
+      // Check if Space/Enter should open dropdown (only if text is empty or cursor at start)
+      final shouldOpenOnSpaceEnter = !_overlayController.isShowing &&
+          (event.logicalKey == LogicalKeyboardKey.space ||
+           event.logicalKey == LogicalKeyboardKey.enter) &&
+          (_controller.text.isEmpty ||
+           _controller.selection.baseOffset == 0);
+      
+      // If Space/Enter and shouldn't open dropdown, let TextField handle it normally
+      if ((event.logicalKey == LogicalKeyboardKey.space ||
+           event.logicalKey == LogicalKeyboardKey.enter) &&
+          !shouldOpenOnSpaceEnter) {
+        return KeyEventResult.ignored;
+      }
+      
+      return _keyboardNavManager.handleKeyEvent(
+        event: event,
+        filteredItems: _filtered,
+        scrollController: _scrollController,
+        mounted: mounted,
+        isDropdownOpen: _overlayController.isShowing,
+      );
+    };
 
     // Minimal hook: when the field loses focus, reset horizontal scroll to start
     _focusNode.addListener(_handleFocusSnapScroll);

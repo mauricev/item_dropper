@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:item_dropper/item_dropper.dart';
@@ -63,19 +62,10 @@ class _MyAppState extends State<MyApp> {
   }
 
   void _calculateAndSetWindowSize(BuildContext context) async {
-    // Get actual screen size from PlatformDispatcher (now that window exists)
-    final primaryView = ui.PlatformDispatcher.instance.views.first;
-    final physicalScreenSize = primaryView.physicalSize;
-    final devicePixelRatio = primaryView.devicePixelRatio;
-    final logicalScreenSize = Size(
-      physicalScreenSize.width / devicePixelRatio,
-      physicalScreenSize.height / devicePixelRatio,
-    );
     
     // Get MediaQuery to see what it reports
     final mediaQuery = MediaQuery.of(context);
     final mediaQuerySize = mediaQuery.size;
-    final padding = mediaQuery.padding;
     
     // Get current window bounds to calculate title bar height
     final currentBounds = await windowManager.getBounds();
@@ -83,12 +73,6 @@ class _MyAppState extends State<MyApp> {
     
     // Calculate title bar height: window height - MediaQuery height
     final titleBarHeight = currentWindowHeight - mediaQuerySize.height;
-    
-    // Calculate menu bar and dock height
-    // Screen height - MediaQuery height = menu bar + dock + title bar
-    final screenHeight = logicalScreenSize.height;
-    final mediaQueryHeight = mediaQuerySize.height;
-    final menuBarAndDockHeight = screenHeight - mediaQueryHeight - titleBarHeight;
     
     // Calculate window size dynamically
     // MediaQuery.size.height = content area available to the app

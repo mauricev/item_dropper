@@ -35,15 +35,19 @@ class KeyboardNavigationManager<T> {
   /// Callback when Escape key is pressed
   final VoidCallback onEscape;
 
+  /// Callback when Space or Enter is pressed (for opening dropdown)
+  final VoidCallback? onOpenDropdown;
+
   KeyboardNavigationManager({
     required this.onRequestRebuild,
     required this.onEscape,
+    this.onOpenDropdown,
   });
 
   /// Current keyboard highlight index (read-only)
   int get keyboardHighlightIndex => _keyboardHighlightIndex;
 
-  /// Handles keyboard events (Arrow keys, Escape)
+  /// Handles keyboard events (Arrow keys, Escape, Space, Enter)
   /// 
   /// Returns [KeyEventResult.handled] if the key was processed,
   /// [KeyEventResult.ignored] otherwise.
@@ -52,6 +56,7 @@ class KeyboardNavigationManager<T> {
     required List<ItemDropperItem<T>> filteredItems,
     required ScrollController scrollController,
     required bool mounted,
+    required bool isDropdownOpen,
   }) {
     // Handle both KeyDownEvent (initial press) and KeyRepeatEvent (auto-repeat when held)
     if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
@@ -74,6 +79,15 @@ class KeyboardNavigationManager<T> {
       return KeyEventResult.handled;
     } else if (event.logicalKey == LogicalKeyboardKey.escape) {
       onEscape();
+      return KeyEventResult.handled;
+    } else if ((event.logicalKey == LogicalKeyboardKey.space ||
+                 event.logicalKey == LogicalKeyboardKey.enter) &&
+               !isDropdownOpen &&
+               onOpenDropdown != null) {
+      // Space or Enter to open dropdown when closed
+      // Only handle if text is empty or cursor is at start (to allow normal text input)
+      // Note: This check should be done by the caller before calling handleKeyEvent
+      onOpenDropdown!();
       return KeyEventResult.handled;
     }
 

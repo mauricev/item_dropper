@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:item_dropper/src/common/item_dropper_common.dart';
 import 'package:item_dropper/src/common/item_dropper_semantics.dart';
 import 'package:item_dropper/src/common/live_region_manager.dart';
 import 'package:item_dropper/src/common/keyboard_navigation_manager.dart';
 import 'package:item_dropper/src/common/decoration_cache_manager.dart';
 import 'package:item_dropper/src/multi/chip_measurement_helper.dart';
+import 'package:item_dropper/src/multi/chip_focus_manager.dart';
 import 'package:item_dropper/src/multi/multi_select_constants.dart';
 import 'package:item_dropper/src/multi/multi_select_focus_manager.dart';
 import 'package:item_dropper/src/multi/multi_select_layout_calculator.dart';
@@ -155,6 +157,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   bool _rebuildScheduled = false;
   // Track when we're the source of selection changes to prevent didUpdateWidget from rebuilding
   bool _isInternalSelectionChange = false;
+  // Track when we're programmatically clearing search text to prevent overlay from closing
+  bool _isClearingSearchForSelection = false;
 
   // Focus manager for manual focus state tracking
   late final MultiSelectFocusManager _focusManager;
@@ -164,6 +168,12 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
 
   // Live region for screen reader announcements
   late final LiveRegionManager _liveRegionManager;
+  
+  // Chip focus manager for keyboard navigation between chips
+  late final ChipFocusManager<T> _chipFocusManager;
+  
+  // Map to store FocusNodes for each chip (keyed by chip index)
+  final Map<int, FocusNode> _chipFocusNodes = {};
 
   @override
   void initState() {
@@ -203,22 +213,102 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     _keyboardNavManager = KeyboardNavigationManager<T>(
       onRequestRebuild: () => _safeSetState(() {}),
       onEscape: () => _focusManager.loseFocus(),
+      onOpenDropdown: () {
+        if (!_selectionManager.isMaxReached()) {
+          _focusManager.gainFocus();
+          _overlayManager.showIfNeeded();
+        }
+      },
     );
 
     // Initialize live region manager
     _liveRegionManager = LiveRegionManager(
       onUpdate: () => _safeSetState(() {}),
     );
+    
+    // Initialize chip focus manager
+    _chipFocusManager = ChipFocusManager<T>(
+      onFocusChanged: () => _safeSetState(() {}),
+      onRemoveChip: _removeChip,
+      onFocusTextField: () => _focusNode.requestFocus(),
+    );
+    _chipFocusManager.updateSelectedItems(_selectionManager.selected);
 
     _filterUtils.initializeItems(widget.items);
 
-    _focusNode.onKeyEvent = (node, event) =>
-        _keyboardNavManager.handleKeyEvent(
-          event: event,
-          filteredItems: _filtered,
-          scrollController: _scrollController,
-          mounted: mounted,
-        );
+    _focusNode.onKeyEvent = (node, event) {
+      // Only process KeyDownEvent and KeyRepeatEvent (ignore KeyUpEvent)
+      if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+        return KeyEventResult.ignored;
+      }
+      
+      // Debug output
+      print('=== TextField Key Event ===');
+      print('Key: ${event.logicalKey}');
+      print('Event type: ${event.runtimeType}');
+      print('Chip focused: ${!_chipFocusManager.isTextFieldFocused}');
+      print('TextField focused: ${_chipFocusManager.isTextFieldFocused}');
+      print('Dropdown open: ${_overlayController.isShowing}');
+      print('Selected count: ${_selectionManager.selectedCount}');
+      print('Cursor position: ${_searchController.selection.baseOffset}');
+      print('Text length: ${_searchController.text.length}');
+      print('Text: "${_searchController.text}"');
+      
+      // If a chip is focused, let chip focus manager handle arrow/delete keys
+      if (!_chipFocusManager.isTextFieldFocused) {
+        print('Delegating to chip focus manager');
+        final chipResult = _chipFocusManager.handleKeyEvent(event);
+        if (chipResult == KeyEventResult.handled) {
+          return chipResult;
+        }
+      }
+      
+      // Handle left/right arrow keys: navigate between TextField and chips
+      // This should work even when dropdown is open (when cursor is at boundary)
+      if (_chipFocusManager.isTextFieldFocused &&
+          _selectionManager.selectedCount > 0) {
+        final cursorPosition = _searchController.selection.baseOffset;
+        
+        // Left arrow at cursor position 0: move to last chip
+        if (event.logicalKey == LogicalKeyboardKey.arrowLeft && cursorPosition == 0) {
+          print('Moving to last chip (index ${_selectionManager.selectedCount - 1})');
+          _chipFocusManager.focusChip(_selectionManager.selectedCount - 1);
+          return KeyEventResult.handled;
+        }
+        
+        // Right arrow at end of text: move to first chip
+        if (event.logicalKey == LogicalKeyboardKey.arrowRight &&
+            cursorPosition == _searchController.text.length) {
+          print('Moving to first chip');
+          _chipFocusManager.focusChip(0);
+          return KeyEventResult.handled;
+        }
+      }
+      
+      // Check if Space/Enter should open dropdown (only if text is empty or cursor at start)
+      final shouldOpenOnSpaceEnter = !_overlayController.isShowing &&
+          (event.logicalKey == LogicalKeyboardKey.space ||
+           event.logicalKey == LogicalKeyboardKey.enter) &&
+          (_searchController.text.isEmpty ||
+           _searchController.selection.baseOffset == 0);
+      
+      // If Space/Enter and shouldn't open dropdown, let TextField handle it normally
+      if ((event.logicalKey == LogicalKeyboardKey.space ||
+           event.logicalKey == LogicalKeyboardKey.enter) &&
+          !shouldOpenOnSpaceEnter) {
+        print('Ignoring Space/Enter - letting TextField handle');
+        return KeyEventResult.ignored;
+      }
+      
+      print('Delegating to keyboard nav manager');
+      return _keyboardNavManager.handleKeyEvent(
+        event: event,
+        filteredItems: _filtered,
+        scrollController: _scrollController,
+        mounted: mounted,
+        isDropdownOpen: _overlayController.isShowing,
+      );
+    };
   }
 
   List<ItemDropperItem<T>> get _filtered {
@@ -315,6 +405,10 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   }
 
   void _handleFocusChange() {
+    // When TextField gains focus, clear chip focus
+    if (_focusNode.hasFocus) {
+      _chipFocusManager.focusTextField();
+    }
     // Focus change is now handled by the FocusManager
     // This method is kept for additional overlay logic
 
@@ -338,7 +432,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         }
 
         final filtered = _filtered;
-        if (!_overlayManager.isShowing && filtered.isNotEmpty) {
+        // showIfNeeded checks isShowing internally, only check if we have items
+        if (filtered.isNotEmpty) {
           _overlayManager.showIfNeeded();
         }
       });
@@ -371,6 +466,17 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       stateUpdate: () {
         // Update selection inside the rebuild callback
         selectionUpdate();
+        
+        // Update chip focus manager with new selection
+        _chipFocusManager.updateSelectedItems(_selectionManager.selected);
+        
+        // Clean up FocusNodes for chips that no longer exist
+        final currentIndices = _selectionManager.selected.asMap().keys.toSet();
+        final nodesToRemove = _chipFocusNodes.keys.where((i) => !currentIndices.contains(i)).toList();
+        for (final index in nodesToRemove) {
+          _chipFocusNodes[index]?.dispose();
+          _chipFocusNodes.remove(index);
+        }
 
         // Update highlights based on filtered items
         final List<ItemDropperItem<T>> remainingFilteredItems = _filtered;
@@ -455,16 +561,11 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     // Allow removing items even when max is reached (toggle behavior)
 
     _updateSelection(() {
-      final bool wasAtMax = _selectionManager.isMaxReached();
-
       if (!isCurrentlySelected) {
         _selectionManager.addItem(item);
 
         // Reset totalChipWidth when selection count changes - will be remeasured correctly
         _measurements.totalChipWidth = null;
-
-        // Clear search text after selection for continued searching
-        _searchController.clear();
 
         // Announce selection to screen readers
         _liveRegionManager.announce(
@@ -474,6 +575,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         // If we just reached the max, close the overlay
         if (_selectionManager.isMaxReached()) {
           _overlayManager.hideIfNeeded();
+          // Clear search text after closing overlay
+          _searchController.clear();
           // Announce max reached
           if (widget.maxSelected != null) {
             _liveRegionManager.announce(
@@ -481,9 +584,34 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
                   widget.maxSelected!),
             );
           }
+        } else {
+          // Keep focus and overlay open for continued selection
+          // Ensure focus is maintained BEFORE clearing search text
+          _focusManager.gainFocus();
+          
+          // Clear search text after selection for continued searching
+          // Set flag to prevent overlay from closing
+          _isClearingSearchForSelection = true;
+          _searchController.clear();
+          _isClearingSearchForSelection = false;
+          
+          // Ensure overlay stays open after text clear
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            
+            // Ensure focus is maintained
+            _focusNode.requestFocus();
+            
+            // Ensure overlay stays open (showIfNeeded checks isShowing internally)
+            if (_focusManager.isFocused) {
+              _overlayManager.showIfNeeded();
+            }
+          });
         }
       } else {
         // Item is already selected, remove it (toggle off)
+        // Capture state before removal to check if we should reopen overlay
+        final bool wasAtMax = _selectionManager.isMaxReached();
         _selectionManager.removeItem(item.value);
 
         // Reset totalChipWidth when selection count changes - will be remeasured correctly
@@ -606,6 +734,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       final item = filteredItems[_keyboardNavManager.keyboardHighlightIndex];
       // Skip group headers
       if (!item.isGroupHeader) {
+        // Ensure focus is maintained before toggling
+        _focusManager.gainFocus();
         _toggleItem(item);
       }
     } else {
@@ -615,6 +745,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
           .toList();
       if (selectableItems.length == 1) {
         // No keyboard navigation, but exactly 1 selectable item - auto-select it
+        // Ensure focus is maintained before toggling
+        _focusManager.gainFocus();
         _toggleItem(selectableItems[0]);
       } else {}
     }
@@ -672,8 +804,16 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       _clearHighlights();
     });
 
-    // Show overlay if there are filtered items OR if user is searching (to show empty state)
-    // Use manual focus state
+    // If we're clearing search text as part of selection, keep overlay open
+    if (_isClearingSearchForSelection) {
+      if (_focusManager.isFocused) {
+        _overlayManager.showIfNeeded();
+      }
+      return;
+    }
+
+    // Show overlay if focused - keep it open even if filtered is empty
+    // This allows continued selection after clearing search text
     if (_focusManager.isFocused) {
       _overlayManager.showIfNeeded();
     } else if (_filtered.isEmpty) {
@@ -764,6 +904,9 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   @override
   void didUpdateWidget(covariant MultiItemDropper<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
+    
+    // Update chip focus manager with new selection
+    _chipFocusManager.updateSelectedItems(_selectionManager.selected);
 
     // If widget became disabled, unfocus and hide overlay
     if (oldWidget.enabled && !widget.enabled) {
@@ -832,7 +975,14 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   }
 
   @override
+  @override
   void dispose() {
+    // Dispose chip focus nodes
+    for (final focusNode in _chipFocusNodes.values) {
+      focusNode.dispose();
+    }
+    _chipFocusNodes.clear();
+    
     _liveRegionManager.dispose();
     _focusManager.dispose();
     _focusNode.dispose();
@@ -911,12 +1061,15 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
                   runSpacing: MultiSelectConstants.kChipSpacing,
                   children: [
                     // Selected chips
-                    ..._selectionManager.selected.map((item) =>
-                        Container(
-                          key: ValueKey('chip_${item.value}'),
-                          // Unique key for each chip
-                          child: _buildChip(item),
-                        )),
+                    ..._selectionManager.selected.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final item = entry.value;
+                      return Container(
+                        key: ValueKey('chip_${item.value}'),
+                        // Unique key for each chip
+                        child: _buildChip(item, null, null, index),
+                      );
+                    }),
                     _buildTextFieldChip(double.infinity),
                   ],
                 ),
@@ -951,7 +1104,10 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
 
 
   Widget _buildChip(ItemDropperItem<T> item,
-      [GlobalKey? chipKey, Key? valueKey]) {
+      [GlobalKey? chipKey, Key? valueKey, int? chipIndex]) {
+    final index = chipIndex ?? _selectionManager.selected.indexOf(item);
+    final isFocused = _chipFocusManager.isChipFocused(index);
+    
     // Only measure the first chip (index 0) to avoid GlobalKey conflicts
     final bool isFirstChip = _selectionManager.selected.isNotEmpty &&
         _selectionManager.selected.first.value == item.value;
@@ -1000,50 +1156,97 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
               BorderRadius.circular(MultiSelectConstants.kChipBorderRadius),
             );
 
+        // Add focus border if focused
+        final BoxDecoration focusedDecoration = isFocused
+            ? effectiveDecoration.copyWith(
+                border: Border.all(
+                  color: Colors.blue.shade600,
+                  width: 2.0,
+                ),
+              )
+            : effectiveDecoration;
+        
+        // Get or create FocusNode for this chip
+        final chipFocusNode = _chipFocusNodes.putIfAbsent(
+          index,
+          () => FocusNode(skipTraversal: false, canRequestFocus: widget.enabled),
+        );
+        
+        // Request focus when this chip becomes focused
+        if (isFocused) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            if (_chipFocusManager.isChipFocused(index)) {
+              chipFocusNode.requestFocus();
+            }
+          });
+        }
+        
         return Semantics(
           label: ItemDropperSemantics.formatSelectedChipLabel(item.label),
           button: true,
           excludeSemantics: true,
-          child: Container(
-            key: chipKey,
-            // Use provided GlobalKey (for last chip) or null
-            decoration: effectiveDecoration,
-            padding: const EdgeInsets.symmetric(
-              horizontal: MultiSelectConstants.kChipHorizontalPadding,
-              vertical: MultiSelectConstants.kChipVerticalPadding,
-            ),
-            margin: const EdgeInsets.only(
-              right: MultiSelectConstants.kChipMarginRight,),
-            child: Row(
-              key: rowKey, // Only first chip gets the key
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Text(
-                  item.label,
-                  style: (widget.fieldTextStyle ?? const TextStyle(
-                      fontSize: ItemDropperConstants.kDropdownItemFontSize))
-                      .copyWith(
-                    color: widget.enabled
-                        ? (widget.fieldTextStyle?.color ?? Colors.black)
-                        : Colors.grey.shade500,
-                  ),
+          child: Focus(
+            focusNode: chipFocusNode,
+            onKeyEvent: (node, event) {
+              // Delegate to chip focus manager
+              return _chipFocusManager.handleKeyEvent(event);
+            },
+            onFocusChange: (hasFocus) {
+              if (hasFocus) {
+                _chipFocusManager.focusChip(index);
+              } else if (_chipFocusManager.isChipFocused(index)) {
+                // Lost focus but we still think it's focused - move to TextField
+                _chipFocusManager.focusTextField();
+              }
+            },
+            child: GestureDetector(
+              onTap: () {
+                _chipFocusManager.focusChip(index);
+                chipFocusNode.requestFocus();
+              },
+              child: Container(
+                key: chipKey,
+                // Use provided GlobalKey (for last chip) or null
+                decoration: focusedDecoration,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: MultiSelectConstants.kChipHorizontalPadding,
+                  vertical: MultiSelectConstants.kChipVerticalPadding,
                 ),
-                if (widget.enabled)
-                  Container(
-                    width: MultiSelectConstants.kChipDeleteButtonSize,
-                    height: MultiSelectConstants.kChipDeleteButtonSize,
-                    alignment: Alignment.center,
-                    child: GestureDetector(
-                      onTap: () {
-                        _removeChip(item);
-                      },
-                      child: Icon(Icons.close,
-                          size: MultiSelectConstants.kChipDeleteIconSize,
-                          color: Colors.grey.shade700),
+                margin: const EdgeInsets.only(
+                  right: MultiSelectConstants.kChipMarginRight,),
+                child: Row(
+                  key: rowKey, // Only first chip gets the key
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      item.label,
+                      style: (widget.fieldTextStyle ?? const TextStyle(
+                          fontSize: ItemDropperConstants.kDropdownItemFontSize))
+                          .copyWith(
+                        color: widget.enabled
+                            ? (widget.fieldTextStyle?.color ?? Colors.black)
+                            : Colors.grey.shade500,
+                      ),
                     ),
-                  ),
-              ],
+                    if (widget.enabled)
+                      Container(
+                        width: MultiSelectConstants.kChipDeleteButtonSize,
+                        height: MultiSelectConstants.kChipDeleteButtonSize,
+                        alignment: Alignment.center,
+                        child: GestureDetector(
+                          onTap: () {
+                            _removeChip(item);
+                          },
+                          child: Icon(Icons.close,
+                              size: MultiSelectConstants.kChipDeleteIconSize,
+                              color: Colors.grey.shade700),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             ),
           ),
         );
@@ -1100,6 +1303,11 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
           enabled: widget.enabled,
           // Ensure TextField can receive focus
           autofocus: false,
+          onTap: () {
+            // When TextField is tapped, focus it and clear chip focus
+            _chipFocusManager.focusTextField();
+            _focusNode.requestFocus();
+          },
         ), // Close TextField
         ), // Close Semantics
       ), // Close IgnorePointer
