@@ -1,5 +1,4 @@
 import '../common/item_dropper_item.dart';
-import '../common/item_dropper_semantics.dart';
 import '../common/item_dropper_localizations.dart';
 
 /// Shared utilities for "add item" functionality in dropdowns
@@ -84,7 +83,7 @@ class ItemDropperAddItemUtils {
   static List<ItemDropperItem<T>> addAddItemIfNeeded<T>({
     required List<ItemDropperItem<T>> filteredItems,
     required String searchText,
-    List<ItemDropperItem<T>> originalItems,
+    required List<ItemDropperItem<T>> originalItems,
     required bool Function() hasOnAddItemCallback,
     ItemDropperLocalizations? localizations,
   }) {

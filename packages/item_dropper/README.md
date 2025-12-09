@@ -9,11 +9,11 @@ capabilities, built-in search filtering, and full keyboard navigation support.
 
 ### Single-Select Dropdown
 
-![Single-Select Demo](https://raw.githubusercontent.com/mauricev/item_dropper/main/packages/item_dropper/screenshots/single_select_demo.png)
+![Single-Select Demo](https://raw.githubusercontent.com/mauricev/item_dropper/main/movies/single-select.gif)
 
 ### Multi-Select Dropdown with Chips
 
-![Multi-Select Demo](https://raw.githubusercontent.com/mauricev/item_dropper/main/packages/item_dropper/screenshots/multi_select_demo.png)
+![Multi-Select Demo](https://raw.githubusercontent.com/mauricev/item_dropper/main/movies/multi-select.gif)
 
 ---
 
