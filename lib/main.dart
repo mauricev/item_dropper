@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:item_dropper/item_dropper.dart';
@@ -11,8 +12,9 @@ void main() async {
   // Configure window size for desktop platforms
   await windowManager.ensureInitialized();
 
+  // Start with a reasonable default size
   final windowOptions = WindowOptions(
-    size: const Size(1800, 1263),
+    size: const Size(1800, 1362), // Default size, will be recalculated after window shows
     center: true,
     backgroundColor: Colors.transparent,
     skipTaskbar: false,
@@ -27,11 +29,28 @@ void main() async {
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
   @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  static bool _hasResized = false;
+
+  @override
   Widget build(BuildContext context) {
+    // Calculate window size once after first build when MediaQuery is available
+    if (!_hasResized) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!_hasResized && mounted) {
+          _hasResized = true;
+          _calculateAndSetWindowSize(context);
+        }
+      });
+    }
+
     return MaterialApp(
       title: 'ItemDropper Tester',
       debugShowCheckedModeBanner: false,
@@ -41,6 +60,47 @@ class MyApp extends StatelessWidget {
       ),
       home: const DropdownTestPage(),
     );
+  }
+
+  void _calculateAndSetWindowSize(BuildContext context) async {
+    // Get actual screen size from PlatformDispatcher (now that window exists)
+    final primaryView = ui.PlatformDispatcher.instance.views.first;
+    final physicalScreenSize = primaryView.physicalSize;
+    final devicePixelRatio = primaryView.devicePixelRatio;
+    final logicalScreenSize = Size(
+      physicalScreenSize.width / devicePixelRatio,
+      physicalScreenSize.height / devicePixelRatio,
+    );
+    
+    // Get MediaQuery to see what it reports
+    final mediaQuery = MediaQuery.of(context);
+    final mediaQuerySize = mediaQuery.size;
+    final padding = mediaQuery.padding;
+    
+    // Get current window bounds to calculate title bar height
+    final currentBounds = await windowManager.getBounds();
+    final currentWindowHeight = currentBounds.height;
+    
+    // Calculate title bar height: window height - MediaQuery height
+    final titleBarHeight = currentWindowHeight - mediaQuerySize.height;
+    
+    // Calculate menu bar and dock height
+    // Screen height - MediaQuery height = menu bar + dock + title bar
+    final screenHeight = logicalScreenSize.height;
+    final mediaQueryHeight = mediaQuerySize.height;
+    final menuBarAndDockHeight = screenHeight - mediaQueryHeight - titleBarHeight;
+    
+    // Calculate window size dynamically
+    // MediaQuery.size.height = content area available to the app
+    // MediaQuery.size represents the screen size minus system UI (menu bar, dock)
+    // Window height = MediaQuery.size.height + title bar
+    // 
+    // Note: MediaQuery.size.height should represent the full screen content area
+    // once properly sized, so we use it directly
+    final windowHeight = mediaQuerySize.height + titleBarHeight;
+    final windowWidth = 1800.0;
+    
+    await windowManager.setSize(Size(windowWidth, windowHeight));
   }
 }
 
@@ -109,6 +169,9 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
   // Font family properties
   String fieldFontFamily = 'Default';
   String itemFontFamily = 'Default';
+
+  // Flag to control visibility of 5th column
+  bool showFifthColumn = false;
 
   // Generate dummy data
   late List<ItemDropperItem<String>> fruits;
@@ -1307,56 +1370,59 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
                       ),
                     ),
 
-                    const SizedBox(width: 32),
+                    // Conditionally show 5th column separator and content
+                    if (showFifthColumn) ...[
+                      const SizedBox(width: 32),
 
-                    // Fifth column: Additional dropdowns
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Fruits dropdown
-                          _buildDropdownSection(
-                            title: 'Fruits (8 items)',
-                            description: 'Small list for basic functionality testing',
-                            selectedValue: selectedFruit?.label,
-                            dropdown: dropDown<String>(
-                              width: 300,
-                              listItems: fruits,
-                              initiallySelected: selectedFruit,
-                              onChanged: (item) {
-                                setState(() {
-                                  selectedFruit = item;
-                                });
-                              },
-                              hintText: 'Select a fruit...',
-                              showKeyboard: true,
-                              maxDropdownHeight: 220,
+                      // Fifth column: Additional dropdowns
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Fruits dropdown
+                            _buildDropdownSection(
+                              title: 'Fruits (8 items)',
+                              description: 'Small list for basic functionality testing',
+                              selectedValue: selectedFruit?.label,
+                              dropdown: dropDown<String>(
+                                width: 300,
+                                listItems: fruits,
+                                initiallySelected: selectedFruit,
+                                onChanged: (item) {
+                                  setState(() {
+                                    selectedFruit = item;
+                                  });
+                                },
+                                hintText: 'Select a fruit...',
+                                showKeyboard: true,
+                                maxDropdownHeight: 220,
+                              ),
                             ),
-                          ),
 
-                          const SizedBox(height: 250),
+                            const SizedBox(height: 250),
 
-                          // Multi-Select States dropdown
-                          _buildMultiDropdownSection(
-                            title: 'Multi-Select States (50 items)',
-                            description: 'Select multiple US states with chip-based display',
-                            selectedValues: selectedStates.map((e) => e.label).join(', '),
-                            dropdown: multiDropDown<String>(
-                              width: 500,
-                              listItems: states,
-                              initiallySelected: selectedStates,
-                              onChanged: (items) {
-                                setState(() {
-                                  selectedStates = items;
-                                });
-                              },
-                              hintText: 'Select states...',
-                              maxDropdownHeight: 250,
+                            // Multi-Select States dropdown
+                            _buildMultiDropdownSection(
+                              title: 'Multi-Select States (50 items)',
+                              description: 'Select multiple US states with chip-based display',
+                              selectedValues: selectedStates.map((e) => e.label).join(', '),
+                              dropdown: multiDropDown<String>(
+                                width: 500,
+                                listItems: states,
+                                initiallySelected: selectedStates,
+                                onChanged: (items) {
+                                  setState(() {
+                                    selectedStates = items;
+                                  });
+                                },
+                                hintText: 'Select states...',
+                                maxDropdownHeight: 250,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ],
