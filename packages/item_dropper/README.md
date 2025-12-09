@@ -308,6 +308,31 @@ Built-in keyboard support:
 - **Escape** - Close dropdown
 - **Type to search** - Filter items in real-time
 
+### Localization
+
+All user-facing text can be customized by providing an `ItemDropperLocalizations` instance:
+
+```dart
+SingleItemDropper<String>(
+  items: items,
+  selectedItem: selectedItem,
+  width: 300,
+  onChanged: (item) => setState(() => selectedItem = item),
+  localizations: ItemDropperLocalizations(
+    addItemPrefix: 'Ajouter "',
+    addItemSuffix: '"',
+    noResultsFound: 'Aucun résultat trouvé',
+    deleteDialogTitle: 'Supprimer "{label}"?',
+    deleteDialogContent: 'Cet élément sera supprimé de la liste.',
+    deleteDialogCancel: 'Annuler',
+    deleteDialogDelete: 'Supprimer',
+    // ... other strings
+  ),
+)
+```
+
+See `ItemDropperLocalizations` class for all available strings.
+
 ---
 
 ## 🎨 Customization Options
@@ -337,6 +362,7 @@ Built-in keyboard support:
 | `fieldDecoration`          | `BoxDecoration?`                        | `null`   | Optional BoxDecoration for field container                         |
 | `showDropdownPositionIcon` | `bool`                                  | `true`   | Show the dropdown position arrow (down/up)                         |
 | `showDeleteAllIcon`        | `bool`                                  | `true`   | Show the clear (X) icon                                            |
+| `localizations`            | `ItemDropperLocalizations?`             | `null`   | Localization strings for user-facing text (optional)                |
 | `inputKey`                 | `GlobalKey?`                            | `null`   | Key for programmatic access                                        |
 
 ### MultiItemDropper Parameters
@@ -366,6 +392,7 @@ Built-in keyboard support:
 | `inputKey`                 | `GlobalKey?`                            | `null`   | Key for programmatic access to widget                              |
 | `showDropdownPositionIcon` | `bool`                                  | `true`   | Show the dropdown position arrow (down/up)                         |
 | `showDeleteAllIcon`        | `bool`                                  | `true`   | Show the clear (X) icon (clears search/all selections)             |
+| `localizations`            | `ItemDropperLocalizations?`             | `null`   | Localization strings for user-facing text (optional)                |
 
 ### ItemDropperItem Properties
 

@@ -1,4 +1,5 @@
 import '../common/item_dropper_item.dart';
+import '../common/item_dropper_localizations.dart';
 import 'item_dropper_add_item_utils.dart';
 
 /// Shared handler for processing add item selections in dropdown widgets.
@@ -78,15 +79,16 @@ class ItemDropperSelectionHandler {
     required List<ItemDropperItem<T>> originalItems,
     required ItemDropperItem<T>? Function(String)? onAddItem,
     required void Function(ItemDropperItem<T>) onItemCreated,
+    ItemDropperLocalizations? localizations,
   }) {
     // Check if this is an add item
-    if (!ItemDropperAddItemUtils.isAddItem(item, originalItems)) {
+    if (!ItemDropperAddItemUtils.isAddItem(item, originalItems, localizations: localizations)) {
       return AddItemResult<T>(handled: false);
     }
     
     // Extract search text and create new item
     final String searchText = ItemDropperAddItemUtils
-        .extractSearchTextFromAddItem(item);
+        .extractSearchTextFromAddItem(item, localizations: localizations);
     
     if (searchText.isNotEmpty && onAddItem != null) {
       final ItemDropperItem<T>? newItem = onAddItem(searchText);

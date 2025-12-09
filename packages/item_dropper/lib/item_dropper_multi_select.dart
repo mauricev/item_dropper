@@ -18,6 +18,7 @@ import 'package:item_dropper/src/utils/item_dropper_add_item_utils.dart';
 import 'package:item_dropper/src/utils/item_dropper_selection_handler.dart';
 import 'package:item_dropper/src/utils/dropdown_position_calculator.dart';
 import 'package:item_dropper/src/single/single_select_constants.dart';
+import 'package:item_dropper/src/common/item_dropper_localizations.dart';
 
 /// Multi-select dropdown widget
 /// Allows selecting multiple items with chip-based display
@@ -91,6 +92,10 @@ class MultiItemDropper<T> extends StatefulWidget {
   /// Whether to show the clear/X icon (defaults to true).
   final bool showDeleteAllIcon;
 
+  /// Localization strings for user-facing text (optional).
+  /// If not provided, uses default English strings.
+  final ItemDropperLocalizations? localizations;
+
   const MultiItemDropper({
     super.key,
     required this.items,
@@ -116,6 +121,7 @@ class MultiItemDropper<T> extends StatefulWidget {
     this.elevation,
     this.showDropdownPositionIcon = true,
     this.showDeleteAllIcon = true,
+    this.localizations,
   }) : assert(maxSelected == null ||
       maxSelected >= 2, 'maxSelected must be null or >= 2');
 
@@ -150,6 +156,10 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   
   // Measurement helper
   final ChipMeasurementHelper _measurements = ChipMeasurementHelper();
+  
+  /// Get localizations with defaults
+  ItemDropperLocalizations get _localizations =>
+      widget.localizations ?? ItemDropperLocalizations.english;
   
   // Decoration cache manager
   final DecorationCacheManager _decorationManager = DecorationCacheManager();
@@ -336,6 +346,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       searchText: currentSearchText,
       originalItems: widget.items,
       hasOnAddItemCallback: () => widget.onAddItem != null,
+      localizations: _localizations,
     );
     
     // Cache the result
@@ -522,6 +533,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       item: item,
       originalItems: widget.items,
       onAddItem: widget.onAddItem,
+      localizations: _localizations,
       onItemCreated: (newItem) {
         // Add the new item to the list and select it
         // Note: The parent should update widget.items to include the new item
@@ -568,8 +580,9 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         _measurements.totalChipWidth = null;
 
         // Announce selection to screen readers
+        final loc = _localizations;
         _liveRegionManager.announce(
-          ItemDropperSemantics.announceItemSelected(item.label),
+          '${item.label}${loc.itemSelectedSuffix}',
         );
 
         // If we just reached the max, close the overlay
@@ -580,8 +593,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
           // Announce max reached
           if (widget.maxSelected != null) {
             _liveRegionManager.announce(
-              ItemDropperSemantics.announceMaxSelectionReached(
-                  widget.maxSelected!),
+              '${loc.maxSelectionReachedPrefix}${widget.maxSelected}${loc.maxSelectionReachedSuffix}',
             );
           }
         } else {
@@ -640,7 +652,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
 
     // Announce removal to screen readers
     _liveRegionManager.announce(
-      ItemDropperSemantics.announceItemRemoved(item.label),
+      '${item.label}${_localizations.itemRemovedSuffix}',
     );
 
     // Use unified selection change handler
@@ -684,20 +696,21 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   Future<void> _confirmAndDeleteItem(BuildContext context,
       ItemDropperItem<T> item) async {
     // Show a simple confirmation dialog above the existing overlay/dialogs.
+    final loc = _localizations;
     final bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: Text('Delete "${item.label}"?'),
-          content: const Text('This will remove the item from the list.'),
+          title: Text(loc.deleteDialogTitle.replaceAll('{label}', item.label)),
+          content: Text(loc.deleteDialogContent),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Cancel'),
+              child: Text(loc.deleteDialogCancel),
             ),
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('Delete'),
+              child: Text(loc.deleteDialogDelete),
             ),
           ],
         );
@@ -1183,7 +1196,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         }
         
         return Semantics(
-          label: ItemDropperSemantics.formatSelectedChipLabel(item.label),
+          label: '${item.label}${_localizations.selectedSuffix}',
           button: true,
           excludeSemantics: true,
           child: Focus(
@@ -1278,7 +1291,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       child: IgnorePointer(
         ignoring: !widget.enabled,
         child: Semantics(
-          label: ItemDropperSemantics.multiSelectFieldLabel,
+          label: _localizations.multiSelectFieldLabel,
           textField: true,
           child: TextField(
             controller: _searchController,
@@ -1343,6 +1356,11 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     final double effectiveItemHeight = widget.itemHeight ??
         calculateItemHeightFromStyle();
 
+    // Show max reached overlay if max selection is reached
+    if (_selectionManager.isMaxReached()) {
+      return _buildMaxReachedOverlay(inputContext);
+    }
+    
     // Show empty state if user is searching but no results found
     if (filteredItems.isEmpty) {
       if (_searchController.text.isNotEmpty) {
@@ -1429,6 +1447,53 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     );
   }
 
+  /// Builds a max reached overlay when maximum selection is reached
+  Widget _buildMaxReachedOverlay(BuildContext inputContext) {
+    // Don't build overlay if disabled
+    if (!widget.enabled) return const SizedBox.shrink();
+
+    final RenderBox? inputBox = inputContext.findRenderObject() as RenderBox?;
+    if (inputBox == null) return const SizedBox.shrink();
+
+    final double inputFieldHeight = inputBox.size.height;
+    // Use actual measured field width to ensure overlay matches field width exactly
+    final double actualFieldWidth = inputBox.size.width;
+    final double maxDropdownHeight = widget.maxDropdownHeight ??
+        MultiSelectConstants.kDefaultMaxDropdownHeight;
+    
+    final position = DropdownPositionCalculator.calculate(
+      context: inputContext,
+      inputBox: inputBox,
+      inputFieldHeight: inputFieldHeight,
+      maxDropdownHeight: maxDropdownHeight,
+    );
+
+    return CompositedTransformFollower(
+      link: _layerLink,
+      showWhenUnlinked: false,
+      offset: position.offset,
+      child: SizedBox(
+        width: actualFieldWidth,
+        child: Material(
+          elevation: ItemDropperConstants.kDropdownElevation,
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: MultiSelectConstants.kEmptyStatePaddingHorizontal,
+              vertical: MultiSelectConstants.kEmptyStatePaddingVertical,
+            ),
+            child: Text(
+              _localizations.maxItemsReachedOverlay,
+              style: (widget.popupTextStyle ?? widget.fieldTextStyle ?? const TextStyle(fontSize: ItemDropperConstants
+                  .kDropdownItemFontSize)).copyWith(
+                color: Colors.grey.shade600,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   /// Builds an empty state overlay when search returns no results
   Widget _buildEmptyStateOverlay(BuildContext inputContext) {
     // Don't build overlay if disabled
@@ -1464,7 +1529,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
               vertical: MultiSelectConstants.kEmptyStatePaddingVertical,
             ),
             child: Text(
-              MultiSelectConstants.kEmptyStateMessage,
+              _localizations.noResultsFound,
               style: (widget.popupTextStyle ?? widget.fieldTextStyle ?? const TextStyle(fontSize: ItemDropperConstants
                   .kDropdownItemFontSize)).copyWith(
                 color: Colors.grey.shade600,

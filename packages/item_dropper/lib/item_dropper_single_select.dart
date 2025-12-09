@@ -7,6 +7,7 @@ import 'package:item_dropper/src/utils/item_dropper_selection_handler.dart';
 import 'package:item_dropper/src/single/single_select_constants.dart';
 import 'package:item_dropper/src/multi/multi_select_constants.dart';
 import 'package:item_dropper/src/common/item_dropper_semantics.dart';
+import 'package:item_dropper/src/common/item_dropper_localizations.dart';
 import 'package:item_dropper/src/common/live_region_manager.dart';
 import 'package:item_dropper/src/common/keyboard_navigation_manager.dart';
 import 'package:item_dropper/src/common/decoration_cache_manager.dart';
@@ -108,6 +109,10 @@ class SingleItemDropper<T> extends StatefulWidget {
   /// Defaults to true.
   final bool showDeleteAllIcon;
 
+  /// Localization strings for user-facing text (optional).
+  /// If not provided, uses default English strings.
+  final ItemDropperLocalizations? localizations;
+
   const SingleItemDropper({
     super.key,
     required this.items,
@@ -132,6 +137,7 @@ class SingleItemDropper<T> extends StatefulWidget {
     this.fieldDecoration,
     this.showDropdownPositionIcon = true,
     this.showDeleteAllIcon = true,
+    this.localizations,
   });
 
   @override
@@ -176,6 +182,10 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
 
   // Live region for screen reader announcements
   late final LiveRegionManager _liveRegionManager;
+  
+  /// Get localizations with defaults
+  ItemDropperLocalizations get _localizations =>
+      widget.localizations ?? ItemDropperLocalizations.english;
 
   bool get _isUserEditing =>
       _interactionState == DropdownInteractionState.editing;
@@ -203,6 +213,7 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
         searchText: _controller.text,
         originalItems: widget.items,
         hasOnAddItemCallback: () => widget.onAddItem != null,
+        localizations: _localizations,
       );
     }
     return result;
@@ -461,6 +472,7 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
         item: selectedItem,
         originalItems: widget.items,
         onAddItem: widget.onAddItem,
+        localizations: _localizations,
         onItemCreated: (newItem) {
           _withSquelch(() {
             _controller.text = newItem.label;
@@ -556,6 +568,7 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
           item: item,
           originalItems: widget.items,
           onAddItem: widget.onAddItem,
+          localizations: _localizations,
           onItemCreated: (newItem) {
             _withSquelch(() {
               _controller.text = newItem.label;
@@ -786,7 +799,7 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
             child: IgnorePointer(
               ignoring: !widget.enabled,
               child: Semantics(
-                label: ItemDropperSemantics.singleSelectFieldLabel,
+                label: _localizations.singleSelectFieldLabel,
                 textField: true,
                 child: TextField(
                   key: widget.inputKey ?? _internalFieldKey,
