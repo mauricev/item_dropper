@@ -251,21 +251,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         return KeyEventResult.ignored;
       }
       
-      // Debug output
-      print('=== TextField Key Event ===');
-      print('Key: ${event.logicalKey}');
-      print('Event type: ${event.runtimeType}');
-      print('Chip focused: ${!_chipFocusManager.isTextFieldFocused}');
-      print('TextField focused: ${_chipFocusManager.isTextFieldFocused}');
-      print('Dropdown open: ${_overlayController.isShowing}');
-      print('Selected count: ${_selectionManager.selectedCount}');
-      print('Cursor position: ${_searchController.selection.baseOffset}');
-      print('Text length: ${_searchController.text.length}');
-      print('Text: "${_searchController.text}"');
-      
       // If a chip is focused, let chip focus manager handle arrow/delete keys
       if (!_chipFocusManager.isTextFieldFocused) {
-        print('Delegating to chip focus manager');
         final chipResult = _chipFocusManager.handleKeyEvent(event);
         if (chipResult == KeyEventResult.handled) {
           return chipResult;
@@ -280,7 +267,6 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         
         // Left arrow at cursor position 0: move to last chip
         if (event.logicalKey == LogicalKeyboardKey.arrowLeft && cursorPosition == 0) {
-          print('Moving to last chip (index ${_selectionManager.selectedCount - 1})');
           _chipFocusManager.focusChip(_selectionManager.selectedCount - 1);
           return KeyEventResult.handled;
         }
@@ -288,7 +274,6 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         // Right arrow at end of text: move to first chip
         if (event.logicalKey == LogicalKeyboardKey.arrowRight &&
             cursorPosition == _searchController.text.length) {
-          print('Moving to first chip');
           _chipFocusManager.focusChip(0);
           return KeyEventResult.handled;
         }
@@ -305,11 +290,9 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       if ((event.logicalKey == LogicalKeyboardKey.space ||
            event.logicalKey == LogicalKeyboardKey.enter) &&
           !shouldOpenOnSpaceEnter) {
-        print('Ignoring Space/Enter - letting TextField handle');
         return KeyEventResult.ignored;
       }
       
-      print('Delegating to keyboard nav manager');
       return _keyboardNavManager.handleKeyEvent(
         event: event,
         filteredItems: _filtered,
