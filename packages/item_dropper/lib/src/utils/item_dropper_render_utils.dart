@@ -180,17 +180,8 @@ class ItemDropperRenderUtils {
       // Add separator line above group header if there's a previous item that's not a group header
       final bool showSeparator = hasPreviousItem && !previousItemIsGroupHeader;
       
-      return Container(
-        decoration: showSeparator
-            ? BoxDecoration(
-                border: Border(
-                  top: BorderSide(
-                    color: Colors.grey.shade300,
-                    width: ItemDropperConstants.kDropdownSeparatorWidth,
-                  ),
-                ),
-              )
-            : null,
+      // Build the header content with padding
+      final headerContent = Container(
         padding: const EdgeInsets.symmetric(
             horizontal: ItemDropperConstants.kDropdownItemHorizontalPadding,
             vertical: ItemDropperConstants.kDropdownGroupHeaderVerticalPadding),
@@ -199,6 +190,30 @@ class ItemDropperRenderUtils {
           style: popupGroupHeaderStyle ?? defaultGroupStyle,
         ),
       );
+      
+      // If separator is needed, use Stack with full-width separator line
+      // Use fit: StackFit.expand to ensure Stack fills available width from Align
+      if (showSeparator) {
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            // Full-width separator line at the top
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              height: ItemDropperConstants.kDropdownSeparatorWidth,
+              child: Container(
+                color: Colors.grey.shade300,
+              ),
+            ),
+            // Header content below the line
+            headerContent,
+          ],
+        );
+      }
+      
+      return headerContent;
     }
 
     final defaultItemStyle = const TextStyle(
