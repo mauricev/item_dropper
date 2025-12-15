@@ -56,7 +56,7 @@ class MultiItemDropper<T> extends StatefulWidget {
   final GlobalKey<State<StatefulWidget>>? inputKey;
 
   /// Maximum dropdown popup height.
-  final double? maxDropdownHeight;
+  final double maxDropdownHeight;
 
   /// Whether to show a vertical scrollbar in popup.
   final bool showScrollbar;
@@ -314,6 +314,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     }
 
     // Filter out already selected items - use existing Set for O(1) lookups
+    // getFiltered will reinitialize if items reference changed
     final result = _filterUtils.getFiltered(
       widget.items,
       currentSearchText,
@@ -343,6 +344,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     _cachedFilteredItems = null;
     _lastFilteredSearchText = '';
     _lastFilteredSelectedCount = -1;
+    // Also ensure filter utils is initialized with current items
+    _filterUtils.initializeItems(widget.items);
   }
 
 
@@ -1008,17 +1011,38 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     final double iconContainerHeight = fontSize *
         ItemDropperConstants.kSuffixIconHeightMultiplier;
     
-    return Container(
-      key: widget.inputKey ?? _fieldKey,
-      width: widget.width, // Constrain to 500px
-      // Let content determine height naturally to prevent overflow
-      decoration: _decorationManager.get(
-        isFocused: _focusManager.isFocused,
-        customDecoration: widget.fieldDecoration,
-        borderRadius: MultiSelectConstants.kContainerBorderRadius,
-        borderWidth: MultiSelectConstants.kContainerBorderWidth,
-      ),
-      child: Stack(
+    return GestureDetector(
+      onTap: () {
+        // When container is tapped (but not on chips or icons), focus the TextField
+        if (widget.enabled) {
+          _chipFocusManager.focusTextField();
+          _focusManager.gainFocus();
+          // Invalidate filter cache to ensure fresh calculation
+          _invalidateFilteredCache();
+          // Show overlay immediately - _handleFocusChange will also handle it, but this ensures
+          // it shows right away for tests and immediate user feedback
+          if (_selectionManager.isMaxReached()) {
+            _overlayManager.showIfNeeded();
+          } else {
+            // Check if we have items to show (either from _filtered or widget.items)
+            final filtered = _filtered;
+            if (filtered.isNotEmpty || widget.items.isNotEmpty) {
+              _overlayManager.showIfNeeded();
+            }
+          }
+        }
+      },
+      child: Container(
+        key: widget.inputKey ?? _fieldKey,
+        width: widget.width, // Constrain to 500px
+        // Let content determine height naturally to prevent overflow
+        decoration: _decorationManager.get(
+          isFocused: _focusManager.isFocused,
+          customDecoration: widget.fieldDecoration,
+          borderRadius: MultiSelectConstants.kContainerBorderRadius,
+          borderWidth: MultiSelectConstants.kContainerBorderWidth,
+        ),
+        child: Stack(
         clipBehavior: Clip.none,
         children: [
           Column(
@@ -1080,6 +1104,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
               ),
             ),
         ],
+      ),
       ),
     );
   }
@@ -1289,10 +1314,14 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
             // When TextField is tapped, focus it and clear chip focus
             _chipFocusManager.focusTextField();
             _focusManager.gainFocus();
-            // Explicitly show overlay if max is reached (handles case where field already focused)
-            // Show immediately, not in post-frame callback, to ensure it displays
+            // Show overlay immediately - similar to SingleItemDropper
             if (_selectionManager.isMaxReached()) {
               _overlayManager.showIfNeeded();
+            } else {
+              final filtered = _filtered;
+              if (filtered.isNotEmpty || widget.items.isNotEmpty) {
+                _overlayManager.showIfNeeded();
+              }
             }
           },
         ), // Close TextField
@@ -1341,8 +1370,69 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         // User is searching but no results - show empty state
         return _buildEmptyStateOverlay(inputContext);
       }
-      // No search text and no items - hide overlay
-      return const SizedBox.shrink();
+      // No search text and no filtered items - check if we have items to show
+      // If widget.items has items (excluding selected), show them
+      final availableItems = widget.items
+          .where((item) => item.isGroupHeader || !_selectionManager.selectedValues.contains(item.value))
+          .toList();
+      if (availableItems.isEmpty) {
+        // No items available - hide overlay
+        return const SizedBox.shrink();
+      }
+      // We have items but filteredItems is empty - use availableItems instead
+      // This can happen during initialization before _filtered is properly calculated
+      // Continue with availableItems as the items to display
+      return ItemDropperRenderUtils.buildDropdownOverlay<T>(
+        context: inputContext,
+        items: availableItems,
+        maxDropdownHeight: widget.maxDropdownHeight,
+        width: widget.width,
+        controller: _overlayController,
+        scrollController: _scrollController,
+        layerLink: _layerLink,
+        isSelected: (ItemDropperItem<T> item) => _selectionManager.isSelected(item),
+        builder: (BuildContext builderContext, ItemDropperItem<T> item, bool isSelected) {
+          final int itemIndex = availableItems.indexWhere((x) => x.value == item.value);
+          final bool hasPrevious = itemIndex > 0;
+          final bool previousIsGroupHeader = hasPrevious && availableItems[itemIndex - 1].isGroupHeader;
+          
+          final Widget Function(BuildContext, ItemDropperItem<T>, bool) itemBuilder;
+          if (widget.popupItemBuilder != null) {
+            itemBuilder = widget.popupItemBuilder!;
+          } else {
+            itemBuilder = (context, item, isSelected) {
+              return ItemDropperRenderUtils.defaultDropdownPopupItemBuilder(
+                context,
+                item,
+                isSelected,
+                popupTextStyle: widget.popupTextStyle,
+                popupGroupHeaderStyle: widget.popupGroupHeaderStyle,
+                hasPreviousItem: hasPrevious,
+                previousItemIsGroupHeader: previousIsGroupHeader,
+              );
+            };
+          }
+          
+          return ItemDropperRenderUtils.buildDropdownItemWithHover<T>(
+            context: builderContext,
+            item: item,
+            isSelected: isSelected,
+            filteredItems: availableItems,
+            hoverIndex: _keyboardNavManager.hoverIndex,
+            keyboardHighlightIndex: _keyboardNavManager.keyboardHighlightIndex,
+            safeSetState: _safeSetState,
+            setHoverIndex: (index) => _keyboardNavManager.hoverIndex = index,
+            onTap: () {
+              _toggleItem(item);
+            },
+            customBuilder: itemBuilder,
+            itemHeight: effectiveItemHeight,
+            onRequestDelete: _handleRequestDeleteFromOverlay,
+          );
+        },
+        itemHeight: effectiveItemHeight,
+        preferredFieldHeight: _measurements.wrapHeight,
+      );
     }
 
     // Use custom builder if provided, otherwise use default with style parameters
@@ -1390,7 +1480,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     return ItemDropperRenderUtils.buildDropdownOverlay(
       context: inputContext,
       items: filteredItems,
-      maxDropdownHeight: widget.maxDropdownHeight ?? MultiSelectConstants.kDefaultMaxDropdownHeight,
+      maxDropdownHeight: widget.maxDropdownHeight,
       width: widget.width,
       controller: _overlayController,
       scrollController: _scrollController,
@@ -1432,8 +1522,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     final double inputFieldHeight = inputBox.size.height;
     // Use actual measured field width to ensure overlay matches field width exactly
     final double actualFieldWidth = inputBox.size.width;
-    final double maxDropdownHeight = widget.maxDropdownHeight ??
-        MultiSelectConstants.kDefaultMaxDropdownHeight;
+    final double maxDropdownHeight = widget.maxDropdownHeight;
     
     final position = DropdownPositionCalculator.calculate(
       context: inputContext,
@@ -1479,8 +1568,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     final double inputFieldHeight = inputBox.size.height;
     // Use actual measured field width to ensure overlay matches field width exactly
     final double actualFieldWidth = inputBox.size.width;
-    final double maxDropdownHeight = widget.maxDropdownHeight ??
-        MultiSelectConstants.kDefaultMaxDropdownHeight;
+    final double maxDropdownHeight = widget.maxDropdownHeight;
     
     final position = DropdownPositionCalculator.calculate(
       context: inputContext,
