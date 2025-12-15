@@ -562,6 +562,30 @@ void main() {
       expect(find.byType(MultiItemDropper<String>), findsOneWidget);
     });
 
+    testWidgets('should handle null selectedItems', (WidgetTester tester) async {
+      final items = [
+        ItemDropperItem<String>(value: '1', label: 'Item 1'),
+      ];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: MultiItemDropper<String>(
+              items: items,
+              selectedItems: null,
+              width: 300,
+              onChanged: (_) {},
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Should not crash and should behave like empty list
+      expect(find.byType(MultiItemDropper<String>), findsOneWidget);
+    });
+
     testWidgets('should handle group headers', (WidgetTester tester) async {
       final items = [
         ItemDropperItem<String>(value: 'header1', label: 'Group 1', isGroupHeader: true),

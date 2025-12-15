@@ -25,8 +25,8 @@ class MultiItemDropper<T> extends StatefulWidget {
   /// The items to display in the dropdown (required).
   final List<ItemDropperItem<T>> items;
 
-  /// The currently selected items (required for controlled usage).
-  final List<ItemDropperItem<T>> selectedItems;
+  /// The currently selected items (optional for controlled usage).
+  final List<ItemDropperItem<T>>? selectedItems;
 
   /// Called when the selection changes (required).
   final void Function(List<ItemDropperItem<T>>) onChanged;
@@ -98,7 +98,7 @@ class MultiItemDropper<T> extends StatefulWidget {
   const MultiItemDropper({
     super.key,
     required this.items,
-    required this.selectedItems,
+    this.selectedItems,
     required this.onChanged,
     this.popupItemBuilder,
     required this.width,
@@ -210,7 +210,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         _invalidateFilteredCache();
       },
     );
-    _selectionManager.syncItems(widget.selectedItems);
+    _selectionManager.syncItems(widget.selectedItems ?? []);
 
     // Initialize overlay manager
     _overlayManager = MultiSelectOverlayManager(
@@ -903,7 +903,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     if (!_isInternalSelectionChange &&
         !_areItemsEqual(widget.selectedItems, _selectionManager
             .selected)) {
-      _selectionManager.syncItems(widget.selectedItems);
+      _selectionManager.syncItems(widget.selectedItems ?? []);
       // Don't trigger rebuild here if we're already rebuilding
       // Parent change will be reflected in the current rebuild cycle
       _requestRebuildIfNotScheduled();
@@ -933,7 +933,10 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   // Helper to check if two item lists are equal (by value)
   // Optimized for performance: early returns and efficient Set-based comparison
   // Time complexity: O(n) where n is the length of the lists
-  bool _areItemsEqual(List<ItemDropperItem<T>> a, List<ItemDropperItem<T>> b) {
+  bool _areItemsEqual(List<ItemDropperItem<T>>? a, List<ItemDropperItem<T>> b) {
+    // Handle null
+    if (a == null) return b.isEmpty;
+    
     // Fast path: reference equality
     if (identical(a, b)) return true;
 
