@@ -17,6 +17,10 @@ import 'package:item_dropper/src/utils/dropdown_position_calculator.dart';
 import 'package:item_dropper/src/single/single_select_constants.dart';
 import 'package:item_dropper/src/common/item_dropper_localizations.dart';
 
+part 'src/multi/multi_item_dropper_state.dart';
+part 'src/multi/multi_item_dropper_handlers.dart';
+part 'src/multi/multi_item_dropper_builders.dart';
+
 /// Multi-select dropdown widget
 /// Allows selecting multiple items with chip-based display
 class MultiItemDropper<T> extends StatefulWidget {
