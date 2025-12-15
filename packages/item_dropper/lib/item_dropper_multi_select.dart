@@ -4,9 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:item_dropper/src/common/item_dropper_common.dart';
 import 'package:item_dropper/src/common/live_region_manager.dart';
 import 'package:item_dropper/src/common/keyboard_navigation_manager.dart';
-import 'package:item_dropper/src/common/decoration_cache_manager.dart';
 import 'package:item_dropper/src/multi/chip_measurement_helper.dart';
-import 'package:item_dropper/src/multi/chip_focus_manager.dart';
 import 'package:item_dropper/src/multi/multi_select_constants.dart';
 import 'package:item_dropper/src/multi/multi_select_focus_manager.dart';
 import 'package:item_dropper/src/multi/multi_select_layout_calculator.dart';
@@ -160,26 +158,25 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   ItemDropperLocalizations get _localizations =>
       widget.localizations ?? ItemDropperLocalizations.english;
   
-  // Decoration cache manager
-  final DecorationCacheManager _decorationManager = DecorationCacheManager();
-
+  // State flags - consolidated to reduce complexity
   bool _rebuildScheduled = false;
   // Track when we're the source of selection changes to prevent didUpdateWidget from rebuilding
   bool _isInternalSelectionChange = false;
   // Track when we're programmatically clearing search text to prevent overlay from closing
   bool _isClearingSearchForSelection = false;
 
-  // Focus manager for manual focus state tracking
-  late final MultiSelectFocusManager _focusManager;
+  // Unified focus manager handles both TextField and chip focus
+  late final MultiSelectFocusManager<T> _focusManager;
+  
+  // Cached decoration state (simplified from DecorationCacheManager)
+  BoxDecoration? _cachedDecoration;
+  bool? _cachedFocusState;
 
   // Use shared filter utils
   final ItemDropperFilterUtils<T> _filterUtils = ItemDropperFilterUtils<T>();
 
   // Live region for screen reader announcements
   late final LiveRegionManager _liveRegionManager;
-  
-  // Chip focus manager for keyboard navigation between chips
-  late final ChipFocusManager<T> _chipFocusManager;
   
   // Map to store FocusNodes for each chip (keyed by chip index)
   final Map<int, FocusNode> _chipFocusNodes = {};
@@ -192,11 +189,12 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     _scrollController = ScrollController();
     _focusNode = FocusNode();
 
-    // Initialize focus manager with callback for visual state updates
-    _focusManager = MultiSelectFocusManager(
+    // Initialize unified focus manager (handles both TextField and chip focus)
+    _focusManager = MultiSelectFocusManager<T>(
       focusNode: _focusNode,
       onFocusVisualStateChanged: _updateFocusVisualState,
       onFocusChanged: _handleFocusChange,
+      onRemoveChip: _removeChip,
     );
 
     // Initialize selection manager with callbacks
@@ -234,13 +232,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       onUpdate: () => _safeSetState(() {}),
     );
     
-    // Initialize chip focus manager
-    _chipFocusManager = ChipFocusManager<T>(
-      onFocusChanged: () => _safeSetState(() {}),
-      onRemoveChip: _removeChip,
-      onFocusTextField: () => _focusNode.requestFocus(),
-    );
-    _chipFocusManager.updateSelectedItems(_selectionManager.selected);
+    // Update focus manager with initial selected items
+    _focusManager.updateSelectedItems(_selectionManager.selected);
 
     _filterUtils.initializeItems(widget.items);
 
@@ -250,9 +243,9 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         return KeyEventResult.ignored;
       }
       
-      // If a chip is focused, let chip focus manager handle arrow/delete keys
-      if (!_chipFocusManager.isTextFieldFocused) {
-        final chipResult = _chipFocusManager.handleKeyEvent(event);
+      // If a chip is focused, let focus manager handle arrow/delete keys
+      if (!_focusManager.isTextFieldFocused) {
+        final chipResult = _focusManager.handleKeyEvent(event);
         if (chipResult == KeyEventResult.handled) {
           return chipResult;
         }
@@ -260,20 +253,20 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       
       // Handle left/right arrow keys: navigate between TextField and chips
       // This should work even when dropdown is open (when cursor is at boundary)
-      if (_chipFocusManager.isTextFieldFocused &&
+      if (_focusManager.isTextFieldFocused &&
           _selectionManager.selectedCount > 0) {
         final cursorPosition = _searchController.selection.baseOffset;
         
         // Left arrow at cursor position 0: move to last chip
         if (event.logicalKey == LogicalKeyboardKey.arrowLeft && cursorPosition == 0) {
-          _chipFocusManager.focusChip(_selectionManager.selectedCount - 1);
+          _focusManager.focusChip(_selectionManager.selectedCount - 1);
           return KeyEventResult.handled;
         }
         
         // Right arrow at end of text: move to first chip
         if (event.logicalKey == LogicalKeyboardKey.arrowRight &&
             cursorPosition == _searchController.text.length) {
-          _chipFocusManager.focusChip(0);
+          _focusManager.focusChip(0);
           return KeyEventResult.handled;
         }
       }
@@ -400,9 +393,11 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   }
 
   void _handleFocusChange() {
-    // When TextField gains focus, clear chip focus
-    if (_focusNode.hasFocus) {
-      _chipFocusManager.focusTextField();
+    // When TextField gains focus, ensure chip focus index reflects this
+    // (Don't call focusTextField() here as it would cause infinite recursion)
+    if (_focusNode.hasFocus && !_focusManager.isTextFieldFocused) {
+      // Just update the chip focus index without requesting focus
+      _focusManager.clearChipFocus();
     }
     // Focus change is now handled by the FocusManager
     // This method is kept for additional overlay logic
@@ -440,10 +435,41 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       return;
     }
     // Invalidate decoration cache - will be recreated on next build with new focus state
-    _decorationManager.invalidate();
+    _cachedDecoration = null;
+    _cachedFocusState = null;
     _safeSetState(() {
       // Trigger rebuild to apply new decoration
     });
+  }
+
+  /// Get decoration for the input field container (simplified from DecorationCacheManager)
+  BoxDecoration _getDecoration({
+    required bool isFocused,
+    BoxDecoration? customDecoration,
+  }) {
+    // If custom decoration provided, use it as-is (no caching)
+    if (customDecoration != null) {
+      return customDecoration;
+    }
+
+    // Only recreate if cache is null or focus state changed
+    if (_cachedDecoration == null || _cachedFocusState != isFocused) {
+      _cachedFocusState = isFocused;
+      _cachedDecoration = BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Colors.white, Color(0xFFE5E5E5)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+        border: Border.all(
+          color: isFocused ? Colors.blue : Colors.grey.shade400,
+          width: MultiSelectConstants.kContainerBorderWidth,
+        ),
+        borderRadius: BorderRadius.circular(MultiSelectConstants.kContainerBorderRadius),
+      );
+    }
+
+    return _cachedDecoration!;
   }
 
   void _updateSelection(void Function() selectionUpdate) {
@@ -458,8 +484,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         // Update selection inside the rebuild callback
         selectionUpdate();
         
-        // Update chip focus manager with new selection
-        _chipFocusManager.updateSelectedItems(_selectionManager.selected);
+        // Update focus manager with new selection
+        _focusManager.updateSelectedItems(_selectionManager.selected);
         
         // Clean up FocusNodes for chips that no longer exist
         final currentIndices = _selectionManager.selected.asMap().keys.toSet();
@@ -890,8 +916,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   void didUpdateWidget(covariant MultiItemDropper<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
     
-    // Update chip focus manager with new selection
-    _chipFocusManager.updateSelectedItems(_selectionManager.selected);
+    // Update focus manager with new selection
+    _focusManager.updateSelectedItems(_selectionManager.selected);
 
     // If widget became disabled, unfocus and hide overlay
     if (oldWidget.enabled && !widget.enabled) {
@@ -1018,7 +1044,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       onTap: () {
         // When container is tapped (but not on chips or icons), focus the TextField
         if (widget.enabled) {
-          _chipFocusManager.focusTextField();
+          _focusManager.focusTextField();
           _focusManager.gainFocus();
           // Invalidate filter cache to ensure fresh calculation
           _invalidateFilteredCache();
@@ -1039,11 +1065,9 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         key: widget.inputKey ?? _fieldKey,
         width: widget.width, // Constrain to 500px
         // Let content determine height naturally to prevent overflow
-        decoration: _decorationManager.get(
+        decoration: _getDecoration(
           isFocused: _focusManager.isFocused,
           customDecoration: widget.fieldDecoration,
-          borderRadius: MultiSelectConstants.kContainerBorderRadius,
-          borderWidth: MultiSelectConstants.kContainerBorderWidth,
         ),
         child: Stack(
         clipBehavior: Clip.none,
@@ -1116,7 +1140,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   Widget _buildChip(ItemDropperItem<T> item,
       [GlobalKey? chipKey, Key? valueKey, int? chipIndex]) {
     final index = chipIndex ?? _selectionManager.selected.indexOf(item);
-    final isFocused = _chipFocusManager.isChipFocused(index);
+    final isFocused = _focusManager.isChipFocused(index);
     
     // Only measure the first chip (index 0) to avoid GlobalKey conflicts
     final bool isFirstChip = _selectionManager.selected.isNotEmpty &&
@@ -1186,7 +1210,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         if (isFocused) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (!mounted) return;
-            if (_chipFocusManager.isChipFocused(index)) {
+            if (_focusManager.isChipFocused(index)) {
               chipFocusNode.requestFocus();
             }
           });
@@ -1200,19 +1224,19 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
             focusNode: chipFocusNode,
             onKeyEvent: (node, event) {
               // Delegate to chip focus manager
-              return _chipFocusManager.handleKeyEvent(event);
+              return _focusManager.handleKeyEvent(event);
             },
             onFocusChange: (hasFocus) {
               if (hasFocus) {
-                _chipFocusManager.focusChip(index);
-              } else if (_chipFocusManager.isChipFocused(index)) {
+                _focusManager.focusChip(index);
+              } else if (_focusManager.isChipFocused(index)) {
                 // Lost focus but we still think it's focused - move to TextField
-                _chipFocusManager.focusTextField();
+                _focusManager.focusTextField();
               }
             },
             child: GestureDetector(
               onTap: () {
-                _chipFocusManager.focusChip(index);
+                _focusManager.focusChip(index);
                 chipFocusNode.requestFocus();
               },
               child: Container(
@@ -1315,7 +1339,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
           autofocus: false,
           onTap: () {
             // When TextField is tapped, focus it and clear chip focus
-            _chipFocusManager.focusTextField();
+            _focusManager.focusTextField();
             _focusManager.gainFocus();
             // Show overlay immediately - similar to SingleItemDropper
             if (_selectionManager.isMaxReached()) {
