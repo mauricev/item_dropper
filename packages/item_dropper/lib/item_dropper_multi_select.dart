@@ -158,12 +158,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   ItemDropperLocalizations get _localizations =>
       widget.localizations ?? ItemDropperLocalizations.english;
   
-  // State flags - consolidated to reduce complexity
+  // State flag for rebuild scheduling
   bool _rebuildScheduled = false;
-  // Track when we're the source of selection changes to prevent didUpdateWidget from rebuilding
-  bool _isInternalSelectionChange = false;
-  // Track when we're programmatically clearing search text to prevent overlay from closing
-  bool _isClearingSearchForSelection = false;
 
   // Unified focus manager handles both TextField and chip focus
   late final MultiSelectFocusManager<T> _focusManager;
@@ -431,9 +427,6 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     if (_rebuildScheduled) {
       return;
     }
-    if (_isInternalSelectionChange) {
-      return;
-    }
     // Invalidate decoration cache - will be recreated on next build with new focus state
     _cachedDecoration = null;
     _cachedFocusState = null;
@@ -608,10 +601,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
           _focusManager.gainFocus();
           
           // Clear search text after selection for continued searching
-          // Set flag to prevent overlay from closing
-          _isClearingSearchForSelection = true;
+          // Focus is already set above, so overlay will stay open in _handleTextChanged
           _searchController.clear();
-          _isClearingSearchForSelection = false;
           
           // Ensure overlay stays open after text clear
           WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -815,16 +806,9 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       _clearHighlights();
     });
 
-    // If we're clearing search text as part of selection, keep overlay open
-    if (_isClearingSearchForSelection) {
-      if (_focusManager.isFocused) {
-        _overlayManager.showIfNeeded();
-      }
-      return;
-    }
-
     // Show overlay if focused - if max is reached, overlay will show max reached message
     // This allows continued selection after clearing search text
+    // When we clear text after selection, focus is already set, so overlay stays open
     if (_focusManager.isFocused) {
       _overlayManager.showIfNeeded();
     } else if (_filtered.isEmpty && !_selectionManager.isMaxReached()) {
@@ -874,14 +858,11 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   }
 
   /// Unified method to handle selection changes: rebuild + notify parent + cleanup
-  /// Consolidates the common pattern of rebuilding, notifying parent, and clearing flags
+  /// Consolidates the common pattern of rebuilding, notifying parent, and cleanup
   void _handleSelectionChange({
     required void Function() stateUpdate,
     void Function()? postRebuildCallback,
   }) {
-    // Mark that we're the source of this selection change
-    _isInternalSelectionChange = true;
-
     // Update selection and all related state inside rebuild
     _requestRebuild(stateUpdate);
 
@@ -891,24 +872,13 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       if (!mounted) return;
 
       // Notify parent of change (this triggers parent rebuild synchronously)
-      // Our didUpdateWidget will run as part of the parent rebuild, and will see
-      // _isInternalSelectionChange = true, preventing unnecessary sync
+      // Our didUpdateWidget will detect if we caused the change by comparing values
       widget.onChanged(_selectionManager.selected);
 
-      // Clear the flag AFTER notifying parent, but use a microtask to ensure
-      // didUpdateWidget has completed its synchronous execution first
-      // This prevents race conditions where didUpdateWidget might check the flag
-      // after it's been cleared but during the same synchronous execution
-      Future.microtask(() {
-        if (mounted) {
-          _isInternalSelectionChange = false;
-
-          // Execute optional post-rebuild callback (e.g., focus management, overlay updates)
-          if (postRebuildCallback != null) {
-            postRebuildCallback();
-          }
-        }
-      });
+      // Execute optional post-rebuild callback (e.g., focus management, overlay updates)
+      if (postRebuildCallback != null) {
+        postRebuildCallback();
+      }
     });
   }
 
@@ -926,10 +896,15 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     }
 
     // Sync selected items if parent changed them (and we didn't cause the change)
-    if (!_isInternalSelectionChange &&
-        !_areItemsEqual(widget.selectedItems, _selectionManager
-            .selected)) {
-      _selectionManager.syncItems(widget.selectedItems ?? []);
+    // Detect if we caused the change by comparing our selection with widget's selection
+    // If they match, we caused the change (parent hasn't updated yet)
+    // If they don't match, parent changed it
+    final ourSelection = _selectionManager.selected;
+    final widgetSelection = widget.selectedItems ?? [];
+    final weCausedChange = _areItemsEqual(ourSelection, widgetSelection);
+    
+    if (!weCausedChange && !_areItemsEqual(widget.selectedItems, ourSelection)) {
+      _selectionManager.syncItems(widgetSelection);
       // Don't trigger rebuild here if we're already rebuilding
       // Parent change will be reflected in the current rebuild cycle
       _requestRebuildIfNotScheduled();
