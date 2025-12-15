@@ -223,10 +223,9 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       onRequestRebuild: () => _safeSetState(() {}),
       onEscape: () => _focusManager.loseFocus(),
       onOpenDropdown: () {
-        if (!_selectionManager.isMaxReached()) {
-          _focusManager.gainFocus();
-          _overlayManager.showIfNeeded();
-        }
+        // Show dropdown - if max is reached, overlay will show max reached message
+        _focusManager.gainFocus();
+        _overlayManager.showIfNeeded();
       },
     );
 
@@ -407,20 +406,16 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
 
     // Use manual focus state for overlay logic
     if (_focusManager.isFocused) {
-      // Don't show overlay if maxSelected is reached
-      if (_selectionManager.isMaxReached()) {
-        return;
-      }
-
-      // Show overlay when focused if there are any filtered items available
+      // Show overlay when focused - if max is reached, overlay will show max reached message
       // Use a post-frame callback to ensure input context is available
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted || !_focusManager.isFocused) {
           return;
         }
 
-        // Check again if maxSelected is reached (might have changed)
+        // If max is reached, show overlay (will display max reached message)
         if (_selectionManager.isMaxReached()) {
+          _overlayManager.showIfNeeded();
           return;
         }
 
@@ -775,21 +770,13 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       _focusManager.loseFocus();
       _overlayManager.hideIfNeeded();
     } else {
-      // Show dropdown if not at max selection
-      if (!_selectionManager.isMaxReached()) {
-        _focusManager.gainFocus();
-        _overlayManager.showIfNeeded();
-      }
+      // Show dropdown - if max is reached, overlay will show max reached message
+      _focusManager.gainFocus();
+      _overlayManager.showIfNeeded();
     }
   }
 
   void _handleTextChanged(String value) {
-    // Don't show overlay if maxSelected is reached
-    if (_selectionManager.isMaxReached()) {
-      _overlayManager.hideIfNeeded();
-      return;
-    }
-
     // Invalidate filtered cache since search text changed
     _invalidateFilteredCache();
 
@@ -807,12 +794,12 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       return;
     }
 
-    // Show overlay if focused - keep it open even if filtered is empty
+    // Show overlay if focused - if max is reached, overlay will show max reached message
     // This allows continued selection after clearing search text
     if (_focusManager.isFocused) {
       _overlayManager.showIfNeeded();
-    } else if (_filtered.isEmpty) {
-      // Hide overlay if no filtered items and not focused
+    } else if (_filtered.isEmpty && !_selectionManager.isMaxReached()) {
+      // Hide overlay if no filtered items and not focused and not at max
       _overlayManager.hideIfNeeded();
     }
   }
@@ -1301,7 +1288,12 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
           onTap: () {
             // When TextField is tapped, focus it and clear chip focus
             _chipFocusManager.focusTextField();
-            _focusNode.requestFocus();
+            _focusManager.gainFocus();
+            // Explicitly show overlay if max is reached (handles case where field already focused)
+            // Show immediately, not in post-frame callback, to ensure it displays
+            if (_selectionManager.isMaxReached()) {
+              _overlayManager.showIfNeeded();
+            }
           },
         ), // Close TextField
         ), // Close Semantics
