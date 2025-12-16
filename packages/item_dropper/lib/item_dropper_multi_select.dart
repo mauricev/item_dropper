@@ -343,9 +343,6 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
 
 
 
-  void _clearHighlights() {
-    _keyboardNavManager.clearHighlights();
-  }
 
 
 
