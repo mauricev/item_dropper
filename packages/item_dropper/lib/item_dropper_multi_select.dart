@@ -331,14 +331,6 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     
     return filteredWithAdd;
   }
-  
-
-
-
-
-
-
-
 
   // Helper method to safely call setState (must stay in main class, not extension, because setState is protected)
   void _safeSetState(void Function() fn) {
@@ -398,8 +390,6 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     }
   }
 
-
-  @override
   @override
   void dispose() {
     // Dispose chip focus nodes
@@ -437,6 +427,5 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       ],
     );
   }
-
 }
 
