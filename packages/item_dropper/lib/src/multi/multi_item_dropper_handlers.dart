@@ -82,22 +82,9 @@ extension _MultiItemDropperStateHandlers<T> on _MultiItemDropperState<T> {
           _focusManager.gainFocus();
           
           // Clear search text after selection for continued searching
-          // Focus is already set above, so overlay will stay open in _handleTextChanged
+          // _handleTextChanged (triggered by clear()) already checks focus and shows overlay
+          // gainFocus() already calls requestFocus(), so no need for post-frame callback
           _searchController.clear();
-          
-          // Ensure overlay stays open after text clear
-          // Use post-frame callback to ensure focus state is fully updated
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (!mounted) return;
-            
-            // Ensure focus is maintained
-            _focusNode.requestFocus();
-            
-            // Ensure overlay stays open
-            if (_focusManager.isFocused && !_overlayController.isShowing) {
-              _showOverlay();
-            }
-          });
         }
       } else {
         // Item is already selected, remove it (toggle off)

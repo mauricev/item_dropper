@@ -154,6 +154,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   // Chip measurement state
   double? _chipHeight;
   double? _chipTextTop;
+  double? _lastContainerHeight; // Track Container height for overlay repositioning
   
   final GlobalKey _chipRowKey = GlobalKey();
   final GlobalKey _textFieldKey = GlobalKey();

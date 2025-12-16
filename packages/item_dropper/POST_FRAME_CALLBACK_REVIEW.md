@@ -274,9 +274,12 @@ WidgetsBinding.instance.addPostFrameCallback((_) {
    - ✅ Call `widget.onChanged()` immediately after `_requestRebuild()` (#9) - **DONE**
    - **Result:** All 161 tests pass. Both changes work correctly because `setState` is synchronous.
 
-2. **Test medium-risk changes:**
-   - Try showing overlay synchronously in `_handleFocusChange()` (#7)
-   - Check if focus restoration callback is redundant (#10)
+2. **✅ COMPLETED - Medium-risk changes:**
+   - ✅ Show overlay synchronously in `_handleFocusChange()` (#7) - **DONE**
+   - ✅ Remove redundant focus restoration callback (#10) - **DONE**
+   - **Result:** All 161 tests pass. Both changes work correctly:
+     - #7: `_showOverlay()` already triggers rebuild, so synchronous call works
+     - #10: `_handleTextChanged` (triggered by `clear()`) already handles overlay showing, and `gainFocus()` already calls `requestFocus()`
 
 3. **Test high-risk changes:**
    - Try synchronous chip focus request (#11) - might break focus behavior

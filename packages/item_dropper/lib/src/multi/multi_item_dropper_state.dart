@@ -76,30 +76,18 @@ extension _MultiItemDropperStateHelpers<T> on _MultiItemDropperState<T> {
     // The GestureDetector and TextField onTap handlers already show overlay immediately
     if (_focusManager.isFocused && !_overlayController.isShowing) {
       // Show overlay when focused - if max is reached, overlay will show max reached message
-      // Use a post-frame callback to ensure widget tree is built before showing overlay
-      // This is necessary for proper overlay positioning and rendering
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted || !_focusManager.isFocused) {
-          return;
-        }
+      // _showOverlay() already triggers a rebuild, so we can show it synchronously
+      // If max is reached, show overlay (will display max reached message)
+      if (_selectionManager.isMaxReached()) {
+        _showOverlay();
+        return;
+      }
 
-        // Double-check overlay isn't already showing (might have been shown by another handler)
-        if (_overlayController.isShowing) {
-          return;
-        }
-
-        // If max is reached, show overlay (will display max reached message)
-        if (_selectionManager.isMaxReached()) {
-          _showOverlay();
-          return;
-        }
-
-        final filtered = _filtered;
-        // Only show if we have items
-        if (filtered.isNotEmpty) {
-          _showOverlay();
-        }
-      });
+      final filtered = _filtered;
+      // Only show if we have items
+      if (filtered.isNotEmpty) {
+        _showOverlay();
+      }
     }
   }
 
@@ -199,6 +187,10 @@ extension _MultiItemDropperStateHelpers<T> on _MultiItemDropperState<T> {
       postRebuildCallback: () {
         // Restore focus if needed after selection update
         _focusManager.restoreFocusIfNeeded();
+        
+        // Measure Container height after selection change
+        // This detects when chips wrap to a new row and triggers overlay repositioning
+        _measureContainerHeight();
       },
     );
   }
@@ -285,6 +277,34 @@ extension _MultiItemDropperStateHelpers<T> on _MultiItemDropperState<T> {
           _chipHeight = newChipHeight;
           _chipTextTop = textCenter;
         }
+      }
+    });
+  }
+
+  /// Measure Container height and trigger rebuild if it changed
+  /// This ensures overlay repositions immediately when chips wrap to a new row
+  void _measureContainerHeight() {
+    final fieldContext = (widget.inputKey ?? _fieldKey).currentContext;
+    if (fieldContext == null) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      
+      final RenderBox? containerBox = fieldContext.findRenderObject() as RenderBox?;
+      if (containerBox == null) return;
+
+      final double newContainerHeight = containerBox.size.height;
+      
+      // If height changed and overlay is showing, trigger rebuild to reposition overlay
+      if (_lastContainerHeight != null && 
+          _lastContainerHeight != newContainerHeight &&
+          _overlayController.isShowing) {
+        _lastContainerHeight = newContainerHeight;
+        // Trigger rebuild so overlay recalculates position with new height
+        _safeSetState(() {});
+      } else {
+        // Update stored height (first measurement or no change)
+        _lastContainerHeight = newContainerHeight;
       }
     });
   }
