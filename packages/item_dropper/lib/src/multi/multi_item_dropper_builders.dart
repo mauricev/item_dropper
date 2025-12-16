@@ -417,7 +417,7 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
           );
         },
         itemHeight: effectiveItemHeight,
-        preferredFieldHeight: _wrapHeight,
+        // Don't pass preferredFieldHeight - use Container's full height from inputBox
       );
     }
 
@@ -445,12 +445,10 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
       };
     }
 
-    // Use measured wrapHeight directly for overlay positioning
-    // This prevents overlay flash when field height changes during chip removal
-    _measureWrapAndTextField();
-
-    final double? measuredWrapHeight = _wrapHeight;
-    
+    // Use Container's full height for overlay positioning (not Wrap height)
+    // The Container includes border and padding, which must be accounted for
+    // Don't pass preferredFieldHeight - use inputBox.size.height directly
+    // This ensures overlay is positioned correctly relative to the Container
     return ItemDropperRenderUtils.buildDropdownOverlay(
       context: inputContext,
       items: filteredItems,
@@ -481,7 +479,7 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
         );
       },
       itemHeight: effectiveItemHeight,
-      preferredFieldHeight: measuredWrapHeight, // Pass measured height directly
+      // Don't pass preferredFieldHeight - use Container's full height from inputBox
     );
   }
 
