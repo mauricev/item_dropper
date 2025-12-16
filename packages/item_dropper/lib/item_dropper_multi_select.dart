@@ -154,7 +154,6 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   // Chip measurement state
   double? _chipHeight;
   double? _chipTextTop;
-  double? _wrapHeight; // Measured, no hardcoded initial value
   
   final GlobalKey _chipRowKey = GlobalKey();
   final GlobalKey _textFieldKey = GlobalKey();

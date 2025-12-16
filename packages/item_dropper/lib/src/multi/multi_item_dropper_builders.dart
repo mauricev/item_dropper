@@ -322,11 +322,8 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
 
     // Use the context from build() method for proper positioning
     // Fall back to key-based context if needed, but prefer the passed context
-    final BuildContext? inputContext = (widget.inputKey ?? _fieldKey)
+    final BuildContext inputContext = (widget.inputKey ?? _fieldKey)
         .currentContext ?? context;
-    if (inputContext == null) {
-      return const SizedBox.shrink();
-    }
 
     // Calculate effective item height:
     // - If widget.itemHeight is provided, use it

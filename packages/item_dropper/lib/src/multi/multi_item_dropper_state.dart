@@ -220,6 +220,7 @@ extension _MultiItemDropperStateHelpers<T> on _MultiItemDropperState<T> {
     _rebuildScheduled = true;
 
     // Trigger immediate rebuild - state updates happen inside setState callback
+    // setState is synchronous, so the rebuild completes before setState returns
     _safeSetState(() {
       // Execute state update callback if provided
       if (stateUpdate != null) {
@@ -227,12 +228,12 @@ extension _MultiItemDropperStateHelpers<T> on _MultiItemDropperState<T> {
       }
     });
 
-    // After rebuild completes, reset flag to allow future rebuilds
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _rebuildScheduled = false;
-      }
-    });
+    // Reset flag immediately after setState completes
+    // setState is synchronous, so the rebuild has already completed
+    // No need to wait for the frame to complete
+    if (mounted) {
+      _rebuildScheduled = false;
+    }
   }
 
   /// Unified method to handle selection changes: rebuild + notify parent + cleanup
@@ -244,20 +245,17 @@ extension _MultiItemDropperStateHelpers<T> on _MultiItemDropperState<T> {
     // Update selection and all related state inside rebuild
     _requestRebuild(stateUpdate);
 
-    // Use a post-frame callback to notify parent after current frame completes
-    // This ensures our rebuild completes before parent is notified
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-
-      // Notify parent of change (this triggers parent rebuild synchronously)
-      // Our didUpdateWidget will detect if we caused the change by comparing values
+    // Notify parent immediately after rebuild
+    // setState is synchronous, so the rebuild has already completed
+    // didUpdateWidget will detect if we caused the change by comparing values
+    if (mounted) {
       widget.onChanged(_selectionManager.selected);
 
       // Execute optional post-rebuild callback (e.g., focus management, overlay updates)
       if (postRebuildCallback != null) {
         postRebuildCallback();
       }
-    });
+    }
   }
 
   // Chip measurement methods
@@ -287,28 +285,6 @@ extension _MultiItemDropperStateHelpers<T> on _MultiItemDropperState<T> {
           _chipHeight = newChipHeight;
           _chipTextTop = textCenter;
         }
-      }
-    });
-  }
-
-  void _measureWrapAndTextField() {
-    // Only measure wrap height for overlay positioning - let Wrap handle width naturally
-    final wrapContext = _wrapKey.currentContext;
-    if (wrapContext == null) return;
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final RenderBox? wrapBox = wrapContext.findRenderObject() as RenderBox?;
-      if (wrapBox == null) return;
-
-      final double newWrapHeight = wrapBox.size.height;
-      final bool wrapHeightChanged = newWrapHeight != _wrapHeight;
-
-      if (wrapHeightChanged) {
-        _wrapHeight = newWrapHeight;
-        // Request rebuild to update overlay positioning
-        Future.microtask(() {
-          _requestRebuild();
-        });
       }
     });
   }
