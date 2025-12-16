@@ -4,7 +4,7 @@ part of '../../item_dropper_multi_select.dart';
 extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
   Widget _buildInputField() {
     // Calculate first row height for icon alignment
-    final double chipHeight = _measurements.chipHeight ??
+    final double chipHeight = _chipHeight ??
         MultiSelectLayoutCalculator.calculateTextFieldHeight(
           fontSize: widget.fieldTextStyle?.fontSize,
           chipVerticalPadding: MultiSelectConstants.kChipVerticalPadding,
@@ -60,6 +60,7 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
                   MultiSelectConstants.kContainerPaddingBottom,
                 ),
                 child: SmartWrapWithFlexibleLast(
+                  key: _wrapKey,
                   spacing: MultiSelectConstants.kChipSpacing,
                   runSpacing: MultiSelectConstants.kChipSpacing,
                   children: [
@@ -114,7 +115,7 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
     // Only measure the first chip (index 0) to avoid GlobalKey conflicts
     final bool isFirstChip = _selectionManager.selected.isNotEmpty &&
         _selectionManager.selected.first.value == item.value;
-    final GlobalKey? rowKey = isFirstChip ? _measurements.chipRowKey : null;
+    final GlobalKey? rowKey = isFirstChip ? _chipRowKey : null;
 
     return LayoutBuilder(
       key: valueKey, // Use stable ValueKey for widget preservation
@@ -122,20 +123,18 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
         // Schedule chip measurement after build completes - don't measure during build
         // Measure chip dimensions after first render (only for first chip, only once)
         // Chip measurements don't change, so we only need to measure once
-        if (isFirstChip && rowKey != null && _measurements.chipHeight == null) {
+        if (isFirstChip && rowKey != null && _chipHeight == null) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (!mounted) return;
 
             // Re-check conditions in case they changed
-            if (_measurements.chipHeight == null &&
-                rowKey.currentContext != null) {
-              _measurements.measureChip(
+            if (_chipHeight == null && rowKey.currentContext != null) {
+              _measureChip(
                 context: context,
                 rowKey: rowKey,
                 textSize: widget.fieldTextStyle?.fontSize ??
                     ItemDropperConstants.kDropdownItemFontSize,
                 chipVerticalPadding: MultiSelectConstants.kChipVerticalPadding,
-                requestRebuild: _requestRebuild,
               );
             }
           });
@@ -259,7 +258,7 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
 
   Widget _buildTextFieldChip(double width) {
     // Use measured chip dimensions if available, otherwise fall back to calculation
-    final double chipHeight = _measurements.chipHeight ??
+    final double chipHeight = _chipHeight ??
         MultiSelectLayoutCalculator.calculateTextFieldHeight(
           fontSize: widget.fieldTextStyle?.fontSize,
           chipVerticalPadding: MultiSelectConstants.kChipVerticalPadding,
@@ -275,7 +274,7 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
 
     // Use Container with exact width - Wrap will use this for layout
     return SizedBox(
-      key: _measurements.textFieldKey, // Key to measure TextField position
+      key: _textFieldKey, // Key to measure TextField position
       width: width, // Exact width - Wrap will use this
       height: chipHeight, // Use measured chip height
       child: IgnorePointer(
@@ -422,7 +421,7 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
           );
         },
         itemHeight: effectiveItemHeight,
-        preferredFieldHeight: _measurements.wrapHeight,
+        preferredFieldHeight: _wrapHeight,
       );
     }
 
@@ -452,21 +451,9 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
 
     // Use measured wrapHeight directly for overlay positioning
     // This prevents overlay flash when field height changes during chip removal
-    _measurements.measureWrapAndTextField(
-      wrapContext: _measurements.wrapKey.currentContext,
-      textFieldContext: null,
-      // Not needed for simple height measurement
-      lastChipContext: null,
-      // Not needed for simple height measurement
-      selectedCount: _selectionManager.selectedCount,
-      chipSpacing: MultiSelectConstants.kChipSpacing,
-      minTextFieldWidth: MultiSelectConstants.kMinTextFieldWidth,
-      calculatedTextFieldWidth: null,
-      // Not needed for simple height measurement
-      requestRebuild: _requestRebuild,
-    );
+    _measureWrapAndTextField();
 
-    final double? measuredWrapHeight = _measurements.wrapHeight;
+    final double? measuredWrapHeight = _wrapHeight;
     
     return ItemDropperRenderUtils.buildDropdownOverlay(
       context: inputContext,

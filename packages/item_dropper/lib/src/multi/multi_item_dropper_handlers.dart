@@ -20,7 +20,6 @@ extension _MultiItemDropperStateHandlers<T> on _MultiItemDropperState<T> {
         // For now, we'll just select it and let the parent handle adding to the list
         _updateSelection(() {
           _selectionManager.addItem(newItem);
-          _measurements.totalChipWidth = null;
           _searchController.clear();
 
           // If we just reached the max, close the overlay
@@ -57,9 +56,6 @@ extension _MultiItemDropperStateHandlers<T> on _MultiItemDropperState<T> {
     _updateSelection(() {
       if (!isCurrentlySelected) {
         _selectionManager.addItem(item);
-
-        // Reset totalChipWidth when selection count changes - will be remeasured correctly
-        _measurements.totalChipWidth = null;
 
         // Announce selection to screen readers
         final loc = _localizations;
@@ -109,9 +105,6 @@ extension _MultiItemDropperStateHandlers<T> on _MultiItemDropperState<T> {
         final bool wasAtMax = _selectionManager.isMaxReached();
         _selectionManager.removeItem(item.value);
 
-        // Reset totalChipWidth when selection count changes - will be remeasured correctly
-        _measurements.totalChipWidth = null;
-
         // FIX: Show overlay again if we're below maxSelected after removal
         // This handles the case where user removes an item after reaching max
         if (wasAtMax && _selectionManager.isBelowMax() &&
@@ -143,9 +136,6 @@ extension _MultiItemDropperStateHandlers<T> on _MultiItemDropperState<T> {
       stateUpdate: () {
         // Update selection inside the rebuild callback
         _selectionManager.removeItem(item.value);
-
-        // Reset totalChipWidth when selection count changes - will be remeasured correctly
-        _measurements.totalChipWidth = null;
 
         _clearHighlights();
       },
@@ -266,7 +256,6 @@ extension _MultiItemDropperStateHandlers<T> on _MultiItemDropperState<T> {
       if (_selectionManager.selectedCount > 0) {
         _updateSelection(() {
           _selectionManager.clear();
-          _measurements.totalChipWidth = null;
         });
       }
     }

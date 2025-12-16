@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:item_dropper/src/common/item_dropper_common.dart';
 import 'package:item_dropper/src/common/live_region_manager.dart';
 import 'package:item_dropper/src/common/keyboard_navigation_manager.dart';
-import 'package:item_dropper/src/multi/chip_measurement_helper.dart';
 import 'package:item_dropper/src/multi/multi_select_constants.dart';
 import 'package:item_dropper/src/multi/multi_select_focus_manager.dart';
 import 'package:item_dropper/src/multi/multi_select_layout_calculator.dart';
@@ -152,8 +151,16 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   int _lastFilteredSelectedCount = -1;
   
   
-  // Measurement helper
-  final ChipMeasurementHelper _measurements = ChipMeasurementHelper();
+  // Chip measurement state
+  double? _chipHeight;
+  double? _chipTextTop;
+  double? _wrapHeight; // Measured, no hardcoded initial value
+  
+  final GlobalKey _chipRowKey = GlobalKey();
+  final GlobalKey _textFieldKey = GlobalKey();
+  final GlobalKey _wrapKey = GlobalKey();
+  
+  bool _isMeasuring = false;
   
   /// Get localizations with defaults
   ItemDropperLocalizations get _localizations =>

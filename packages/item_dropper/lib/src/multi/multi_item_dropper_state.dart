@@ -29,10 +29,10 @@ extension _MultiItemDropperStateHelpers<T> on _MultiItemDropperState<T> {
   }) {
     final double textLineHeight = fontSize * MultiSelectConstants.kTextLineHeightMultiplier;
 
-    if (_measurements.chipTextTop != null) {
+    if (_chipTextTop != null) {
       // Use measured chip text center position to align TextField text
       // chipTextTop is already the text center (rowTop + rowHeight/2)
-      final double chipTextCenter = _measurements.chipTextTop!;
+      final double chipTextCenter = _chipTextTop!;
       // Adjust for TextField's text rendering - needs offset upward
       final double top = chipTextCenter - (textLineHeight / 2.0) -
           MultiSelectConstants.kTextFieldPaddingOffset;
@@ -247,6 +247,59 @@ extension _MultiItemDropperStateHelpers<T> on _MultiItemDropperState<T> {
       // Execute optional post-rebuild callback (e.g., focus management, overlay updates)
       if (postRebuildCallback != null) {
         postRebuildCallback();
+      }
+    });
+  }
+
+  // Chip measurement methods
+  void _measureChip({
+    required BuildContext context,
+    required GlobalKey rowKey,
+    required double textSize,
+    required double chipVerticalPadding,
+  }) {
+    if (_isMeasuring) return;
+    _isMeasuring = true;
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _isMeasuring = false;
+      
+      final RenderBox? chipBox = context.findRenderObject() as RenderBox?;
+      final RenderBox? rowBox = rowKey.currentContext?.findRenderObject() as RenderBox?;
+      
+      if (chipBox != null && rowBox != null) {
+        final double newChipHeight = chipBox.size.height;
+        final double rowHeight = rowBox.size.height;
+        final double rowTop = chipVerticalPadding;
+        final double textCenter = rowTop + (rowHeight / 2.0);
+        
+        // Chip measurements only need to be done once - they don't change
+        if (_chipHeight == null) {
+          _chipHeight = newChipHeight;
+          _chipTextTop = textCenter;
+        }
+      }
+    });
+  }
+
+  void _measureWrapAndTextField() {
+    // Only measure wrap height for overlay positioning - let Wrap handle width naturally
+    final wrapContext = _wrapKey.currentContext;
+    if (wrapContext == null) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final RenderBox? wrapBox = wrapContext.findRenderObject() as RenderBox?;
+      if (wrapBox == null) return;
+
+      final double newWrapHeight = wrapBox.size.height;
+      final bool wrapHeightChanged = newWrapHeight != _wrapHeight;
+
+      if (wrapHeightChanged) {
+        _wrapHeight = newWrapHeight;
+        // Request rebuild to update overlay positioning
+        Future.microtask(() {
+          _requestRebuild();
+        });
       }
     });
   }

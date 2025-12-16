@@ -1,5 +1,3 @@
-import 'chip_measurement_helper.dart';
-
 /// Helper class for calculating layout dimensions in multi-select dropdown
 class MultiSelectLayoutCalculator {
   /// Calculate TextField width based on available space and chip measurements
@@ -7,14 +5,14 @@ class MultiSelectLayoutCalculator {
     required double availableWidth,
     required int selectedCount,
     required double chipSpacing,
-    required ChipMeasurementHelper measurements,
+    required double? totalChipWidth,
   }) {
     if (selectedCount == 0) {
       return availableWidth;
     }
 
     // Use measured chip widths - no estimates, no fallbacks
-    final double? measuredTotalChipWidth = measurements.totalChipWidth;
+    final double? measuredTotalChipWidth = totalChipWidth;
     if (measuredTotalChipWidth == null) {
       return 0.0; // No measurement yet - don't render
     }
