@@ -370,7 +370,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       _selectionManager.syncItems(widgetSelection);
       // Don't trigger rebuild here if we're already rebuilding
       // Parent change will be reflected in the current rebuild cycle
-      _requestRebuildIfNotScheduled();
+      // _requestRebuild() already checks _rebuildScheduled internally
+      _requestRebuild();
     }
 
     // Invalidate filter cache if items list changed
@@ -388,8 +389,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         _invalidateFilteredCache();
         // Cache removed - overlay rebuilds automatically
         // Use central rebuild mechanism instead of direct setState
-        // But only if not already rebuilding
-        _requestRebuildIfNotScheduled();
+        // _requestRebuild() already checks _rebuildScheduled internally
+        _requestRebuild();
       }
     }
   }

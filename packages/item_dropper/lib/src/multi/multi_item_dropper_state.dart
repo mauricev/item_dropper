@@ -15,12 +15,6 @@ extension _MultiItemDropperStateHelpers<T> on _MultiItemDropperState<T> {
     _filterUtils.initializeItems(widget.items);
   }
 
-  // Rebuild check helper
-  void _requestRebuildIfNotScheduled() {
-    if (!_rebuildScheduled) {
-      _requestRebuild();
-    }
-  }
 
   // TextField padding calculation
   ({double top, double bottom}) _calculateTextFieldPadding({

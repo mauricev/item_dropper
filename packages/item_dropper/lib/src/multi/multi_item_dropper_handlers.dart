@@ -210,7 +210,8 @@ extension _MultiItemDropperStateHandlers<T> on _MultiItemDropperState<T> {
 
     // Invalidate filtered cache and request a rebuild so overlay updates.
     _invalidateFilteredCache();
-    _requestRebuildIfNotScheduled();
+    // _requestRebuild() already checks _rebuildScheduled internally
+    _requestRebuild();
   }
 
   void _handleEnter() {
