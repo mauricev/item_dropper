@@ -426,7 +426,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
               _overlayController.hide();
             }
           },
-          overlay: _buildDropdownOverlay(),
+          overlay: _buildDropdownOverlay(context),
           inputField: _buildInputField(),
         ),
         // Live region for screen reader announcements

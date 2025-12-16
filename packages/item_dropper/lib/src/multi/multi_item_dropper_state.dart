@@ -61,26 +61,32 @@ extension _MultiItemDropperStateHelpers<T> on _MultiItemDropperState<T> {
     // This method is kept for additional overlay logic
 
     // Use manual focus state for overlay logic
-    if (_focusManager.isFocused) {
+    // Only show overlay if not already showing (to avoid redundant work)
+    // The GestureDetector and TextField onTap handlers already show overlay immediately
+    if (_focusManager.isFocused && !_overlayController.isShowing) {
       // Show overlay when focused - if max is reached, overlay will show max reached message
-      // Use a post-frame callback to ensure input context is available
+      // Use a post-frame callback to ensure widget tree is built before showing overlay
+      // This is necessary for proper overlay positioning and rendering
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted || !_focusManager.isFocused) {
           return;
         }
 
+        // Double-check overlay isn't already showing (might have been shown by another handler)
+        if (_overlayController.isShowing) {
+          return;
+        }
+
         // If max is reached, show overlay (will display max reached message)
         if (_selectionManager.isMaxReached()) {
-          if (!_overlayController.isShowing) {
-            _clearHighlights();
-            _overlayController.show();
-          }
+          _clearHighlights();
+          _overlayController.show();
           return;
         }
 
         final filtered = _filtered;
-        // Only show if we have items and overlay is not already showing
-        if (filtered.isNotEmpty && !_overlayController.isShowing) {
+        // Only show if we have items
+        if (filtered.isNotEmpty) {
           _clearHighlights();
           _overlayController.show();
         }

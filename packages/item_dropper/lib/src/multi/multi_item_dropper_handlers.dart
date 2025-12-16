@@ -86,6 +86,7 @@ extension _MultiItemDropperStateHandlers<T> on _MultiItemDropperState<T> {
           _searchController.clear();
           
           // Ensure overlay stays open after text clear
+          // Use post-frame callback to ensure focus state is fully updated
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (!mounted) return;
             

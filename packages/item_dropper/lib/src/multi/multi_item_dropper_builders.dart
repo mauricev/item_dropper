@@ -23,11 +23,11 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
           _focusManager.gainFocus();
           // Invalidate filter cache to ensure fresh calculation
           _invalidateFilteredCache();
-          // Show overlay immediately - _handleFocusChange will also handle it, but this ensures
-          // it shows right away for tests and immediate user feedback
+          // Show overlay immediately - overlay will build on next frame
           if (!_overlayController.isShowing) {
             _clearHighlights();
             _overlayController.show();
+            print('DEBUG GestureDetector.onTap: Called _overlayController.show(), isShowing = ${_overlayController.isShowing}');
           }
         }
       },
@@ -309,7 +309,7 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
             // When TextField is tapped, focus it and clear chip focus
             _focusManager.focusTextField();
             _focusManager.gainFocus();
-            // Show overlay immediately - similar to SingleItemDropper
+            // Show overlay immediately - overlay will build on next frame
             if (!_overlayController.isShowing) {
               _clearHighlights();
               _overlayController.show();
@@ -321,16 +321,19 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
     );
   }
 
-  Widget _buildDropdownOverlay() {
+  Widget _buildDropdownOverlay(BuildContext context) {
     // Don't build overlay if disabled
     if (!widget.enabled) return const SizedBox.shrink();
 
     final List<ItemDropperItem<T>> filteredItems = _filtered;
 
-    // Get the input field's context for proper positioning
+    // Use the context from build() method for proper positioning
+    // Fall back to key-based context if needed, but prefer the passed context
     final BuildContext? inputContext = (widget.inputKey ?? _fieldKey)
-        .currentContext;
-    if (inputContext == null) return const SizedBox.shrink();
+        .currentContext ?? context;
+    if (inputContext == null) {
+      return const SizedBox.shrink();
+    }
 
     // Calculate effective item height:
     // - If widget.itemHeight is provided, use it
