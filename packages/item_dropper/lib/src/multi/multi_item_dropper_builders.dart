@@ -23,12 +23,8 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
           _focusManager.gainFocus();
           // Invalidate filter cache to ensure fresh calculation
           _invalidateFilteredCache();
-          // Show overlay immediately - overlay will build on next frame
-          if (!_overlayController.isShowing) {
-            _clearHighlights();
-            _overlayController.show();
-            print('DEBUG GestureDetector.onTap: Called _overlayController.show(), isShowing = ${_overlayController.isShowing}');
-          }
+          // Show overlay immediately
+          _showOverlay();
         }
       },
       child: Container(
@@ -309,11 +305,8 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
             // When TextField is tapped, focus it and clear chip focus
             _focusManager.focusTextField();
             _focusManager.gainFocus();
-            // Show overlay immediately - overlay will build on next frame
-            if (!_overlayController.isShowing) {
-              _clearHighlights();
-              _overlayController.show();
-            }
+            // Show overlay immediately
+            _showOverlay();
           },
         ), // Close TextField
         ), // Close Semantics

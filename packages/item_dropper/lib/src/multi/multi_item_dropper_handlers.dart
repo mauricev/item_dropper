@@ -95,8 +95,7 @@ extension _MultiItemDropperStateHandlers<T> on _MultiItemDropperState<T> {
             
             // Ensure overlay stays open
             if (_focusManager.isFocused && !_overlayController.isShowing) {
-              _clearHighlights();
-              _overlayController.show();
+              _showOverlay();
             }
           });
         }
@@ -112,8 +111,7 @@ extension _MultiItemDropperStateHandlers<T> on _MultiItemDropperState<T> {
             _focusManager.isFocused) {
           final filtered = _filtered;
           if (!_overlayController.isShowing && filtered.isNotEmpty) {
-            _clearHighlights();
-            _overlayController.show();
+            _showOverlay();
           }
         }
       }
@@ -148,8 +146,7 @@ extension _MultiItemDropperStateHandlers<T> on _MultiItemDropperState<T> {
         if (_focusManager.isFocused && _selectionManager.isBelowMax()) {
           final filtered = _filtered;
           if (!_overlayController.isShowing && filtered.isNotEmpty) {
-            _clearHighlights();
-            _overlayController.show();
+            _showOverlay();
           }
         }
       },
@@ -271,10 +268,7 @@ extension _MultiItemDropperStateHandlers<T> on _MultiItemDropperState<T> {
     } else {
       // Show dropdown - if max is reached, overlay will show max reached message
       _focusManager.gainFocus();
-      if (!_overlayController.isShowing) {
-        _clearHighlights();
-        _overlayController.show();
-      }
+      _showOverlay();
     }
   }
 
@@ -292,10 +286,7 @@ extension _MultiItemDropperStateHandlers<T> on _MultiItemDropperState<T> {
     // This allows continued selection after clearing search text
     // When we clear text after selection, focus is already set, so overlay stays open
     if (_focusManager.isFocused) {
-      if (!_overlayController.isShowing) {
-        _clearHighlights();
-        _overlayController.show();
-      }
+      _showOverlay();
     } else if (_filtered.isEmpty && !_selectionManager.isMaxReached()) {
       // Hide overlay if no filtered items and not focused and not at max
       if (_overlayController.isShowing) {

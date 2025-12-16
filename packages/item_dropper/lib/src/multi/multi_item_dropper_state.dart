@@ -6,6 +6,17 @@ extension _MultiItemDropperStateHelpers<T> on _MultiItemDropperState<T> {
     _keyboardNavManager.clearHighlights();
   }
 
+  /// Show overlay and trigger rebuild so OverlayPortal displays it
+  /// OverlayPortalController.show() doesn't trigger a rebuild automatically
+  void _showOverlay() {
+    if (!_overlayController.isShowing) {
+      _clearHighlights();
+      _overlayController.show();
+      // Trigger rebuild so OverlayPortal can show the overlay
+      _safeSetState(() {});
+    }
+  }
+
   /// Invalidate filtered items cache - call when search text or selected items change
   void _invalidateFilteredCache() {
     _cachedFilteredItems = null;
@@ -79,16 +90,14 @@ extension _MultiItemDropperStateHelpers<T> on _MultiItemDropperState<T> {
 
         // If max is reached, show overlay (will display max reached message)
         if (_selectionManager.isMaxReached()) {
-          _clearHighlights();
-          _overlayController.show();
+          _showOverlay();
           return;
         }
 
         final filtered = _filtered;
         // Only show if we have items
         if (filtered.isNotEmpty) {
-          _clearHighlights();
-          _overlayController.show();
+          _showOverlay();
         }
       });
     }

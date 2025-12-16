@@ -40,23 +40,6 @@ void main() {
       await tester.tap(find.byType(MultiItemDropper<String>));
       await tester.pumpAndSettle();
 
-      // DEBUG: Check what widgets are actually in the tree
-      print('DEBUG: Looking for overlay...');
-      final overlayFinder = find.byType(Overlay);
-      print('DEBUG: Found ${overlayFinder.evaluate().length} Overlay widgets');
-      
-      // DEBUG: Check if any text widgets exist
-      final allText = find.byType(Text);
-      print('DEBUG: Found ${allText.evaluate().length} Text widgets');
-      for (final element in allText.evaluate()) {
-        final textWidget = element.widget as Text;
-        print('DEBUG: Text widget: "${textWidget.data ?? textWidget.textSpan?.toPlainText() ?? 'N/A'}"');
-      }
-      
-      // DEBUG: Check if overlay portal is showing
-      final overlayPortals = find.byType(OverlayPortal);
-      print('DEBUG: Found ${overlayPortals.evaluate().length} OverlayPortal widgets');
-
       // Verify items are displayed
       expect(find.text('Item 1'), findsOneWidget);
       expect(find.text('Item 2'), findsOneWidget);

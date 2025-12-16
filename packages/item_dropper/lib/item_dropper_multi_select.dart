@@ -222,10 +222,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       onOpenDropdown: () {
         // Show dropdown - if max is reached, overlay will show max reached message
         _focusManager.gainFocus();
-        if (!_overlayController.isShowing) {
-          _clearHighlights();
-          _overlayController.show();
-        }
+        _showOverlay();
       },
     );
 
