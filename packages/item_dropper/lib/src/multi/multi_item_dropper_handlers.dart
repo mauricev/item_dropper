@@ -25,7 +25,9 @@ extension _MultiItemDropperStateHandlers<T> on _MultiItemDropperState<T> {
 
           // If we just reached the max, close the overlay
           if (_selectionManager.isMaxReached()) {
-            _overlayManager.hideIfNeeded();
+            if (_overlayController.isShowing) {
+              _overlayController.hide();
+            }
           }
         });
       },
@@ -45,8 +47,8 @@ extension _MultiItemDropperStateHandlers<T> on _MultiItemDropperState<T> {
     if (_selectionManager.isMaxReached() && !isCurrentlySelected) {
       // Block adding new items when max is reached
       // Close the overlay and keep it closed
-      if (_overlayManager.isShowing) {
-        _overlayManager.hideIfNeeded();
+      if (_overlayController.isShowing) {
+        _overlayController.hide();
       }
       return;
     }
@@ -67,7 +69,9 @@ extension _MultiItemDropperStateHandlers<T> on _MultiItemDropperState<T> {
 
         // If we just reached the max, close the overlay
         if (_selectionManager.isMaxReached()) {
-          _overlayManager.hideIfNeeded();
+          if (_overlayController.isShowing) {
+            _overlayController.hide();
+          }
           // Clear search text after closing overlay
           _searchController.clear();
           // Announce max reached
@@ -92,9 +96,10 @@ extension _MultiItemDropperStateHandlers<T> on _MultiItemDropperState<T> {
             // Ensure focus is maintained
             _focusNode.requestFocus();
             
-            // Ensure overlay stays open (showIfNeeded checks isShowing internally)
-            if (_focusManager.isFocused) {
-              _overlayManager.showIfNeeded();
+            // Ensure overlay stays open
+            if (_focusManager.isFocused && !_overlayController.isShowing) {
+              _clearHighlights();
+              _overlayController.show();
             }
           });
         }
@@ -111,11 +116,11 @@ extension _MultiItemDropperStateHandlers<T> on _MultiItemDropperState<T> {
         // This handles the case where user removes an item after reaching max
         if (wasAtMax && _selectionManager.isBelowMax() &&
             _focusManager.isFocused) {
-          _overlayManager.showIfFocusedAndBelowMax<T>(
-            isFocused: _focusManager.isFocused,
-            isBelowMax: _selectionManager.isBelowMax(),
-            filteredItems: _filtered,
-          );
+          final filtered = _filtered;
+          if (!_overlayController.isShowing && filtered.isNotEmpty) {
+            _clearHighlights();
+            _overlayController.show();
+          }
         }
       }
       // After selection change, clear highlights
@@ -149,11 +154,13 @@ extension _MultiItemDropperStateHandlers<T> on _MultiItemDropperState<T> {
         _focusManager.restoreFocusIfNeeded();
 
         // Show overlay if we're below maxSelected and focused
-        _overlayManager.showIfFocusedAndBelowMax<T>(
-          isFocused: _focusManager.isFocused,
-          isBelowMax: _selectionManager.isBelowMax(),
-          filteredItems: _filtered,
-        );
+        if (_focusManager.isFocused && _selectionManager.isBelowMax()) {
+          final filtered = _filtered;
+          if (!_overlayController.isShowing && filtered.isNotEmpty) {
+            _clearHighlights();
+            _overlayController.show();
+          }
+        }
       },
     );
   }
@@ -269,11 +276,14 @@ extension _MultiItemDropperStateHandlers<T> on _MultiItemDropperState<T> {
   void _handleArrowPressed() {
     if (_overlayController.isShowing) {
       _focusManager.loseFocus();
-      _overlayManager.hideIfNeeded();
+      _overlayController.hide();
     } else {
       // Show dropdown - if max is reached, overlay will show max reached message
       _focusManager.gainFocus();
-      _overlayManager.showIfNeeded();
+      if (!_overlayController.isShowing) {
+        _clearHighlights();
+        _overlayController.show();
+      }
     }
   }
 
@@ -291,10 +301,15 @@ extension _MultiItemDropperStateHandlers<T> on _MultiItemDropperState<T> {
     // This allows continued selection after clearing search text
     // When we clear text after selection, focus is already set, so overlay stays open
     if (_focusManager.isFocused) {
-      _overlayManager.showIfNeeded();
+      if (!_overlayController.isShowing) {
+        _clearHighlights();
+        _overlayController.show();
+      }
     } else if (_filtered.isEmpty && !_selectionManager.isMaxReached()) {
       // Hide overlay if no filtered items and not focused and not at max
-      _overlayManager.hideIfNeeded();
+      if (_overlayController.isShowing) {
+        _overlayController.hide();
+      }
     }
   }
 }

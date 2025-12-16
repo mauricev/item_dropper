@@ -25,14 +25,9 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
           _invalidateFilteredCache();
           // Show overlay immediately - _handleFocusChange will also handle it, but this ensures
           // it shows right away for tests and immediate user feedback
-          if (_selectionManager.isMaxReached()) {
-            _overlayManager.showIfNeeded();
-          } else {
-            // Check if we have items to show (either from _filtered or widget.items)
-            final filtered = _filtered;
-            if (filtered.isNotEmpty || widget.items.isNotEmpty) {
-              _overlayManager.showIfNeeded();
-            }
+          if (!_overlayController.isShowing) {
+            _clearHighlights();
+            _overlayController.show();
           }
         }
       },
@@ -316,13 +311,9 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
             _focusManager.focusTextField();
             _focusManager.gainFocus();
             // Show overlay immediately - similar to SingleItemDropper
-            if (_selectionManager.isMaxReached()) {
-              _overlayManager.showIfNeeded();
-            } else {
-              final filtered = _filtered;
-              if (filtered.isNotEmpty || widget.items.isNotEmpty) {
-                _overlayManager.showIfNeeded();
-              }
+            if (!_overlayController.isShowing) {
+              _clearHighlights();
+              _overlayController.show();
             }
           },
         ), // Close TextField

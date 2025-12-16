@@ -77,14 +77,18 @@ extension _MultiItemDropperStateHelpers<T> on _MultiItemDropperState<T> {
 
         // If max is reached, show overlay (will display max reached message)
         if (_selectionManager.isMaxReached()) {
-          _overlayManager.showIfNeeded();
+          if (!_overlayController.isShowing) {
+            _clearHighlights();
+            _overlayController.show();
+          }
           return;
         }
 
         final filtered = _filtered;
-        // showIfNeeded checks isShowing internally, only check if we have items
-        if (filtered.isNotEmpty) {
-          _overlayManager.showIfNeeded();
+        // Only show if we have items and overlay is not already showing
+        if (filtered.isNotEmpty && !_overlayController.isShowing) {
+          _clearHighlights();
+          _overlayController.show();
         }
       });
     }
@@ -178,7 +182,9 @@ extension _MultiItemDropperStateHelpers<T> on _MultiItemDropperState<T> {
           }
         } else {
           _clearHighlights();
-          _overlayManager.hideIfNeeded();
+          if (_overlayController.isShowing) {
+            _overlayController.hide();
+          }
         }
       },
       postRebuildCallback: () {

@@ -8,7 +8,6 @@ import 'package:item_dropper/src/multi/chip_measurement_helper.dart';
 import 'package:item_dropper/src/multi/multi_select_constants.dart';
 import 'package:item_dropper/src/multi/multi_select_focus_manager.dart';
 import 'package:item_dropper/src/multi/multi_select_layout_calculator.dart';
-import 'package:item_dropper/src/multi/multi_select_overlay_manager.dart';
 import 'package:item_dropper/src/multi/multi_select_selection_manager.dart';
 import 'package:item_dropper/src/multi/smartwrap.dart' show SmartWrapWithFlexibleLast;
 import 'package:item_dropper/src/utils/item_dropper_add_item_utils.dart';
@@ -143,8 +142,6 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   // Selection manager handles selected items state
   late final MultiSelectSelectionManager<T> _selectionManager;
 
-  // Overlay manager handles overlay visibility
-  late final MultiSelectOverlayManager _overlayManager;
 
   // Keyboard navigation manager
   late final KeyboardNavigationManager<T> _keyboardNavManager;
@@ -210,11 +207,6 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     );
     _selectionManager.syncItems(widget.selectedItems ?? []);
 
-    // Initialize overlay manager
-    _overlayManager = MultiSelectOverlayManager(
-      controller: _overlayController,
-      onClearHighlights: _clearHighlights,
-    );
 
     // Initialize keyboard navigation manager
     _keyboardNavManager = KeyboardNavigationManager<T>(
@@ -223,7 +215,10 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       onOpenDropdown: () {
         // Show dropdown - if max is reached, overlay will show max reached message
         _focusManager.gainFocus();
-        _overlayManager.showIfNeeded();
+        if (!_overlayController.isShowing) {
+          _clearHighlights();
+          _overlayController.show();
+        }
       },
     );
 
@@ -351,7 +346,9 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     // If widget became disabled, unfocus and hide overlay
     if (oldWidget.enabled && !widget.enabled) {
       _focusManager.loseFocus();
-      _overlayManager.hideIfNeeded();
+      if (_overlayController.isShowing) {
+        _overlayController.hide();
+      }
     }
 
     // Sync selected items if parent changed them (and we didn't cause the change)
@@ -417,7 +414,9 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
           onDismiss: () {
             // Manual focus management - user clicked outside, unfocus
             _focusManager.loseFocus();
-            _overlayManager.hideIfNeeded();
+            if (_overlayController.isShowing) {
+              _overlayController.hide();
+            }
           },
           overlay: _buildDropdownOverlay(),
           inputField: _buildInputField(),
