@@ -11,6 +11,7 @@ import 'package:item_dropper/src/common/item_dropper_localizations.dart';
 import 'package:item_dropper/src/common/live_region_manager.dart';
 import 'package:item_dropper/src/common/keyboard_navigation_manager.dart';
 import 'package:item_dropper/src/common/decoration_cache_manager.dart';
+import 'package:item_dropper/src/utils/item_dropper_items_utils.dart';
 
 /// Single-select dropdown widget
 /// Allows selecting a single item from a searchable list
@@ -744,6 +745,15 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
       if (_overlayController.isShowing) {
         _dismissDropdown();
       }
+    }
+
+    // Reinitialize filter utils if items list changed
+    if (ItemDropperItemsUtils.hasItemsChanged(oldWidget.items, widget.items)) {
+      _filterUtils.initializeItems(widget.items);
+      // Clear filter cache to ensure fresh filtering
+      _filterUtils.clearCache();
+      // Trigger rebuild to update overlay with new items
+      _safeSetState(() {});
     }
 
     final T? newVal = widget.selectedItem?.value;

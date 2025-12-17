@@ -310,35 +310,9 @@ extension _MultiItemDropperStateHelpers<T> on _MultiItemDropperState<T> {
   }
 
   // Helper to check if two item lists are equal (by value)
-  // Optimized for performance: early returns and efficient Set-based comparison
-  // Time complexity: O(n) where n is the length of the lists
+  // Delegates to shared utility
   bool _areItemsEqual(List<ItemDropperItem<T>>? a, List<ItemDropperItem<T>> b) {
-    // Handle null
-    if (a == null) return b.isEmpty;
-    
-    // Fast path: reference equality
-    if (identical(a, b)) return true;
-
-    // Fast path: length check (O(1))
-    if (a.length != b.length) return false;
-
-    // Fast path: empty lists
-    if (a.isEmpty) return true;
-
-    // For small lists, use simple iteration (more cache-friendly)
-    if (a.length <= MultiSelectConstants.kListComparisonThreshold) {
-      final Set<T> bValues = b.map((item) => item.value).toSet();
-      return a.every((item) => bValues.contains(item.value));
-    }
-
-    // For larger lists, use Set-based comparison
-    final Set<T> aValues = a.map((item) => item.value).toSet();
-    final Set<T> bValues = b.map((item) => item.value).toSet();
-
-    // If lengths are equal and all a values are in b, then all b values must be in a
-    // (since Set length equals list length when there are no duplicates)
-    return aValues.length == bValues.length &&
-        aValues.every((value) => bValues.contains(value));
+    return ItemDropperItemsUtils.areItemsEqual(a, b);
   }
 }
 

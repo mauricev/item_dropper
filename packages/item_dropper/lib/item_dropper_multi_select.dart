@@ -12,6 +12,7 @@ import 'package:item_dropper/src/multi/smartwrap.dart' show SmartWrapWithFlexibl
 import 'package:item_dropper/src/utils/item_dropper_add_item_utils.dart';
 import 'package:item_dropper/src/utils/item_dropper_selection_handler.dart';
 import 'package:item_dropper/src/utils/dropdown_position_calculator.dart';
+import 'package:item_dropper/src/utils/item_dropper_items_utils.dart';
 import 'package:item_dropper/src/single/single_select_constants.dart';
 import 'package:item_dropper/src/common/item_dropper_localizations.dart';
 
@@ -372,23 +373,13 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     }
 
     // Invalidate filter cache if items list changed
-    // Fast path: check reference equality first (O(1))
-    if (!identical(widget.items, oldWidget.items)) {
-      // Only do expensive comparison if lengths differ or we need to check content
-      bool itemsChanged = widget.items.length != oldWidget.items.length;
-      if (!itemsChanged) {
-        // Only do expensive comparison if reference changed but length is same
-        itemsChanged = !_areItemsEqual(widget.items, oldWidget.items);
-      }
-
-      if (itemsChanged) {
-        _filterUtils.initializeItems(widget.items);
-        _invalidateFilteredCache();
-        // Cache removed - overlay rebuilds automatically
-        // Use central rebuild mechanism instead of direct setState
-        // _requestRebuild() already checks _rebuildScheduled internally
-        _requestRebuild();
-      }
+    if (ItemDropperItemsUtils.hasItemsChanged(oldWidget.items, widget.items)) {
+      _filterUtils.initializeItems(widget.items);
+      _invalidateFilteredCache();
+      // Cache removed - overlay rebuilds automatically
+      // Use central rebuild mechanism instead of direct setState
+      // _requestRebuild() already checks _rebuildScheduled internally
+      _requestRebuild();
     }
   }
 
