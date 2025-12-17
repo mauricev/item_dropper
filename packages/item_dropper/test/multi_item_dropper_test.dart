@@ -517,6 +517,207 @@ void main() {
     });
   });
 
+  group('MultiItemDropper - Items List Updates', () {
+    testWidgets('should update dropdown when items list changes', (WidgetTester tester) async {
+      List<ItemDropperItem<String>> items = [
+        ItemDropperItem<String>(value: '1', label: 'Item 1'),
+        ItemDropperItem<String>(value: '2', label: 'Item 2'),
+      ];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: StatefulBuilder(
+              builder: (context, setState) {
+                return MultiItemDropper<String>(
+                  items: items,
+                  selectedItems: [],
+                  width: 300,
+                  onChanged: (_) {},
+                );
+              },
+            ),
+          ),
+        ),
+      );
+
+      // Tap to open dropdown
+      await tester.tap(find.byType(MultiItemDropper<String>));
+      await tester.pumpAndSettle();
+
+      // Verify initial items are displayed
+      expect(find.text('Item 1'), findsOneWidget);
+      expect(find.text('Item 2'), findsOneWidget);
+      expect(find.text('Item 3'), findsNothing);
+
+      // Update items list to add a new item
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: StatefulBuilder(
+              builder: (context, setState) {
+                items = [
+                  ItemDropperItem<String>(value: '1', label: 'Item 1'),
+                  ItemDropperItem<String>(value: '2', label: 'Item 2'),
+                  ItemDropperItem<String>(value: '3', label: 'Item 3'),
+                ];
+                return MultiItemDropper<String>(
+                  items: items,
+                  selectedItems: [],
+                  width: 300,
+                  onChanged: (_) {},
+                );
+              },
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Verify new item appears in dropdown (if overlay is still open)
+      // Close and reopen to see updated items
+      await tester.tap(find.byType(MultiItemDropper<String>));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Item 1'), findsOneWidget);
+      expect(find.text('Item 2'), findsOneWidget);
+      expect(find.text('Item 3'), findsOneWidget);
+    });
+
+    testWidgets('should update dropdown when items list is replaced', (WidgetTester tester) async {
+      List<ItemDropperItem<String>> items = [
+        ItemDropperItem<String>(value: '1', label: 'Item 1'),
+        ItemDropperItem<String>(value: '2', label: 'Item 2'),
+      ];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: StatefulBuilder(
+              builder: (context, setState) {
+                return MultiItemDropper<String>(
+                  items: items,
+                  selectedItems: [],
+                  width: 300,
+                  onChanged: (_) {},
+                );
+              },
+            ),
+          ),
+        ),
+      );
+
+      // Tap to open dropdown
+      await tester.tap(find.byType(MultiItemDropper<String>));
+      await tester.pumpAndSettle();
+
+      // Verify initial items are displayed
+      expect(find.text('Item 1'), findsOneWidget);
+      expect(find.text('Item 2'), findsOneWidget);
+      expect(find.text('Apple'), findsNothing);
+      expect(find.text('Banana'), findsNothing);
+
+      // Replace items list with completely different items
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: StatefulBuilder(
+              builder: (context, setState) {
+                items = [
+                  ItemDropperItem<String>(value: 'a', label: 'Apple'),
+                  ItemDropperItem<String>(value: 'b', label: 'Banana'),
+                ];
+                return MultiItemDropper<String>(
+                  items: items,
+                  selectedItems: [],
+                  width: 300,
+                  onChanged: (_) {},
+                );
+              },
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Close and reopen to see updated items
+      await tester.tap(find.byType(MultiItemDropper<String>));
+      await tester.pumpAndSettle();
+
+      // Verify new items are displayed, old items are gone
+      expect(find.text('Item 1'), findsNothing);
+      expect(find.text('Item 2'), findsNothing);
+      expect(find.text('Apple'), findsOneWidget);
+      expect(find.text('Banana'), findsOneWidget);
+    });
+
+    testWidgets('should update filtered results when items list changes', (WidgetTester tester) async {
+      List<ItemDropperItem<String>> items = [
+        ItemDropperItem<String>(value: '1', label: 'Apple'),
+        ItemDropperItem<String>(value: '2', label: 'Banana'),
+      ];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: StatefulBuilder(
+              builder: (context, setState) {
+                return MultiItemDropper<String>(
+                  items: items,
+                  selectedItems: [],
+                  width: 300,
+                  onChanged: (_) {},
+                );
+              },
+            ),
+          ),
+        ),
+      );
+
+      // Tap to open dropdown and focus field
+      await tester.tap(find.byType(MultiItemDropper<String>));
+      await tester.pumpAndSettle();
+
+      // Type to filter
+      await tester.enterText(find.byType(TextField), 'Cherry');
+      await tester.pumpAndSettle();
+
+      // No results for "Cherry"
+      expect(find.text('Apple'), findsNothing);
+      expect(find.text('Banana'), findsNothing);
+
+      // Update items list to include "Cherry"
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: StatefulBuilder(
+              builder: (context, setState) {
+                items = [
+                  ItemDropperItem<String>(value: '1', label: 'Apple'),
+                  ItemDropperItem<String>(value: '2', label: 'Banana'),
+                  ItemDropperItem<String>(value: '3', label: 'Cherry'),
+                ];
+                return MultiItemDropper<String>(
+                  items: items,
+                  selectedItems: [],
+                  width: 300,
+                  onChanged: (_) {},
+                );
+              },
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Verify "Cherry" now appears in filtered results
+      expect(find.text('Cherry'), findsOneWidget);
+    });
+  });
+
   group('MultiItemDropper - Edge Cases', () {
     testWidgets('should handle empty items list', (WidgetTester tester) async {
       await tester.pumpWidget(
