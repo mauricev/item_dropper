@@ -55,56 +55,65 @@ extension _MultiItemDropperStateHandlers<T> on _MultiItemDropperState<T> {
 
     _updateSelection(() {
       if (!isCurrentlySelected) {
-        _selectionManager.addItem(item);
-
-        // Announce selection to screen readers
-        final loc = _localizations;
-        _liveRegionManager.announce(
-          '${item.label}${loc.itemSelectedSuffix}',
-        );
-
-        // If we just reached the max, close the overlay
-        if (_selectionManager.isMaxReached()) {
-          if (_overlayController.isShowing) {
-            _overlayController.hide();
-          }
-          // Clear search text after closing overlay
-          _searchController.clear();
-          // Announce max reached
-          if (widget.maxSelected != null) {
-            _liveRegionManager.announce(
-              '${loc.maxSelectionReachedPrefix}${widget.maxSelected}${loc.maxSelectionReachedSuffix}',
-            );
-          }
-        } else {
-          // Keep focus and overlay open for continued selection
-          // Ensure focus is maintained BEFORE clearing search text
-          _focusManager.gainFocus();
-          
-          // Clear search text after selection for continued searching
-          // _handleTextChanged (triggered by clear()) already checks focus and shows overlay
-          // gainFocus() already calls requestFocus(), so no need for post-frame callback
-          _searchController.clear();
-        }
+        _handleAddItem(item);
       } else {
-        // Item is already selected, remove it (toggle off)
-        // Capture state before removal to check if we should reopen overlay
-        final bool wasAtMax = _selectionManager.isMaxReached();
-        _selectionManager.removeItem(item.value);
-
-        // FIX: Show overlay again if we're below maxSelected after removal
-        // This handles the case where user removes an item after reaching max
-        if (wasAtMax && _selectionManager.isBelowMax() &&
-            _focusManager.isFocused) {
-          final filtered = _filtered;
-          if (!_overlayController.isShowing && filtered.isNotEmpty) {
-            _showOverlay();
-          }
-        }
+        _handleRemoveItem(item);
       }
       // After selection change, clear highlights
       _clearHighlights();
     });
+  }
+
+  /// Handles adding an item to the selection
+  void _handleAddItem(ItemDropperItem<T> item) {
+    _selectionManager.addItem(item);
+
+    // Announce selection to screen readers
+    final loc = _localizations;
+    _liveRegionManager.announce(
+      '${item.label}${loc.itemSelectedSuffix}',
+    );
+
+    // If we just reached the max, close the overlay
+    if (_selectionManager.isMaxReached()) {
+      if (_overlayController.isShowing) {
+        _overlayController.hide();
+      }
+      // Clear search text after closing overlay
+      _searchController.clear();
+      // Announce max reached
+      if (widget.maxSelected != null) {
+        _liveRegionManager.announce(
+          '${loc.maxSelectionReachedPrefix}${widget.maxSelected}${loc.maxSelectionReachedSuffix}',
+        );
+      }
+    } else {
+      // Keep focus and overlay open for continued selection
+      // Ensure focus is maintained BEFORE clearing search text
+      _focusManager.gainFocus();
+      
+      // Clear search text after selection for continued searching
+      // _handleTextChanged (triggered by clear()) already checks focus and shows overlay
+      // gainFocus() already calls requestFocus(), so no need for post-frame callback
+      _searchController.clear();
+    }
+  }
+
+  /// Handles removing an item from the selection
+  void _handleRemoveItem(ItemDropperItem<T> item) {
+    // Capture state before removal to check if we should reopen overlay
+    final bool wasAtMax = _selectionManager.isMaxReached();
+    _selectionManager.removeItem(item.value);
+
+    // Show overlay again if we're below maxSelected after removal
+    // This handles the case where user removes an item after reaching max
+    if (wasAtMax && _selectionManager.isBelowMax() &&
+        _focusManager.isFocused) {
+      final filtered = _filtered;
+      if (!_overlayController.isShowing && filtered.isNotEmpty) {
+        _showOverlay();
+      }
+    }
   }
 
   void _removeChip(ItemDropperItem<T> item) {

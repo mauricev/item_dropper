@@ -325,22 +325,7 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
     final BuildContext inputContext = (widget.inputKey ?? _fieldKey)
         .currentContext ?? context;
 
-    // Calculate effective item height:
-    // - If widget.itemHeight is provided, use it
-    // - Otherwise, calculate from popupTextStyle
-    double calculateItemHeightFromStyle() {
-      final TextStyle resolvedStyle = widget.popupTextStyle ??
-          const TextStyle(fontSize: ItemDropperConstants.kDropdownItemFontSize);
-      final double fontSize = resolvedStyle.fontSize ??
-          ItemDropperConstants.kDropdownItemFontSize;
-      final double lineHeight = fontSize * (resolvedStyle.height ??
-          MultiSelectConstants.kTextLineHeightMultiplier);
-      return lineHeight +
-          (ItemDropperConstants.kDropdownItemVerticalPadding * 2);
-    }
-
-    final double effectiveItemHeight = widget.itemHeight ??
-        calculateItemHeightFromStyle();
+    final double effectiveItemHeight = _calculateEffectiveItemHeight();
 
     // Show max reached overlay if max selection is reached
     if (_selectionManager.isMaxReached()) {
@@ -364,105 +349,95 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
       }
       // We have items but filteredItems is empty - use availableItems instead
       // This can happen during initialization before _filtered is properly calculated
-      // Continue with availableItems as the items to display
-      return ItemDropperRenderUtils.buildDropdownOverlay<T>(
-        context: inputContext,
+      return _buildOverlayContent(
         items: availableItems,
-        maxDropdownHeight: widget.maxDropdownHeight,
-        width: widget.width,
-        controller: _overlayController,
-        scrollController: _scrollController,
-        layerLink: _layerLink,
-        isSelected: (ItemDropperItem<T> item) => _selectionManager.isSelected(item),
-        builder: (BuildContext builderContext, ItemDropperItem<T> item, bool isSelected) {
-          final int itemIndex = availableItems.indexWhere((x) => x.value == item.value);
-          final bool hasPrevious = itemIndex > 0;
-          final bool previousIsGroupHeader = hasPrevious && availableItems[itemIndex - 1].isGroupHeader;
-          
-          final Widget Function(BuildContext, ItemDropperItem<T>, bool) itemBuilder;
-          if (widget.popupItemBuilder != null) {
-            itemBuilder = widget.popupItemBuilder!;
-          } else {
-            itemBuilder = (context, item, isSelected) {
-              return ItemDropperRenderUtils.defaultDropdownPopupItemBuilder(
-                context,
-                item,
-                isSelected,
-                popupTextStyle: widget.popupTextStyle,
-                popupGroupHeaderStyle: widget.popupGroupHeaderStyle,
-                hasPreviousItem: hasPrevious,
-                previousItemIsGroupHeader: previousIsGroupHeader,
-              );
-            };
-          }
-          
-          return ItemDropperRenderUtils.buildDropdownItemWithHover<T>(
-            context: builderContext,
-            item: item,
-            isSelected: isSelected,
-            filteredItems: availableItems,
-            hoverIndex: _keyboardNavManager.hoverIndex,
-            keyboardHighlightIndex: _keyboardNavManager.keyboardHighlightIndex,
-            safeSetState: _safeSetState,
-            setHoverIndex: (index) => _keyboardNavManager.hoverIndex = index,
-            onTap: () {
-              _toggleItem(item);
-            },
-            customBuilder: itemBuilder,
-            itemHeight: effectiveItemHeight,
-            onRequestDelete: _handleRequestDeleteFromOverlay,
-          );
-        },
-        itemHeight: effectiveItemHeight,
-        // Don't pass preferredFieldHeight - use Container's full height from inputBox
+        inputContext: inputContext,
+        effectiveItemHeight: effectiveItemHeight,
       );
     }
 
-    // Use custom builder if provided, otherwise use default with style parameters
-    final Widget Function(BuildContext, ItemDropperItem<T>, bool) itemBuilder;
-    if (widget.popupItemBuilder != null) {
-      itemBuilder = widget.popupItemBuilder!;
-    } else {
-      itemBuilder = (context, item, isSelected) {
-        final int itemIndex = filteredItems.indexWhere((x) =>
-        x.value == item.value);
-        final bool hasPrevious = itemIndex > 0;
-        final bool previousIsGroupHeader = hasPrevious &&
-            filteredItems[itemIndex - 1].isGroupHeader;
+    // Build overlay with filtered items
+    return _buildOverlayContent(
+      items: filteredItems,
+      inputContext: inputContext,
+      effectiveItemHeight: effectiveItemHeight,
+    );
+  }
 
-        return ItemDropperRenderUtils.defaultDropdownPopupItemBuilder(
-          context,
-          item,
-          isSelected,
-          popupTextStyle: widget.popupTextStyle,
-          popupGroupHeaderStyle: widget.popupGroupHeaderStyle,
-          hasPreviousItem: hasPrevious,
-          previousItemIsGroupHeader: previousIsGroupHeader,
-        );
-      };
+  /// Calculates the effective item height from widget.itemHeight or popupTextStyle
+  double _calculateEffectiveItemHeight() {
+    // If widget.itemHeight is provided, use it
+    if (widget.itemHeight != null) {
+      return widget.itemHeight!;
     }
+    
+    // Otherwise, calculate from popupTextStyle
+    final TextStyle resolvedStyle = widget.popupTextStyle ??
+        const TextStyle(fontSize: ItemDropperConstants.kDropdownItemFontSize);
+    final double fontSize = resolvedStyle.fontSize ??
+        ItemDropperConstants.kDropdownItemFontSize;
+    final double lineHeight = fontSize * (resolvedStyle.height ??
+        MultiSelectConstants.kTextLineHeightMultiplier);
+    return lineHeight +
+        (ItemDropperConstants.kDropdownItemVerticalPadding * 2);
+  }
 
+  /// Gets the item builder function for a given item in a list
+  Widget Function(BuildContext, ItemDropperItem<T>, bool) _getItemBuilder(
+    List<ItemDropperItem<T>> items,
+    int itemIndex,
+  ) {
+    // Use custom builder if provided
+    if (widget.popupItemBuilder != null) {
+      return widget.popupItemBuilder!;
+    }
+    
+    // Otherwise, use default builder with style parameters
+    final bool hasPrevious = itemIndex > 0;
+    final bool previousIsGroupHeader = hasPrevious &&
+        items[itemIndex - 1].isGroupHeader;
+    
+    return (context, item, isSelected) {
+      return ItemDropperRenderUtils.defaultDropdownPopupItemBuilder(
+        context,
+        item,
+        isSelected,
+        popupTextStyle: widget.popupTextStyle,
+        popupGroupHeaderStyle: widget.popupGroupHeaderStyle,
+        hasPreviousItem: hasPrevious,
+        previousItemIsGroupHeader: previousIsGroupHeader,
+      );
+    };
+  }
+
+  /// Builds the overlay content with the given items
+  Widget _buildOverlayContent({
+    required List<ItemDropperItem<T>> items,
+    required BuildContext inputContext,
+    required double effectiveItemHeight,
+  }) {
     // Use Container's full height for overlay positioning (not Wrap height)
     // The Container includes border and padding, which must be accounted for
     // Don't pass preferredFieldHeight - use inputBox.size.height directly
     // This ensures overlay is positioned correctly relative to the Container
-    return ItemDropperRenderUtils.buildDropdownOverlay(
+    return ItemDropperRenderUtils.buildDropdownOverlay<T>(
       context: inputContext,
-      items: filteredItems,
+      items: items,
       maxDropdownHeight: widget.maxDropdownHeight,
       width: widget.width,
       controller: _overlayController,
       scrollController: _scrollController,
       layerLink: _layerLink,
-      isSelected: (ItemDropperItem<T> item) =>
-          _selectionManager.isSelected(item),
-      builder: (BuildContext builderContext, ItemDropperItem<T> item,
-          bool isSelected) {
+      isSelected: (ItemDropperItem<T> item) => _selectionManager.isSelected(item),
+      builder: (BuildContext builderContext, ItemDropperItem<T> item, bool isSelected) {
+        final int itemIndex = items.indexWhere((x) => x.value == item.value);
+        final itemBuilder = _getItemBuilder(items, itemIndex);
+        
         return ItemDropperRenderUtils.buildDropdownItemWithHover<T>(
           context: builderContext,
           item: item,
           isSelected: isSelected,
-          filteredItems: filteredItems,
+          filteredItems: items,
           hoverIndex: _keyboardNavManager.hoverIndex,
           keyboardHighlightIndex: _keyboardNavManager.keyboardHighlightIndex,
           safeSetState: _safeSetState,
