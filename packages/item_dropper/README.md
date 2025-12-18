@@ -362,7 +362,7 @@ See `ItemDropperLocalizations` class for all available strings.
 | `fieldDecoration`          | `BoxDecoration?`                        | `null`   | Optional BoxDecoration for field container                         |
 | `showDropdownPositionIcon` | `bool`                                  | `true`   | Show the dropdown position arrow (down/up)                         |
 | `showDeleteAllIcon`        | `bool`                                  | `true`   | Show the clear (X) icon                                            |
-| `localizations`            | `ItemDropperLocalizations?`             | `null`   | Localization strings for user-facing text (optional)                |
+| `localizations`            | `ItemDropperLocalizations?`             | `null`   | Localization strings for user-facing text (optional)               |
 | `inputKey`                 | `GlobalKey?`                            | `null`   | Key for programmatic access                                        |
 
 ### MultiItemDropper Parameters
@@ -392,7 +392,7 @@ See `ItemDropperLocalizations` class for all available strings.
 | `inputKey`                 | `GlobalKey?`                            | `null`   | Key for programmatic access to widget                              |
 | `showDropdownPositionIcon` | `bool`                                  | `true`   | Show the dropdown position arrow (down/up)                         |
 | `showDeleteAllIcon`        | `bool`                                  | `true`   | Show the clear (X) icon (clears search/all selections)             |
-| `localizations`            | `ItemDropperLocalizations?`             | `null`   | Localization strings for user-facing text (optional)                |
+| `localizations`            | `ItemDropperLocalizations?`             | `null`   | Localization strings for user-facing text (optional)               |
 
 ### ItemDropperItem Properties
 
