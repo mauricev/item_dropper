@@ -17,15 +17,17 @@ class ItemDropperRenderUtils {
     required void Function(void Function()) safeSetState,
     required void Function(int) setHoverIndex,
     required VoidCallback onTap,
-    required Widget Function(BuildContext, ItemDropperItem<T>, bool) customBuilder,
-    required double itemHeight, // Required item height parameter (calculated from style)
+    required Widget Function(BuildContext, ItemDropperItem<T>, bool)
+    customBuilder,
+    required double
+    itemHeight, // Required item height parameter (calculated from style)
     void Function(BuildContext context, ItemDropperItem<T> item)?
-        onRequestDelete, // Optional delete handler (right-click/long-press)
+    onRequestDelete, // Optional delete handler (right-click/long-press)
   }) {
     final int itemIndex = filteredItems.indexWhere(
-          (x) => x.value == item.value,
+      (x) => x.value == item.value,
     );
-    
+
     // Group headers don't get hover effects
     if (item.isGroupHeader) {
       return buildDropdownItem<T>(
@@ -42,10 +44,12 @@ class ItemDropperRenderUtils {
         onRequestDelete: null, // Group headers are never deletable
       );
     }
-    
+
     return MouseRegion(
       onEnter: (event) {
-        final int itemIndex = filteredItems.indexWhere((i) => i.value == item.value);
+        final int itemIndex = filteredItems.indexWhere(
+          (i) => i.value == item.value,
+        );
         if (keyboardHighlightIndex == ItemDropperConstants.kNoHighlight) {
           safeSetState(() => setHoverIndex(itemIndex));
         }
@@ -55,7 +59,8 @@ class ItemDropperRenderUtils {
       child: buildDropdownItem<T>(
         context: context,
         item: item,
-        isHovered: itemIndex == hoverIndex &&
+        isHovered:
+            itemIndex == hoverIndex &&
             keyboardHighlightIndex == ItemDropperConstants.kNoHighlight,
         isKeyboardHighlighted: itemIndex == keyboardHighlightIndex,
         isSelected: isSelected,
@@ -80,13 +85,14 @@ class ItemDropperRenderUtils {
     required bool isGroupHeader,
     required VoidCallback onTap,
     required Widget Function(BuildContext, ItemDropperItem<T>, bool) builder,
-    required double itemHeight, // Required item height parameter (calculated from style)
+    required double
+    itemHeight, // Required item height parameter (calculated from style)
     void Function(BuildContext context, ItemDropperItem<T> item)?
-        onRequestDelete, // Optional delete handler (right-click/long-press)
+    onRequestDelete, // Optional delete handler (right-click/long-press)
   }) {
     Widget itemContent = builder(context, item, isSelected);
     Color? background;
-    
+
     // Group headers have different styling - no hover/selection effects, no background
     if (isGroupHeader) {
       background = null; // No background for group headers
@@ -94,64 +100,58 @@ class ItemDropperRenderUtils {
       // Disabled items: no hover/selection background, rely on greyed-out text only
       background = null;
     } else if (isKeyboardHighlighted || isHovered || isSingleItem) {
-      background = Theme
-          .of(context)
-          .hoverColor;
+      background = Theme.of(context).hoverColor;
     } else if (isSelected) {
-      background = Theme
-          .of(context)
-          .colorScheme
-          .secondary
-          .withAlpha(
-          (ItemDropperConstants.kSelectedItemBackgroundAlpha * 255).toInt());
+      background = Theme.of(context).colorScheme.secondary.withAlpha(
+        (ItemDropperConstants.kSelectedItemBackgroundAlpha * 255).toInt(),
+      );
     } else {
       background = null;
     }
-    
+
     final bool isEnabled = item.isEnabled && !isGroupHeader;
 
     return Semantics(
-        label: item.label,
-        button: !isGroupHeader,
-        selected: isSelected,
-        excludeSemantics: true,
-        child: InkWell(
-      hoverColor: Colors.transparent,
-      onTap: isEnabled
-          ? () {
-              onTap();
-            }
-          : null, // Group headers and disabled items are not clickable
-      // Desktop/web: right-click to request delete (if handler provided & item is deletable)
-      onSecondaryTap: (onRequestDelete != null &&
-              item.isDeletable &&
-              !isGroupHeader &&
-              item.isEnabled)
-          ? () => onRequestDelete(context, item)
-          : null,
-      // Mobile: long-press to request delete (if handler provided & item is deletable)
-      onLongPress: (onRequestDelete != null &&
-              item.isDeletable &&
-              !isGroupHeader &&
-              item.isEnabled)
-          ? () => onRequestDelete(context, item)
-          : null,
-      child: SizedBox(
-        height: itemHeight,
-        child: ColoredBox(
-          color: background ?? Colors.transparent,
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: itemContent,
+      label: item.label,
+      button: !isGroupHeader,
+      selected: isSelected,
+      excludeSemantics: true,
+      child: InkWell(
+        hoverColor: Colors.transparent,
+        onTap: isEnabled
+            ? () {
+                onTap();
+              }
+            : null, // Group headers and disabled items are not clickable
+        // Desktop/web: right-click to request delete (if handler provided & item is deletable)
+        onSecondaryTap:
+            (onRequestDelete != null &&
+                item.isDeletable &&
+                !isGroupHeader &&
+                item.isEnabled)
+            ? () => onRequestDelete(context, item)
+            : null,
+        // Mobile: long-press to request delete (if handler provided & item is deletable)
+        onLongPress:
+            (onRequestDelete != null &&
+                item.isDeletable &&
+                !isGroupHeader &&
+                item.isEnabled)
+            ? () => onRequestDelete(context, item)
+            : null,
+        child: SizedBox(
+          height: itemHeight,
+          child: ColoredBox(
+            color: background ?? Colors.transparent,
+            child: Align(alignment: Alignment.centerLeft, child: itemContent),
           ),
-        ),
-      ), // Close SizedBox
-    ), // Close InkWell
+        ), // Close SizedBox
+      ), // Close InkWell
     ); // Close Semantics
   }
 
   /// Default popup row builder for dropdown items
-  /// 
+  ///
   /// [popupTextStyle] - TextStyle for normal items. If null, defaults to fontSize 10.
   /// [popupGroupHeaderStyle] - TextStyle for group headers. If null, defaults to fontSize 10, bold, reduced opacity.
   /// [hasPreviousItem] - Whether there is a previous item (used to determine if separator should be shown above group header).
@@ -170,27 +170,26 @@ class ItemDropperRenderUtils {
       final defaultGroupStyle = TextStyle(
         fontSize: ItemDropperConstants.kDropdownItemFontSize,
         fontWeight: FontWeight.bold,
-        color: Theme
-            .of(context)
-            .colorScheme
-            .onSurface
-            .withAlpha(ItemDropperConstants.kDropdownGroupHeaderAlpha),
+        color: Theme.of(context).colorScheme.onSurface.withAlpha(
+          ItemDropperConstants.kDropdownGroupHeaderAlpha,
+        ),
       );
-      
+
       // Add separator line above group header if there's a previous item that's not a group header
       final bool showSeparator = hasPreviousItem && !previousItemIsGroupHeader;
-      
+
       // Build the header content with padding
       final headerContent = Container(
         padding: const EdgeInsets.symmetric(
-            horizontal: ItemDropperConstants.kDropdownItemHorizontalPadding,
-            vertical: ItemDropperConstants.kDropdownGroupHeaderVerticalPadding),
+          horizontal: ItemDropperConstants.kDropdownItemHorizontalPadding,
+          vertical: ItemDropperConstants.kDropdownGroupHeaderVerticalPadding,
+        ),
         child: Text(
           item.label,
           style: popupGroupHeaderStyle ?? defaultGroupStyle,
         ),
       );
-      
+
       // If separator is needed, use Stack with full-width separator line
       // Use fit: StackFit.expand to ensure Stack fills available width from Align
       if (showSeparator) {
@@ -203,21 +202,20 @@ class ItemDropperRenderUtils {
               left: 0,
               right: 0,
               height: ItemDropperConstants.kDropdownSeparatorWidth,
-              child: Container(
-                color: Colors.grey.shade300,
-              ),
+              child: Container(color: Colors.grey.shade300),
             ),
             // Header content below the line
             headerContent,
           ],
         );
       }
-      
+
       return headerContent;
     }
 
     final defaultItemStyle = const TextStyle(
-        fontSize: ItemDropperConstants.kDropdownItemFontSize);
+      fontSize: ItemDropperConstants.kDropdownItemFontSize,
+    );
     // Merge user's style with defaults - user's non-null values take precedence,
     // but we ensure fontSize is always set
     final TextStyle baseStyle = defaultItemStyle.merge(popupTextStyle);
@@ -230,8 +228,9 @@ class ItemDropperRenderUtils {
     return Container(
       color: isSelected ? Colors.grey.shade200 : null,
       padding: const EdgeInsets.symmetric(
-          horizontal: ItemDropperConstants.kDropdownItemHorizontalPadding,
-          vertical: 0),
+        horizontal: ItemDropperConstants.kDropdownItemHorizontalPadding,
+        vertical: 0,
+      ),
       alignment: Alignment.centerLeft,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -245,7 +244,8 @@ class ItemDropperRenderUtils {
           ),
           if (isDeletable) ...[
             const SizedBox(
-                width: ItemDropperConstants.kDropdownTextToDeleteIconSpacing),
+              width: ItemDropperConstants.kDropdownTextToDeleteIconSpacing,
+            ),
             Icon(
               Icons.delete_outline,
               size: ItemDropperConstants.kDropdownDeleteIconSize,
@@ -272,8 +272,10 @@ class ItemDropperRenderUtils {
     required Widget Function(BuildContext, ItemDropperItem<T>, bool) builder,
     bool showScrollbar = true,
     double scrollbarThickness = ItemDropperConstants.kDefaultScrollbarThickness,
-    required double itemHeight, // Required item height parameter (calculated from style)
-    double? preferredFieldHeight, // Use this height if provided (for accurate positioning during layout changes)
+    required double
+    itemHeight, // Required item height parameter (calculated from style)
+    double?
+    preferredFieldHeight, // Use this height if provided (for accurate positioning during layout changes)
   }) {
     if (items.isEmpty) return const SizedBox.shrink();
 
@@ -283,8 +285,9 @@ class ItemDropperRenderUtils {
 
     // Use preferredFieldHeight if available (from measurements), otherwise use actual field height
     // This prevents overlay flash when field height changes during chip removal
-    final double inputFieldHeight = preferredFieldHeight ?? inputBox.size.height;
-    
+    final double inputFieldHeight =
+        preferredFieldHeight ?? inputBox.size.height;
+
     // Use actual measured field width to ensure overlay matches field width exactly
     // This accounts for borders, padding, and any layout differences
     final double actualFieldWidth = inputBox.size.width;
@@ -304,13 +307,13 @@ class ItemDropperRenderUtils {
         : items.length;
     final double adjustedMaxHeight = actualVisibleItems * effectiveItemHeight;
 
-    final DropdownPositionResult position = DropdownPositionCalculator
-        .calculate(
-      context: context,
-      inputBox: inputBox,
-      inputFieldHeight: inputFieldHeight,
-      maxDropdownHeight: adjustedMaxHeight,
-    );
+    final DropdownPositionResult position =
+        DropdownPositionCalculator.calculate(
+          context: context,
+          inputBox: inputBox,
+          inputFieldHeight: inputFieldHeight,
+          maxDropdownHeight: adjustedMaxHeight,
+        );
 
     return CompositedTransformFollower(
       // Use stable key based on width only - height changes shouldn't recreate the ListView
@@ -325,16 +328,12 @@ class ItemDropperRenderUtils {
           canRequestFocus: false,
           child: Material(
             elevation: ItemDropperConstants.kDropdownElevation,
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxHeight: position.constrainedMaxHeight,
-                ),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: position.constrainedMaxHeight,
+              ),
               child: DefaultTextStyle(
-                style: Theme
-                    .of(context)
-                    .textTheme
-                    .bodyMedium!
-                    .copyWith(
+                style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                   fontSize: ItemDropperConstants.kDropdownItemFontSize,
                 ),
                 child: Scrollbar(

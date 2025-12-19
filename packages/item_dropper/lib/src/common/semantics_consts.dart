@@ -1,5 +1,5 @@
 /// Constants for accessibility labels used in Semantics widgets.
-/// 
+///
 /// These strings are announced by screen readers to help users
 /// with visual impairments understand and navigate the UI.
 class SemanticsConsts {

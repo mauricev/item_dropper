@@ -3,20 +3,20 @@ import 'package:flutter/services.dart';
 import 'item_dropper_common.dart';
 
 /// Manages keyboard navigation state and event handling for dropdown widgets.
-/// 
+///
 /// Handles arrow key navigation, highlight state, and keyboard event processing.
 /// Provides a unified interface for both single-select and multi-select dropdowns.
-/// 
+///
 /// Example usage:
 /// ```dart
 /// final manager = KeyboardNavigationManager(
 ///   onRequestRebuild: () => setState(() {}),
 ///   onEscape: () => _focusNode.unfocus(),
 /// );
-/// 
+///
 /// // In initState:
 /// _focusNode.onKeyEvent = manager.handleKeyEvent;
-/// 
+///
 /// // Access state:
 /// final highlightedIndex = manager.keyboardHighlightIndex;
 /// ```
@@ -48,7 +48,7 @@ class KeyboardNavigationManager<T> {
   int get keyboardHighlightIndex => _keyboardHighlightIndex;
 
   /// Handles keyboard events (Arrow keys, Escape, Space, Enter)
-  /// 
+  ///
   /// Returns [KeyEventResult.handled] if the key was processed,
   /// [KeyEventResult.ignored] otherwise.
   KeyEventResult handleKeyEvent({
@@ -81,9 +81,9 @@ class KeyboardNavigationManager<T> {
       onEscape();
       return KeyEventResult.handled;
     } else if ((event.logicalKey == LogicalKeyboardKey.space ||
-                 event.logicalKey == LogicalKeyboardKey.enter) &&
-               !isDropdownOpen &&
-               onOpenDropdown != null) {
+            event.logicalKey == LogicalKeyboardKey.enter) &&
+        !isDropdownOpen &&
+        onOpenDropdown != null) {
       // Space or Enter to open dropdown when closed
       // Only handle if text is empty or cursor is at start (to allow normal text input)
       // Note: This check should be done by the caller before calling handleKeyEvent

@@ -30,12 +30,12 @@ class _ItemDropperWithOverlayState extends State<ItemDropperWithOverlay> {
   /// Check if a pointer event occurred within the overlay bounds
   bool _isClickOnOverlay(PointerDownEvent event) {
     final RenderBox? overlayRenderBox =
-    _overlayKey.currentContext?.findRenderObject() as RenderBox?;
+        _overlayKey.currentContext?.findRenderObject() as RenderBox?;
 
     if (overlayRenderBox == null) return false;
 
     final RenderBox? fieldRenderBox =
-    widget.fieldKey.currentContext?.findRenderObject() as RenderBox?;
+        widget.fieldKey.currentContext?.findRenderObject() as RenderBox?;
 
     if (fieldRenderBox == null) return false;
 
@@ -54,7 +54,7 @@ class _ItemDropperWithOverlayState extends State<ItemDropperWithOverlay> {
   /// Check if a pointer event occurred outside the field bounds
   bool _isClickOutsideField(PointerDownEvent event) {
     final RenderBox? renderBox =
-    widget.fieldKey.currentContext?.findRenderObject() as RenderBox?;
+        widget.fieldKey.currentContext?.findRenderObject() as RenderBox?;
 
     if (renderBox == null) return false;
 
@@ -86,26 +86,25 @@ class _ItemDropperWithOverlayState extends State<ItemDropperWithOverlay> {
       link: widget.layerLink,
       child: OverlayPortal(
         controller: widget.overlayController,
-        overlayChildBuilder: (context) =>
-            Stack(
-              children: [
-                // Dismiss dropdown when clicking outside the text field AND outside the overlay
-                // Listener uses translucent behavior to allow child widgets to handle taps first
+        overlayChildBuilder: (context) => Stack(
+          children: [
+            // Dismiss dropdown when clicking outside the text field AND outside the overlay
+            // Listener uses translucent behavior to allow child widgets to handle taps first
             Positioned.fill(
               child: Listener(
                 behavior: HitTestBehavior.translucent,
                 onPointerDown: _handlePointerDown,
-                  ),
-                ),
-                CompositedTransformFollower(
-                  key: _overlayKey,
-                  link: widget.layerLink,
-                  showWhenUnlinked: false,
-                  offset: const Offset(0.0, 0.0), // Position relative to target
-                  child: widget.overlay,
-                ),
-              ],
+              ),
             ),
+            CompositedTransformFollower(
+              key: _overlayKey,
+              link: widget.layerLink,
+              showWhenUnlinked: false,
+              offset: const Offset(0.0, 0.0), // Position relative to target
+              child: widget.overlay,
+            ),
+          ],
+        ),
         child: widget.inputField,
       ),
     );

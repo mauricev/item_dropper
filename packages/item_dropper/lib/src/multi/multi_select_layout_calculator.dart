@@ -21,9 +21,10 @@ class MultiSelectLayoutCalculator {
     // - Between chips: (chipCount - 1) * spacing
     // - Between last chip and TextField: 1 * spacing (ALWAYS needed if we have chips)
     final double spacingBetweenChips = (selectedCount - 1) * chipSpacing;
-    final double spacingBeforeTextField = chipSpacing; // Always need spacing before TextField if chips exist
+    final double spacingBeforeTextField =
+        chipSpacing; // Always need spacing before TextField if chips exist
     final double totalSpacing = spacingBetweenChips + spacingBeforeTextField;
-    
+
     final double usedWidth = measuredTotalChipWidth + totalSpacing;
     final double remainingWidth = availableWidth - usedWidth;
     final double textFieldWidth = remainingWidth.clamp(100.0, availableWidth);
@@ -41,9 +42,11 @@ class MultiSelectLayoutCalculator {
     final double textSize = fontSize ?? 10.0;
     final double textLineHeight = textSize * 1.2;
     const double iconHeight = 24.0;
-    final double rowContentHeight = textLineHeight > iconHeight ? textLineHeight : iconHeight;
-    final double verticalPadding = chipVerticalPadding * 2; // 6px top + 6px bottom = 12px
+    final double rowContentHeight = textLineHeight > iconHeight
+        ? textLineHeight
+        : iconHeight;
+    final double verticalPadding =
+        chipVerticalPadding * 2; // 6px top + 6px bottom = 12px
     return rowContentHeight + verticalPadding;
   }
 }
-

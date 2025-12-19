@@ -8,18 +8,18 @@ class MultiSelectFocusManager<T> {
   final FocusNode focusNode;
   final VoidCallback onFocusVisualStateChanged;
   final VoidCallback? onFocusChanged;
-  
+
   // TextField focus state
   bool _manualFocusState = false;
   bool _disposed = false;
-  
+
   // Chip focus state
   /// Currently focused chip index (-1 if none, -2 if TextField is focused)
   int _focusedChipIndex = -2; // Start with TextField focused
-  
+
   /// List of selected items (for determining chip count)
   List<ItemDropperItem<T>> _selectedItems = [];
-  
+
   /// Callback to remove a chip
   final void Function(ItemDropperItem<T> item)? onRemoveChip;
 
@@ -66,7 +66,7 @@ class MultiSelectFocusManager<T> {
   /// Handle focus change events from FocusNode
   void _handleFocusChange() {
     if (_disposed) return;
-    
+
     final bool flutterHasFocus = focusNode.hasFocus;
 
     // Only update manual focus state if Flutter gained focus (user clicked TextField)
@@ -131,9 +131,9 @@ class MultiSelectFocusManager<T> {
     if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
       return KeyEventResult.ignored;
     }
-    
+
     final itemCount = _selectedItems.length;
-    
+
     if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
       // Move focus left (to previous chip or TextField)
       if (_focusedChipIndex > 0) {
@@ -164,7 +164,7 @@ class MultiSelectFocusManager<T> {
       // Already at last chip or no chips
       return KeyEventResult.ignored;
     } else if (event.logicalKey == LogicalKeyboardKey.arrowUp ||
-               event.logicalKey == LogicalKeyboardKey.arrowDown) {
+        event.logicalKey == LogicalKeyboardKey.arrowDown) {
       // Up/Down arrows: move to TextField if chip focused, or ignore if TextField focused
       if (_focusedChipIndex >= 0) {
         _focusedChipIndex = -2;
@@ -174,14 +174,14 @@ class MultiSelectFocusManager<T> {
       }
       return KeyEventResult.ignored;
     } else if ((event.logicalKey == LogicalKeyboardKey.delete ||
-                 event.logicalKey == LogicalKeyboardKey.backspace) &&
-               _focusedChipIndex >= 0 &&
-               _focusedChipIndex < itemCount &&
-               onRemoveChip != null) {
+            event.logicalKey == LogicalKeyboardKey.backspace) &&
+        _focusedChipIndex >= 0 &&
+        _focusedChipIndex < itemCount &&
+        onRemoveChip != null) {
       // Delete/Backspace: remove focused chip
       final itemToRemove = _selectedItems[_focusedChipIndex];
       onRemoveChip!(itemToRemove);
-      
+
       // Adjust focus after removal
       if (itemCount == 1) {
         // Last chip removed, focus TextField
@@ -191,11 +191,11 @@ class MultiSelectFocusManager<T> {
         _focusedChipIndex = itemCount - 2;
       }
       // Otherwise stay at same index (which now points to next chip)
-      
+
       onFocusChanged?.call();
       return KeyEventResult.handled;
     }
-    
+
     return KeyEventResult.ignored;
   }
 

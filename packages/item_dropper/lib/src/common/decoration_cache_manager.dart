@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 
 /// Manages caching of BoxDecoration for dropdown field containers.
-/// 
+///
 /// Only recreates decoration when focus state changes, avoiding expensive
 /// rebuilds on every frame. Supports custom decorations or generates default
 /// decoration with focus-based border colors.
-/// 
+///
 /// Example usage:
 /// ```dart
 /// final decorationManager = DecorationCacheManager();
-/// 
+///
 /// // In build:
 /// Container(
 ///   decoration: decorationManager.get(
@@ -24,12 +24,12 @@ class DecorationCacheManager {
   bool? _cachedFocusState;
 
   /// Gets decoration, using cached value if focus state hasn't changed.
-  /// 
+  ///
   /// If [customDecoration] is provided, returns it as-is without caching.
   /// Otherwise, generates a default decoration with focus-based border color:
   /// - Blue border when focused
   /// - Grey border when not focused
-  /// 
+  ///
   /// Parameters:
   ///   - [isFocused]: Current focus state
   ///   - [customDecoration]: Optional custom decoration (bypasses caching)
@@ -80,7 +80,7 @@ class DecorationCacheManager {
   }
 
   /// Invalidates the cache, forcing recreation on next [get] call.
-  /// 
+  ///
   /// Useful when external factors change (e.g., theme changes).
   void invalidate() {
     _cachedDecoration = null;

@@ -29,8 +29,8 @@ class SingleItemDropper<T> extends StatefulWidget {
   final String? hintText;
 
   /// Optional custom builder for popup items.
-  final Widget Function(BuildContext, ItemDropperItem<
-      T>, bool)? popupItemBuilder;
+  final Widget Function(BuildContext, ItemDropperItem<T>, bool)?
+  popupItemBuilder;
 
   /// The width of the dropdown field (required).
   final double width;
@@ -46,16 +46,17 @@ class SingleItemDropper<T> extends StatefulWidget {
 
   /// Callback for deleting items, provides the deleted item (optional).
   final void Function(ItemDropperItem<T> item)? onDeleteItem;
+
   /// Optional GlobalKey for the input field.
-  /// 
+  ///
   /// If provided, allows external access to the input field for:
   /// - Programmatic focus control
   /// - Integration with form libraries
   /// - Testing and widget finding
   /// - Layout measurement and positioning
-  /// 
+  ///
   /// If not provided, an internal key is used automatically.
-  /// 
+  ///
   /// Example usage:
   /// ```dart
   /// final key = GlobalKey();
@@ -96,15 +97,18 @@ class SingleItemDropper<T> extends StatefulWidget {
 
   /// Height for popup dropdown items.
   final double? itemHeight;
+
   /// Optional custom decoration for the dropdown field container.
   ///
   /// - If provided, this BoxDecoration is used as-is for the field container.
   /// - If null, a default white-to-grey gradient with rounded corners is applied.
   final BoxDecoration? fieldDecoration;
+
   /// Whether to show the dropdown position icon (arrow up/down).
   /// When true, displays an arrow icon that toggles the dropdown visibility.
   /// Defaults to true.
   final bool showDropdownPositionIcon;
+
   /// Whether to show the delete all icon (clear/X button).
   /// When true, displays a clear button that clears the current selection.
   /// Defaults to true.
@@ -183,7 +187,7 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
 
   // Live region for screen reader announcements
   late final LiveRegionManager _liveRegionManager;
-  
+
   /// Get localizations with defaults
   ItemDropperLocalizations get _localizations =>
       widget.localizations ?? ItemDropperLocalizations.english;
@@ -227,8 +231,7 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
     _controller = TextEditingController(text: widget.selectedItem?.label ?? '');
     _scrollController = ScrollController();
     _textScrollCtrl = ScrollController();
-    _focusNode = FocusNode()
-      ..addListener(_handleFocusChange);
+    _focusNode = FocusNode()..addListener(_handleFocusChange);
 
     _selected = widget.selectedItem;
     _filterUtils.initializeItems(widget.items);
@@ -257,19 +260,19 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
     // Attach keyboard event handler for arrow key navigation
     _focusNode.onKeyEvent = (node, event) {
       // Check if Space/Enter should open dropdown (only if text is empty or cursor at start)
-      final shouldOpenOnSpaceEnter = !_overlayController.isShowing &&
+      final shouldOpenOnSpaceEnter =
+          !_overlayController.isShowing &&
           (event.logicalKey == LogicalKeyboardKey.space ||
-           event.logicalKey == LogicalKeyboardKey.enter) &&
-          (_controller.text.isEmpty ||
-           _controller.selection.baseOffset == 0);
-      
+              event.logicalKey == LogicalKeyboardKey.enter) &&
+          (_controller.text.isEmpty || _controller.selection.baseOffset == 0);
+
       // If Space/Enter and shouldn't open dropdown, let TextField handle it normally
       if ((event.logicalKey == LogicalKeyboardKey.space ||
-           event.logicalKey == LogicalKeyboardKey.enter) &&
+              event.logicalKey == LogicalKeyboardKey.enter) &&
           !shouldOpenOnSpaceEnter) {
         return KeyEventResult.ignored;
       }
-      
+
       return _keyboardNavManager.handleKeyEvent(
         event: event,
         filteredItems: _filtered,
@@ -319,8 +322,7 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
     // Find exact match among enabled items
     ItemDropperItem<T>? match;
     for (final item in widget.items) {
-      if (item.isEnabled &&
-          item.label.trim().toLowerCase() == trimmedInput) {
+      if (item.isEnabled && item.label.trim().toLowerCase() == trimmedInput) {
         match = item;
         break;
       }
@@ -417,7 +419,8 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
           _scrollController.position.hasContentDimensions) {
         final String input = _controller.text.trim().toLowerCase();
         final int itemIndex = _filtered.indexWhere(
-                (item) => item.label.toLowerCase().contains(input));
+          (item) => item.label.toLowerCase().contains(input),
+        );
         if (itemIndex >= 0) {
           _scrollController.animateTo(
             itemIndex *
@@ -461,30 +464,33 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
     final List<ItemDropperItem<T>> filteredItems = _filtered;
     if (_keyboardNavManager.keyboardHighlightIndex >= 0 &&
         _keyboardNavManager.keyboardHighlightIndex < filteredItems.length) {
-      final ItemDropperItem<
-          T> selectedItem = filteredItems[_keyboardNavManager.keyboardHighlightIndex];
+      final ItemDropperItem<T> selectedItem =
+          filteredItems[_keyboardNavManager.keyboardHighlightIndex];
       // Skip group headers
       if (selectedItem.isGroupHeader) {
         return;
       }
 
       // Handle add item selection using shared handler
-      final addItemResult = ItemDropperSelectionHandler.handleAddItemIfNeeded<T>(
-        item: selectedItem,
-        originalItems: widget.items,
-        onAddItem: widget.onAddItem,
-        localizations: _localizations,
-        onItemCreated: (newItem) {
-          _withSquelch(() {
-            _controller.text = newItem.label;
-            _controller.selection = const TextSelection.collapsed(offset: 0);
-          });
-          _setSelected(newItem);
-          _isUserEditing = false;
-          _dismissDropdown();
-        },
-      );
-      
+      final addItemResult =
+          ItemDropperSelectionHandler.handleAddItemIfNeeded<T>(
+            item: selectedItem,
+            originalItems: widget.items,
+            onAddItem: widget.onAddItem,
+            localizations: _localizations,
+            onItemCreated: (newItem) {
+              _withSquelch(() {
+                _controller.text = newItem.label;
+                _controller.selection = const TextSelection.collapsed(
+                  offset: 0,
+                );
+              });
+              _setSelected(newItem);
+              _isUserEditing = false;
+              _dismissDropdown();
+            },
+          );
+
       if (addItemResult.handled) {
         return;
       }
@@ -501,8 +507,9 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
   void _waitThenScrollToSelected() {
     if (_selected == null) return;
 
-    final int selectedIndex = _filtered.indexWhere((it) =>
-    it.value == _selected?.value);
+    final int selectedIndex = _filtered.indexWhere(
+      (it) => it.value == _selected?.value,
+    );
     if (selectedIndex < 0) return;
 
     int retryCount = 0;
@@ -521,15 +528,18 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
       }
 
       // Center the selected item in the viewport if possible
-      final double itemTop = selectedIndex *
+      final double itemTop =
+          selectedIndex *
           (widget.itemHeight ?? ItemDropperConstants.kDropdownItemHeight);
-      final double viewportHeight = _scrollController.position
-          .viewportDimension;
-      final double centeredOffset = (itemTop -
-          (viewportHeight / ItemDropperConstants.kCenteringDivisor) +
-          ((widget.itemHeight ?? ItemDropperConstants.kDropdownItemHeight) /
-              ItemDropperConstants.kCenteringDivisor))
-          .clamp(0.0, _scrollController.position.maxScrollExtent);
+      final double viewportHeight =
+          _scrollController.position.viewportDimension;
+      final double centeredOffset =
+          (itemTop -
+                  (viewportHeight / ItemDropperConstants.kCenteringDivisor) +
+                  ((widget.itemHeight ??
+                          ItemDropperConstants.kDropdownItemHeight) /
+                      ItemDropperConstants.kCenteringDivisor))
+              .clamp(0.0, _scrollController.position.maxScrollExtent);
 
       _scrollController.jumpTo(centeredOffset);
     }
@@ -565,23 +575,25 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
         final item = selectableItems.first;
 
         // Handle add item selection using shared handler
-        final addItemResult = ItemDropperSelectionHandler.handleAddItemIfNeeded<T>(
-          item: item,
-          originalItems: widget.items,
-          onAddItem: widget.onAddItem,
-          localizations: _localizations,
-          onItemCreated: (newItem) {
-            _withSquelch(() {
-              _controller.text = newItem.label;
-              _controller.selection =
-              const TextSelection.collapsed(offset: 0);
-            });
-            _setSelected(newItem);
-            _isUserEditing = false;
-            _dismissDropdown();
-          },
-        );
-        
+        final addItemResult =
+            ItemDropperSelectionHandler.handleAddItemIfNeeded<T>(
+              item: item,
+              originalItems: widget.items,
+              onAddItem: widget.onAddItem,
+              localizations: _localizations,
+              onItemCreated: (newItem) {
+                _withSquelch(() {
+                  _controller.text = newItem.label;
+                  _controller.selection = const TextSelection.collapsed(
+                    offset: 0,
+                  );
+                });
+                _setSelected(newItem);
+                _isUserEditing = false;
+                _dismissDropdown();
+              },
+            );
+
         if (addItemResult.handled) {
           return;
         }
@@ -603,26 +615,29 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
     final List<ItemDropperItem<T>> filteredItems = _filtered;
 
     // Get the input field's context for proper positioning
-    final BuildContext? inputContext = (widget.inputKey ?? _internalFieldKey)
-        .currentContext;
+    final BuildContext? inputContext =
+        (widget.inputKey ?? _internalFieldKey).currentContext;
     if (inputContext == null) return const SizedBox.shrink();
 
     // Calculate effective item height:
     // - If widget.itemHeight is provided, use it
     // - Otherwise, calculate from popupTextStyle
     double calculateItemHeightFromStyle() {
-      final TextStyle resolvedStyle = widget.popupTextStyle ??
+      final TextStyle resolvedStyle =
+          widget.popupTextStyle ??
           const TextStyle(fontSize: ItemDropperConstants.kDropdownItemFontSize);
-      final double fontSize = resolvedStyle.fontSize ??
-          ItemDropperConstants.kDropdownItemFontSize;
-      final double lineHeight = fontSize * (resolvedStyle.height ??
-          MultiSelectConstants.kTextLineHeightMultiplier);
+      final double fontSize =
+          resolvedStyle.fontSize ?? ItemDropperConstants.kDropdownItemFontSize;
+      final double lineHeight =
+          fontSize *
+          (resolvedStyle.height ??
+              MultiSelectConstants.kTextLineHeightMultiplier);
       return lineHeight +
           (ItemDropperConstants.kDropdownItemVerticalPadding * 2);
     }
 
-    final double effectiveItemHeight = widget.itemHeight ??
-        calculateItemHeightFromStyle();
+    final double effectiveItemHeight =
+        widget.itemHeight ?? calculateItemHeightFromStyle();
 
     return ItemDropperRenderUtils.buildDropdownOverlay(
       context: inputContext,
@@ -635,73 +650,84 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
       showScrollbar: widget.showScrollbar,
       scrollbarThickness: widget.scrollbarThickness,
       isSelected: (ItemDropperItem<T> item) => item.value == _selected?.value,
-      builder: (BuildContext builderContext, ItemDropperItem<T> item,
-          bool isSelected) {
-        return ItemDropperRenderUtils.buildDropdownItemWithHover<T>(
-          context: builderContext,
-          item: item,
-          isSelected: isSelected,
-          filteredItems: filteredItems,
-          hoverIndex: _keyboardNavManager.hoverIndex,
-          keyboardHighlightIndex: _keyboardNavManager.keyboardHighlightIndex,
-          safeSetState: _safeSetState,
-          setHoverIndex: (index) => _keyboardNavManager.hoverIndex = index,
-          onTap: () {
-            // Skip group headers
-            if (item.isGroupHeader) {
-              return;
-            }
-
-            // Handle add item selection using shared handler
-            final addItemResult = ItemDropperSelectionHandler.handleAddItemIfNeeded<T>(
+      builder:
+          (
+            BuildContext builderContext,
+            ItemDropperItem<T> item,
+            bool isSelected,
+          ) {
+            return ItemDropperRenderUtils.buildDropdownItemWithHover<T>(
+              context: builderContext,
               item: item,
-              originalItems: widget.items,
-              onAddItem: widget.onAddItem,
-              onItemCreated: (newItem) {
+              isSelected: isSelected,
+              filteredItems: filteredItems,
+              hoverIndex: _keyboardNavManager.hoverIndex,
+              keyboardHighlightIndex:
+                  _keyboardNavManager.keyboardHighlightIndex,
+              safeSetState: _safeSetState,
+              setHoverIndex: (index) => _keyboardNavManager.hoverIndex = index,
+              onTap: () {
+                // Skip group headers
+                if (item.isGroupHeader) {
+                  return;
+                }
+
+                // Handle add item selection using shared handler
+                final addItemResult =
+                    ItemDropperSelectionHandler.handleAddItemIfNeeded<T>(
+                      item: item,
+                      originalItems: widget.items,
+                      onAddItem: widget.onAddItem,
+                      onItemCreated: (newItem) {
+                        _withSquelch(() {
+                          _controller.text = newItem.label;
+                          _controller.selection = const TextSelection.collapsed(
+                            offset: 0,
+                          );
+                        });
+                        _setSelected(newItem);
+                        _isUserEditing = false;
+                        _dismissDropdown();
+                      },
+                    );
+
+                if (addItemResult.handled) {
+                  return;
+                }
+
                 _withSquelch(() {
-                  _controller.text = newItem.label;
-                  _controller.selection =
-                  const TextSelection.collapsed(offset: 0);
+                  _controller.text = item.label;
+                  _controller.selection = const TextSelection.collapsed(
+                    offset: 0,
+                  );
                 });
-                _setSelected(newItem);
-                _isUserEditing = false;
+                _attemptSelectByInput(item.label);
                 _dismissDropdown();
               },
-            );
-            
-            if (addItemResult.handled) {
-              return;
-            }
-
-            _withSquelch(() {
-              _controller.text = item.label;
-              _controller.selection =
-              const TextSelection.collapsed(offset: 0);
-            });
-            _attemptSelectByInput(item.label);
-            _dismissDropdown();
-          },
-          customBuilder: widget.popupItemBuilder ??
+              customBuilder:
+                  widget.popupItemBuilder ??
                   (context, item, isSelected) {
-                final int itemIndex = filteredItems.indexWhere((x) =>
-                x.value == item.value);
-                final bool hasPrevious = itemIndex > 0;
-                final bool previousIsGroupHeader = hasPrevious &&
-                    filteredItems[itemIndex - 1].isGroupHeader;
+                    final int itemIndex = filteredItems.indexWhere(
+                      (x) => x.value == item.value,
+                    );
+                    final bool hasPrevious = itemIndex > 0;
+                    final bool previousIsGroupHeader =
+                        hasPrevious &&
+                        filteredItems[itemIndex - 1].isGroupHeader;
 
-                return ItemDropperRenderUtils.defaultDropdownPopupItemBuilder(
-                  context,
-                  item,
-                  isSelected,
-                  popupTextStyle: widget.popupTextStyle,
-                  popupGroupHeaderStyle: widget.popupGroupHeaderStyle,
-                  hasPreviousItem: hasPrevious,
-                  previousItemIsGroupHeader: previousIsGroupHeader,
-                );
-              },
-          itemHeight: effectiveItemHeight,
-        );
-      },
+                    return ItemDropperRenderUtils.defaultDropdownPopupItemBuilder(
+                      context,
+                      item,
+                      isSelected,
+                      popupTextStyle: widget.popupTextStyle,
+                      popupGroupHeaderStyle: widget.popupGroupHeaderStyle,
+                      hasPreviousItem: hasPrevious,
+                      previousItemIsGroupHeader: previousIsGroupHeader,
+                    );
+                  },
+              itemHeight: effectiveItemHeight,
+            );
+          },
       itemHeight: effectiveItemHeight,
     );
   }
@@ -718,15 +744,15 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
     // Cancel and clear timer to prevent memory leaks
     _scrollDebounceTimer?.cancel();
     _scrollDebounceTimer = null;
-    
+
     _liveRegionManager.dispose();
     _removeOverlay();
-    
+
     // Remove listeners before disposing focus node
     _focusNode.removeListener(_handleFocusChange);
     _focusNode.removeListener(_handleFocusSnapScroll);
     _focusNode.dispose();
-    
+
     _controller.dispose();
     _scrollController.dispose();
     _textScrollCtrl.dispose();
@@ -770,15 +796,18 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
           currentText.trim().toLowerCase() != newLabel.toLowerCase()) {
         _withSquelch(() {
           _controller.text = newLabel;
-          _controller.selection =
-              TextSelection.collapsed(offset: _controller.text.length);
+          _controller.selection = TextSelection.collapsed(
+            offset: _controller.text.length,
+          );
         });
 
         // Ensure viewport is at start in case update happens while unfocused
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted && _textScrollCtrl.hasClients) {
             try {
-              _textScrollCtrl.jumpTo(SingleSelectConstants.kScrollResetPosition);
+              _textScrollCtrl.jumpTo(
+                SingleSelectConstants.kScrollResetPosition,
+              );
             } catch (_) {}
           }
         });
@@ -792,125 +821,146 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
 
     return Stack(
       children: [
-      ItemDropperWithOverlay(
-      layerLink: _layerLink,
-      overlayController: _overlayController,
-      fieldKey: widget.inputKey ?? _internalFieldKey,
-      onDismiss: _dismissDropdown,
-      overlay: _buildDropdownOverlay(),
-      inputField: Container(
-          decoration: _decorationManager.get(
-            isFocused: _focusNode.hasFocus,
-            customDecoration: widget.fieldDecoration,
-            borderRadius: SingleSelectConstants.kContainerBorderRadius,
-          ),
-          child: SizedBox(
-            width: widget.width,
-            child: IgnorePointer(
-              ignoring: !widget.enabled,
-              child: Semantics(
-                label: _localizations.singleSelectFieldLabel,
-                textField: true,
-                child: TextField(
-                  key: widget.inputKey ?? _internalFieldKey,
-                  controller: _controller,
-                focusNode: _focusNode,
-                scrollController: _textScrollCtrl,
-                readOnly: !widget.showKeyboard,
-                showCursor: true,
-                enableInteractiveSelection: false,
-                style: (widget.fieldTextStyle ?? const TextStyle(fontSize: ItemDropperConstants
-                    .kDropdownItemFontSize)).copyWith(
-                  color: widget.enabled 
-                      ? (widget.fieldTextStyle?.color ?? Colors.black)
-                      : Colors.grey,
-                ),
-                onTap: () {
-                  if (!widget.enabled) return;
-                  final textLength = _controller.text.length;
-                  _controller.selection =
-                      TextSelection.collapsed(offset: textLength);
-                  _showOverlay();
-                },
-                onSubmitted: _handleSubmit,
-                onChanged: (value) {
-                if (_squelchOnChanged) return;
+        ItemDropperWithOverlay(
+          layerLink: _layerLink,
+          overlayController: _overlayController,
+          fieldKey: widget.inputKey ?? _internalFieldKey,
+          onDismiss: _dismissDropdown,
+          overlay: _buildDropdownOverlay(),
+          inputField: Container(
+            decoration: _decorationManager.get(
+              isFocused: _focusNode.hasFocus,
+              customDecoration: widget.fieldDecoration,
+              borderRadius: SingleSelectConstants.kContainerBorderRadius,
+            ),
+            child: SizedBox(
+              width: widget.width,
+              child: IgnorePointer(
+                ignoring: !widget.enabled,
+                child: Semantics(
+                  label: _localizations.singleSelectFieldLabel,
+                  textField: true,
+                  child: TextField(
+                    key: widget.inputKey ?? _internalFieldKey,
+                    controller: _controller,
+                    focusNode: _focusNode,
+                    scrollController: _textScrollCtrl,
+                    readOnly: !widget.showKeyboard,
+                    showCursor: true,
+                    enableInteractiveSelection: false,
+                    style:
+                        (widget.fieldTextStyle ??
+                                const TextStyle(
+                                  fontSize: ItemDropperConstants
+                                      .kDropdownItemFontSize,
+                                ))
+                            .copyWith(
+                              color: widget.enabled
+                                  ? (widget.fieldTextStyle?.color ??
+                                        Colors.black)
+                                  : Colors.grey,
+                            ),
+                    onTap: () {
+                      if (!widget.enabled) return;
+                      final textLength = _controller.text.length;
+                      _controller.selection = TextSelection.collapsed(
+                        offset: textLength,
+                      );
+                      _showOverlay();
+                    },
+                    onSubmitted: _handleSubmit,
+                    onChanged: (value) {
+                      if (_squelchOnChanged) return;
 
-                final bool hadSelection = hasSelection;
-                final String selectedLabel = _selectedLabelText;
+                      final bool hadSelection = hasSelection;
+                      final String selectedLabel = _selectedLabelText;
 
-                if (hadSelection) {
-                  // User is typing - clear selection and allow them to continue typing
-                  // Don't revert the text - let them type freely
-                  if (value != selectedLabel) {
-                    // User typed something different - clear selection and let them type
-                    _setSelected(null);
-                    _isUserEditing = true;
-                  }
-                  return;
-                }
+                      if (hadSelection) {
+                        // User is typing - clear selection and allow them to continue typing
+                        // Don't revert the text - let them type freely
+                        if (value != selectedLabel) {
+                          // User typed something different - clear selection and let them type
+                          _setSelected(null);
+                          _isUserEditing = true;
+                        }
+                        return;
+                      }
 
-                // No selection → normal typing; live search managed by controller listener
-              },
-              decoration: InputDecoration(
-                filled: false,
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(
-                  vertical: SingleSelectConstants
-                      .kTextFieldVerticalPaddingNoBorder,
-                  horizontal: SingleSelectConstants.kTextFieldHorizontalPadding,
-                ),
-                suffixIconConstraints: (widget.showDropdownPositionIcon || widget.showDeleteAllIcon)
-                    ? BoxConstraints.tightFor(
-                        width: SingleSelectConstants.kSuffixIconWidth,
-                        height: (widget.fieldTextStyle?.fontSize ??
-                            ItemDropperConstants.kDropdownItemFontSize) *
-                            ItemDropperConstants.kSuffixIconHeightMultiplier,
-                      )
-                    : null,
-                suffixIcon: (widget.showDropdownPositionIcon || widget.showDeleteAllIcon)
-                    ? ItemDropperSuffixIcons(
-                        isDropdownShowing: _overlayController.isShowing,
-                        enabled: widget.enabled,
-                        onClearPressed: () {
-                          _withSquelch(() => _controller.clear());
-                          _attemptSelectByInput('');
-                          if (mounted) {
-                            setState(() =>
-                            _keyboardNavManager.hoverIndex = ItemDropperConstants.kNoHighlight);
-                          }
-                        },
-                        onArrowPressed: () {
-                          if (_overlayController.isShowing) {
-                            _dismissDropdown();
-                          } else {
-                            _focusNode.requestFocus();
-                          }
-                        },
-                        iconSize: SingleSelectConstants.kIconSize,
-                        suffixIconWidth: SingleSelectConstants.kSuffixIconWidth,
-                        iconButtonSize: SingleSelectConstants.kIconButtonSize,
-                        clearButtonRightPosition: SingleSelectConstants
-                            .kClearButtonRightPosition,
-                        arrowButtonRightPosition: SingleSelectConstants
-                            .kArrowButtonRightPosition,
-                        textSize: widget.fieldTextStyle?.fontSize ??
-                            ItemDropperConstants.kDropdownItemFontSize,
-                        showDropdownPositionIcon: widget.showDropdownPositionIcon,
-                        showDeleteAllIcon: widget.showDeleteAllIcon,
-                      )
-                    : null,
-                hintText: widget.hintText,
-              ), // Close InputDecoration
-                ), // Close TextField
-              ), // Close Semantics
-            ), // Close IgnorePointer
-          ), // Close SizedBox
-      ), // Close Container
-      ), // Close ItemDropperWithOverlay
+                      // No selection → normal typing; live search managed by controller listener
+                    },
+                    decoration: InputDecoration(
+                      filled: false,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(
+                        vertical: SingleSelectConstants
+                            .kTextFieldVerticalPaddingNoBorder,
+                        horizontal:
+                            SingleSelectConstants.kTextFieldHorizontalPadding,
+                      ),
+                      suffixIconConstraints:
+                          (widget.showDropdownPositionIcon ||
+                              widget.showDeleteAllIcon)
+                          ? BoxConstraints.tightFor(
+                              width: SingleSelectConstants.kSuffixIconWidth,
+                              height:
+                                  (widget.fieldTextStyle?.fontSize ??
+                                      ItemDropperConstants
+                                          .kDropdownItemFontSize) *
+                                  ItemDropperConstants
+                                      .kSuffixIconHeightMultiplier,
+                            )
+                          : null,
+                      suffixIcon:
+                          (widget.showDropdownPositionIcon ||
+                              widget.showDeleteAllIcon)
+                          ? ItemDropperSuffixIcons(
+                              isDropdownShowing: _overlayController.isShowing,
+                              enabled: widget.enabled,
+                              onClearPressed: () {
+                                _withSquelch(() => _controller.clear());
+                                _attemptSelectByInput('');
+                                if (mounted) {
+                                  setState(
+                                    () => _keyboardNavManager.hoverIndex =
+                                        ItemDropperConstants.kNoHighlight,
+                                  );
+                                }
+                              },
+                              onArrowPressed: () {
+                                if (_overlayController.isShowing) {
+                                  _dismissDropdown();
+                                } else {
+                                  _focusNode.requestFocus();
+                                }
+                              },
+                              iconSize: SingleSelectConstants.kIconSize,
+                              suffixIconWidth:
+                                  SingleSelectConstants.kSuffixIconWidth,
+                              iconButtonSize:
+                                  SingleSelectConstants.kIconButtonSize,
+                              clearButtonRightPosition: SingleSelectConstants
+                                  .kClearButtonRightPosition,
+                              arrowButtonRightPosition: SingleSelectConstants
+                                  .kArrowButtonRightPosition,
+                              textSize:
+                                  widget.fieldTextStyle?.fontSize ??
+                                  ItemDropperConstants.kDropdownItemFontSize,
+                              showDropdownPositionIcon:
+                                  widget.showDropdownPositionIcon,
+                              showDeleteAllIcon: widget.showDeleteAllIcon,
+                            )
+                          : null,
+                      hintText: widget.hintText,
+                    ), // Close InputDecoration
+                  ), // Close TextField
+                ), // Close Semantics
+              ), // Close IgnorePointer
+            ), // Close SizedBox
+          ), // Close Container
+        ), // Close ItemDropperWithOverlay
         // Live region for screen reader announcements
         _liveRegionManager.build(),
       ],

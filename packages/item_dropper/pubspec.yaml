@@ -1,9 +1,7 @@
 name: item_dropper
 description: >-
-  Customizable dropdown widgets for Flutter with single and multi-select support,
-  real-time search filtering, keyboard navigation, and accessibility features.
-  Includes add/delete items, group headers, and extensive styling options.
-version: 0.0.1
+  Customizable Flutter dropdowns with single and multi-select, search, keyboard navigation, accessibility, and add/delete support.
+version: 0.0.2
 homepage: https://github.com/mauricev/item_dropper
 repository: https://github.com/mauricev/item_dropper
 issue_tracker: https://github.com/mauricev/item_dropper/issues

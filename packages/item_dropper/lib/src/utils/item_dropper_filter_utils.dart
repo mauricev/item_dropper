@@ -16,11 +16,12 @@ class ItemDropperFilterUtils<T> {
   }
 
   /// Get filtered items based on search text
-  List<ItemDropperItem<T>> getFiltered(List<ItemDropperItem<T>> items,
-      String searchText, {
-        bool isUserEditing = false,
-        Set<T>? excludeValues,
-      }) {
+  List<ItemDropperItem<T>> getFiltered(
+    List<ItemDropperItem<T>> items,
+    String searchText, {
+    bool isUserEditing = false,
+    Set<T>? excludeValues,
+  }) {
     final String input = searchText.trim().toLowerCase();
 
     // Reinitialize if items reference changed
@@ -37,7 +38,9 @@ class ItemDropperFilterUtils<T> {
       }
       // Exclude selected items, but always include group headers
       return items
-          .where((item) => item.isGroupHeader || !excludeValues.contains(item.value))
+          .where(
+            (item) => item.isGroupHeader || !excludeValues.contains(item.value),
+          )
           .toList();
     }
 
@@ -51,10 +54,13 @@ class ItemDropperFilterUtils<T> {
     // But if a group header's label matches, we might want to show it for context
     // For now, exclude group headers from search results
     final List<ItemDropperItem<T>> filteredResult = _normalizedItems
-        .where((entry) =>
-            !entry.item.isGroupHeader && // Exclude group headers from search
-            entry.label.contains(input) &&
-            (excludeValues == null || !excludeValues.contains(entry.item.value)))
+        .where(
+          (entry) =>
+              !entry.item.isGroupHeader && // Exclude group headers from search
+              entry.label.contains(input) &&
+              (excludeValues == null ||
+                  !excludeValues.contains(entry.item.value)),
+        )
         .map((entry) => entry.item)
         .toList(growable: false);
 

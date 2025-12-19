@@ -17,7 +17,7 @@ class ItemDropperSemantics {
   // Helper methods for common patterns
 
   /// Creates a full "add item" label for the given search text.
-  /// 
+  ///
   /// Example: formatAddItemLabel('Orange') → 'Add "Orange"'
   static String formatAddItemLabel(String searchText) {
     return '${SemanticsConsts.addItemPrefix}$searchText${SemanticsConsts.addItemSuffix}';

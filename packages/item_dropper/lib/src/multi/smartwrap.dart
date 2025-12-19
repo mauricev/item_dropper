@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+
 class SmartWrapWithFlexibleLast extends MultiChildRenderObjectWidget {
   const SmartWrapWithFlexibleLast({
     super.key,
@@ -31,9 +32,11 @@ class SmartWrapWithFlexibleLast extends MultiChildRenderObjectWidget {
 
   @override
   void updateRenderObject(
-      BuildContext context,
-      covariant RenderObject renderObject,) {
-    final _RenderSmartWrapWithFlexibleLast typedRenderObject = renderObject as _RenderSmartWrapWithFlexibleLast;
+    BuildContext context,
+    covariant RenderObject renderObject,
+  ) {
+    final _RenderSmartWrapWithFlexibleLast typedRenderObject =
+        renderObject as _RenderSmartWrapWithFlexibleLast;
     typedRenderObject
       ..spacing = spacing
       ..runSpacing = runSpacing
@@ -51,9 +54,9 @@ class _RenderSmartWrapWithFlexibleLast extends RenderBox
     required double spacing,
     required double runSpacing,
     required double minRemainingWidthForSameRow,
-  })  : _spacing = spacing,
-        _runSpacing = runSpacing,
-        _minRemainingWidthForSameRow = minRemainingWidthForSameRow;
+  }) : _spacing = spacing,
+       _runSpacing = runSpacing,
+       _minRemainingWidthForSameRow = minRemainingWidthForSameRow;
 
   double _spacing;
   double get spacing => _spacing;
@@ -99,14 +102,12 @@ class _RenderSmartWrapWithFlexibleLast extends RenderBox
     while (child != null) {
       final bool isLastChildInList = childAfter(child) == null;
       final _SmartWrapParentData parentData =
-      child.parentData as _SmartWrapParentData;
+          child.parentData as _SmartWrapParentData;
 
       if (!isLastChildInList) {
         // Normal wrap behavior for all but the last child.
         child.layout(
-          BoxConstraints(
-            maxWidth: maxRowWidth,
-          ),
+          BoxConstraints(maxWidth: maxRowWidth),
           parentUsesSize: true,
         );
         final Size childSize = child.size;
@@ -129,8 +130,9 @@ class _RenderSmartWrapWithFlexibleLast extends RenderBox
         parentData.offset = Offset(childX, currentRowY);
 
         currentRowX = childX + childSize.width;
-        currentRowHeight =
-        currentRowHeight > childSize.height ? currentRowHeight : childSize.height;
+        currentRowHeight = currentRowHeight > childSize.height
+            ? currentRowHeight
+            : childSize.height;
       } else {
         // Special logic for the last child in the *whole* widget.
         double childX = currentRowX;
@@ -161,17 +163,16 @@ class _RenderSmartWrapWithFlexibleLast extends RenderBox
         }
 
         child.layout(
-          BoxConstraints(
-            maxWidth: availableWidthForLastChild,
-          ),
+          BoxConstraints(maxWidth: availableWidthForLastChild),
           parentUsesSize: true,
         );
         final Size childSize = child.size;
 
         parentData.offset = Offset(childX, currentRowY);
         currentRowX = childX + childSize.width;
-        currentRowHeight =
-        currentRowHeight > childSize.height ? currentRowHeight : childSize.height;
+        currentRowHeight = currentRowHeight > childSize.height
+            ? currentRowHeight
+            : childSize.height;
       }
 
       child = childAfter(child);
@@ -196,8 +197,9 @@ class _RenderSmartWrapWithFlexibleLast extends RenderBox
       final bool isLastChildInList = childAfter(child) == null;
 
       if (!isLastChildInList) {
-        final Size childSize =
-        child.getDryLayout(BoxConstraints(maxWidth: maxRowWidth));
+        final Size childSize = child.getDryLayout(
+          BoxConstraints(maxWidth: maxRowWidth),
+        );
 
         final double proposedRowEndX = currentRowX == 0.0
             ? childSize.width
@@ -211,8 +213,9 @@ class _RenderSmartWrapWithFlexibleLast extends RenderBox
 
         final double childX = currentRowX == 0.0 ? 0.0 : currentRowX + spacing;
         currentRowX = childX + childSize.width;
-        currentRowHeight =
-        currentRowHeight > childSize.height ? currentRowHeight : childSize.height;
+        currentRowHeight = currentRowHeight > childSize.height
+            ? currentRowHeight
+            : childSize.height;
       } else {
         double childX = currentRowX;
         double availableWidthForLastChild;
@@ -241,8 +244,9 @@ class _RenderSmartWrapWithFlexibleLast extends RenderBox
           BoxConstraints(maxWidth: availableWidthForLastChild),
         );
         currentRowX = childX + childSize.width;
-        currentRowHeight =
-        currentRowHeight > childSize.height ? currentRowHeight : childSize.height;
+        currentRowHeight = currentRowHeight > childSize.height
+            ? currentRowHeight
+            : childSize.height;
       }
 
       child = childAfter(child);
@@ -254,10 +258,7 @@ class _RenderSmartWrapWithFlexibleLast extends RenderBox
   }
 
   @override
-  bool hitTestChildren(
-      BoxHitTestResult result, {
-        required Offset position,
-      }) {
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) {
     return defaultHitTestChildren(result, position: position);
   }
 

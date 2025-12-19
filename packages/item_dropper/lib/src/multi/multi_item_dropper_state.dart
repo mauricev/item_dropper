@@ -26,35 +26,39 @@ extension _MultiItemDropperStateHelpers<T> on _MultiItemDropperState<T> {
     _filterUtils.initializeItems(widget.items);
   }
 
-
   // TextField padding calculation
   ({double top, double bottom}) _calculateTextFieldPadding({
     required double chipHeight,
     required double fontSize,
   }) {
-    final double textLineHeight = fontSize * MultiSelectConstants.kTextLineHeightMultiplier;
+    final double textLineHeight =
+        fontSize * MultiSelectConstants.kTextLineHeightMultiplier;
 
     if (_chipTextTop != null) {
       // Use measured chip text center position to align TextField text
       // chipTextTop is already the text center (rowTop + rowHeight/2)
       final double chipTextCenter = _chipTextTop!;
       // Adjust for TextField's text rendering - needs offset upward
-      final double top = chipTextCenter - (textLineHeight / 2.0) -
+      final double top =
+          chipTextCenter -
+          (textLineHeight / 2.0) -
           MultiSelectConstants.kTextFieldPaddingOffset;
       final double bottom = chipHeight - textLineHeight - top;
       return (top: top, bottom: bottom);
     } else {
       // Fallback: calculate same as chip structure
       // Chip text center = chipVerticalPadding + rowHeight/2
-      final double rowContentHeight = textLineHeight >
-          MultiSelectConstants.kIconHeight
+      final double rowContentHeight =
+          textLineHeight > MultiSelectConstants.kIconHeight
           ? textLineHeight
           : MultiSelectConstants.kIconHeight;
-      final double chipTextCenter = MultiSelectConstants.kChipVerticalPadding +
-          (rowContentHeight / 2.0);
+      final double chipTextCenter =
+          MultiSelectConstants.kChipVerticalPadding + (rowContentHeight / 2.0);
 
       // Same adjustment as measured case
-      final double top = chipTextCenter - (textLineHeight / 2.0) -
+      final double top =
+          chipTextCenter -
+          (textLineHeight / 2.0) -
           MultiSelectConstants.kTextFieldPaddingOffset;
       final double bottom = chipHeight - textLineHeight - top;
       return (top: top, bottom: bottom);
@@ -126,7 +130,9 @@ extension _MultiItemDropperStateHelpers<T> on _MultiItemDropperState<T> {
           color: isFocused ? Colors.blue : Colors.grey.shade400,
           width: MultiSelectConstants.kContainerBorderWidth,
         ),
-        borderRadius: BorderRadius.circular(MultiSelectConstants.kContainerBorderRadius),
+        borderRadius: BorderRadius.circular(
+          MultiSelectConstants.kContainerBorderRadius,
+        ),
       );
     }
 
@@ -135,7 +141,8 @@ extension _MultiItemDropperStateHelpers<T> on _MultiItemDropperState<T> {
 
   void _updateSelection(void Function() selectionUpdate) {
     // Preserve keyboard highlight state - only reset if keyboard navigation was active
-    final bool wasKeyboardActive = _keyboardNavManager.keyboardHighlightIndex !=
+    final bool wasKeyboardActive =
+        _keyboardNavManager.keyboardHighlightIndex !=
         ItemDropperConstants.kNoHighlight;
     final int previousHoverIndex = _keyboardNavManager.hoverIndex;
 
@@ -144,13 +151,15 @@ extension _MultiItemDropperStateHelpers<T> on _MultiItemDropperState<T> {
       stateUpdate: () {
         // Update selection inside the rebuild callback
         selectionUpdate();
-        
+
         // Update focus manager with new selection
         _focusManager.updateSelectedItems(_selectionManager.selected);
-        
+
         // Clean up FocusNodes for chips that no longer exist
         final currentIndices = _selectionManager.selected.asMap().keys.toSet();
-        final nodesToRemove = _chipFocusNodes.keys.where((i) => !currentIndices.contains(i)).toList();
+        final nodesToRemove = _chipFocusNodes.keys
+            .where((i) => !currentIndices.contains(i))
+            .toList();
         for (final index in nodesToRemove) {
           _chipFocusNodes[index]?.dispose();
           _chipFocusNodes.remove(index);
@@ -187,14 +196,13 @@ extension _MultiItemDropperStateHelpers<T> on _MultiItemDropperState<T> {
       postRebuildCallback: () {
         // Restore focus if needed after selection update
         _focusManager.restoreFocusIfNeeded();
-        
+
         // Measure Container height after selection change
         // This detects when chips wrap to a new row and triggers overlay repositioning
         _measureContainerHeight();
       },
     );
   }
-
 
   // Central rebuild mechanism - prevents cascading rebuilds
   // Only allows one rebuild at a time - ignores further requests until rebuild completes
@@ -259,19 +267,20 @@ extension _MultiItemDropperStateHelpers<T> on _MultiItemDropperState<T> {
   }) {
     if (_isMeasuring) return;
     _isMeasuring = true;
-    
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _isMeasuring = false;
-      
+
       final RenderBox? chipBox = context.findRenderObject() as RenderBox?;
-      final RenderBox? rowBox = rowKey.currentContext?.findRenderObject() as RenderBox?;
-      
+      final RenderBox? rowBox =
+          rowKey.currentContext?.findRenderObject() as RenderBox?;
+
       if (chipBox != null && rowBox != null) {
         final double newChipHeight = chipBox.size.height;
         final double rowHeight = rowBox.size.height;
         final double rowTop = chipVerticalPadding;
         final double textCenter = rowTop + (rowHeight / 2.0);
-        
+
         // Chip measurements only need to be done once - they don't change
         if (_chipHeight == null) {
           _chipHeight = newChipHeight;
@@ -289,14 +298,15 @@ extension _MultiItemDropperStateHelpers<T> on _MultiItemDropperState<T> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      
-      final RenderBox? containerBox = fieldContext.findRenderObject() as RenderBox?;
+
+      final RenderBox? containerBox =
+          fieldContext.findRenderObject() as RenderBox?;
       if (containerBox == null) return;
 
       final double newContainerHeight = containerBox.size.height;
-      
+
       // If height changed and overlay is showing, trigger rebuild to reposition overlay
-      if (_lastContainerHeight != null && 
+      if (_lastContainerHeight != null &&
           _lastContainerHeight != newContainerHeight &&
           _overlayController.isShowing) {
         _lastContainerHeight = newContainerHeight;
@@ -315,4 +325,3 @@ extension _MultiItemDropperStateHelpers<T> on _MultiItemDropperState<T> {
     return ItemDropperItemsUtils.areItemsEqual(a, b);
   }
 }
-

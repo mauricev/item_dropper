@@ -14,9 +14,11 @@ class ItemDropperSuffixIcons extends StatelessWidget {
   final double clearButtonRightPosition;
   final double arrowButtonRightPosition;
   final double textSize;
+
   /// Whether to show the dropdown position icon (arrow up/down).
   /// Defaults to true.
   final bool showDropdownPositionIcon;
+
   /// Whether to show the delete all icon (clear/X button).
   /// Defaults to true.
   final bool showDeleteAllIcon;
@@ -40,7 +42,7 @@ class ItemDropperSuffixIcons extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final List<Widget> children = [];
-    
+
     // Add clear icon if enabled
     if (showDeleteAllIcon) {
       children.add(
@@ -63,7 +65,7 @@ class ItemDropperSuffixIcons extends StatelessWidget {
         ),
       );
     }
-    
+
     // Add arrow icon if enabled
     if (showDropdownPositionIcon) {
       children.add(
@@ -71,9 +73,7 @@ class ItemDropperSuffixIcons extends StatelessWidget {
           right: arrowButtonRightPosition,
           child: IconButton(
             icon: Icon(
-              isDropdownShowing
-                  ? Icons.arrow_drop_up
-                  : Icons.arrow_drop_down,
+              isDropdownShowing ? Icons.arrow_drop_up : Icons.arrow_drop_down,
               size: iconSize,
               color: enabled ? Colors.black : Colors.grey,
             ),
@@ -88,12 +88,12 @@ class ItemDropperSuffixIcons extends StatelessWidget {
         ),
       );
     }
-    
+
     // If no icons are shown, return empty widget
     if (children.isEmpty) {
       return const SizedBox.shrink();
     }
-    
+
     return SizedBox(
       width: suffixIconWidth,
       height: textSize * ItemDropperConstants.kSuffixIconHeightMultiplier,

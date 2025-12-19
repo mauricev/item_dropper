@@ -8,7 +8,8 @@ import 'package:item_dropper/src/multi/multi_select_constants.dart';
 import 'package:item_dropper/src/multi/multi_select_focus_manager.dart';
 import 'package:item_dropper/src/multi/multi_select_layout_calculator.dart';
 import 'package:item_dropper/src/multi/multi_select_selection_manager.dart';
-import 'package:item_dropper/src/multi/smartwrap.dart' show SmartWrapWithFlexibleLast;
+import 'package:item_dropper/src/multi/smartwrap.dart'
+    show SmartWrapWithFlexibleLast;
 import 'package:item_dropper/src/utils/item_dropper_add_item_utils.dart';
 import 'package:item_dropper/src/utils/item_dropper_selection_handler.dart';
 import 'package:item_dropper/src/utils/dropdown_position_calculator.dart';
@@ -33,7 +34,8 @@ class MultiItemDropper<T> extends StatefulWidget {
   final void Function(List<ItemDropperItem<T>>) onChanged;
 
   /// Optional custom builder for popup items.
-  final Widget Function(BuildContext, ItemDropperItem<T>, bool)? popupItemBuilder;
+  final Widget Function(BuildContext, ItemDropperItem<T>, bool)?
+  popupItemBuilder;
 
   /// The width of the dropdown field (required).
   final double width;
@@ -122,15 +124,16 @@ class MultiItemDropper<T> extends StatefulWidget {
     this.showDropdownPositionIcon = true,
     this.showDeleteAllIcon = true,
     this.localizations,
-  }) : assert(maxSelected == null ||
-      maxSelected >= 2, 'maxSelected must be null or >= 2');
+  }) : assert(
+         maxSelected == null || maxSelected >= 2,
+         'maxSelected must be null or >= 2',
+       );
 
   @override
   State<MultiItemDropper<T>> createState() => _MultiItemDropperState<T>();
 }
 
 class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
-
   final GlobalKey _fieldKey = GlobalKey();
   late final TextEditingController _searchController;
   late final ScrollController _scrollController;
@@ -142,37 +145,36 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   // Selection manager handles selected items state
   late final MultiSelectSelectionManager<T> _selectionManager;
 
-
   // Keyboard navigation manager
   late final KeyboardNavigationManager<T> _keyboardNavManager;
-  
+
   // Memoized filtered items - invalidated when search text or selected items change
   List<ItemDropperItem<T>>? _cachedFilteredItems;
   String _lastFilteredSearchText = '';
   int _lastFilteredSelectedCount = -1;
-  
-  
+
   // Chip measurement state
   double? _chipHeight;
   double? _chipTextTop;
-  double? _lastContainerHeight; // Track Container height for overlay repositioning
-  
+  double?
+  _lastContainerHeight; // Track Container height for overlay repositioning
+
   final GlobalKey _chipRowKey = GlobalKey();
   final GlobalKey _textFieldKey = GlobalKey();
   final GlobalKey _wrapKey = GlobalKey();
-  
+
   bool _isMeasuring = false;
-  
+
   /// Get localizations with defaults
   ItemDropperLocalizations get _localizations =>
       widget.localizations ?? ItemDropperLocalizations.english;
-  
+
   // State flag for rebuild scheduling
   bool _rebuildScheduled = false;
 
   // Unified focus manager handles both TextField and chip focus
   late final MultiSelectFocusManager<T> _focusManager;
-  
+
   // Cached decoration state (simplified from DecorationCacheManager)
   BoxDecoration? _cachedDecoration;
   bool? _cachedFocusState;
@@ -182,7 +184,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
 
   // Live region for screen reader announcements
   late final LiveRegionManager _liveRegionManager;
-  
+
   // Map to store FocusNodes for each chip (keyed by chip index)
   final Map<int, FocusNode> _chipFocusNodes = {};
 
@@ -215,7 +217,6 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     );
     _selectionManager.syncItems(widget.selectedItems ?? []);
 
-
     // Initialize keyboard navigation manager
     _keyboardNavManager = KeyboardNavigationManager<T>(
       onRequestRebuild: () => _safeSetState(() {}),
@@ -231,7 +232,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     _liveRegionManager = LiveRegionManager(
       onUpdate: () => _safeSetState(() {}),
     );
-    
+
     // Update focus manager with initial selected items
     _focusManager.updateSelectedItems(_selectionManager.selected);
 
@@ -242,7 +243,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
         return KeyEventResult.ignored;
       }
-      
+
       // If a chip is focused, let focus manager handle arrow/delete keys
       if (!_focusManager.isTextFieldFocused) {
         final chipResult = _focusManager.handleKeyEvent(event);
@@ -250,19 +251,20 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
           return chipResult;
         }
       }
-      
+
       // Handle left/right arrow keys: navigate between TextField and chips
       // This should work even when dropdown is open (when cursor is at boundary)
       if (_focusManager.isTextFieldFocused &&
           _selectionManager.selectedCount > 0) {
         final cursorPosition = _searchController.selection.baseOffset;
-        
+
         // Left arrow at cursor position 0: move to last chip
-        if (event.logicalKey == LogicalKeyboardKey.arrowLeft && cursorPosition == 0) {
+        if (event.logicalKey == LogicalKeyboardKey.arrowLeft &&
+            cursorPosition == 0) {
           _focusManager.focusChip(_selectionManager.selectedCount - 1);
           return KeyEventResult.handled;
         }
-        
+
         // Right arrow at end of text: move to first chip
         if (event.logicalKey == LogicalKeyboardKey.arrowRight &&
             cursorPosition == _searchController.text.length) {
@@ -270,21 +272,22 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
           return KeyEventResult.handled;
         }
       }
-      
+
       // Check if Space/Enter should open dropdown (only if text is empty or cursor at start)
-      final shouldOpenOnSpaceEnter = !_overlayController.isShowing &&
+      final shouldOpenOnSpaceEnter =
+          !_overlayController.isShowing &&
           (event.logicalKey == LogicalKeyboardKey.space ||
-           event.logicalKey == LogicalKeyboardKey.enter) &&
+              event.logicalKey == LogicalKeyboardKey.enter) &&
           (_searchController.text.isEmpty ||
-           _searchController.selection.baseOffset == 0);
-      
+              _searchController.selection.baseOffset == 0);
+
       // If Space/Enter and shouldn't open dropdown, let TextField handle it normally
       if ((event.logicalKey == LogicalKeyboardKey.space ||
-           event.logicalKey == LogicalKeyboardKey.enter) &&
+              event.logicalKey == LogicalKeyboardKey.enter) &&
           !shouldOpenOnSpaceEnter) {
         return KeyEventResult.ignored;
       }
-      
+
       return _keyboardNavManager.handleKeyEvent(
         event: event,
         filteredItems: _filtered,
@@ -323,12 +326,12 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       hasOnAddItemCallback: () => widget.onAddItem != null,
       localizations: _localizations,
     );
-    
+
     // Cache the result
     _cachedFilteredItems = filteredWithAdd;
     _lastFilteredSearchText = currentSearchText;
     _lastFilteredSelectedCount = currentSelectedCount;
-    
+
     return filteredWithAdd;
   }
 
@@ -344,7 +347,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   @override
   void didUpdateWidget(covariant MultiItemDropper<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
-    
+
     // Update focus manager with new selection
     _focusManager.updateSelectedItems(_selectionManager.selected);
 
@@ -363,8 +366,9 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     final ourSelection = _selectionManager.selected;
     final widgetSelection = widget.selectedItems ?? [];
     final weCausedChange = _areItemsEqual(ourSelection, widgetSelection);
-    
-    if (!weCausedChange && !_areItemsEqual(widget.selectedItems, ourSelection)) {
+
+    if (!weCausedChange &&
+        !_areItemsEqual(widget.selectedItems, ourSelection)) {
       _selectionManager.syncItems(widgetSelection);
       // Don't trigger rebuild here if we're already rebuilding
       // Parent change will be reflected in the current rebuild cycle
@@ -390,7 +394,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       focusNode.dispose();
     }
     _chipFocusNodes.clear();
-    
+
     _liveRegionManager.dispose();
     _focusManager.dispose();
     _focusNode.dispose();
@@ -423,4 +427,3 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     );
   }
 }
-

@@ -31,7 +31,7 @@ extension _MultiItemDropperStateHandlers<T> on _MultiItemDropperState<T> {
         });
       },
     );
-    
+
     if (addItemResult.handled) {
       return;
     }
@@ -70,9 +70,7 @@ extension _MultiItemDropperStateHandlers<T> on _MultiItemDropperState<T> {
 
     // Announce selection to screen readers
     final loc = _localizations;
-    _liveRegionManager.announce(
-      '${item.label}${loc.itemSelectedSuffix}',
-    );
+    _liveRegionManager.announce('${item.label}${loc.itemSelectedSuffix}');
 
     // If we just reached the max, close the overlay
     if (_selectionManager.isMaxReached()) {
@@ -91,7 +89,7 @@ extension _MultiItemDropperStateHandlers<T> on _MultiItemDropperState<T> {
       // Keep focus and overlay open for continued selection
       // Ensure focus is maintained BEFORE clearing search text
       _focusManager.gainFocus();
-      
+
       // Clear search text after selection for continued searching
       // _handleTextChanged (triggered by clear()) already checks focus and shows overlay
       // gainFocus() already calls requestFocus(), so no need for post-frame callback
@@ -107,8 +105,7 @@ extension _MultiItemDropperStateHandlers<T> on _MultiItemDropperState<T> {
 
     // Show overlay again if we're below maxSelected after removal
     // This handles the case where user removes an item after reaching max
-    if (wasAtMax && _selectionManager.isBelowMax() &&
-        _focusManager.isFocused) {
+    if (wasAtMax && _selectionManager.isBelowMax() && _focusManager.isFocused) {
       final filtered = _filtered;
       if (!_overlayController.isShowing && filtered.isNotEmpty) {
         _showOverlay();
@@ -151,8 +148,10 @@ extension _MultiItemDropperStateHandlers<T> on _MultiItemDropperState<T> {
 
   /// Handle delete requests coming from overlay items (right-click / long-press).
   /// Uses a simple built-in confirmation dialog before invoking onDeleteItem.
-  void _handleRequestDeleteFromOverlay(BuildContext context,
-      ItemDropperItem<T> item) {
+  void _handleRequestDeleteFromOverlay(
+    BuildContext context,
+    ItemDropperItem<T> item,
+  ) {
     // Only allow delete for items explicitly marked as deletable.
     if (!item.isDeletable) {
       return;
@@ -162,8 +161,10 @@ extension _MultiItemDropperStateHandlers<T> on _MultiItemDropperState<T> {
     _confirmAndDeleteItem(context, item);
   }
 
-  Future<void> _confirmAndDeleteItem(BuildContext context,
-      ItemDropperItem<T> item) async {
+  Future<void> _confirmAndDeleteItem(
+    BuildContext context,
+    ItemDropperItem<T> item,
+  ) async {
     // Show a simple confirmation dialog above the existing overlay/dialogs.
     final loc = _localizations;
     final bool? confirmed = await showDialog<bool>(
@@ -291,4 +292,3 @@ extension _MultiItemDropperStateHandlers<T> on _MultiItemDropperState<T> {
     }
   }
 }
-

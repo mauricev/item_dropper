@@ -7,10 +7,10 @@ class ItemDropperItemsUtils {
   static const int kListComparisonThreshold = 10;
 
   /// Check if two item lists are equal (by value)
-  /// 
+  ///
   /// Optimized for performance: early returns and efficient Set-based comparison
   /// Time complexity: O(n) where n is the length of the lists
-  /// 
+  ///
   /// Returns true if both lists contain the same items (by value), false otherwise.
   /// Handles null lists (treats null as empty list).
   static bool areItemsEqual<T>(
@@ -46,10 +46,10 @@ class ItemDropperItemsUtils {
   }
 
   /// Check if items list has changed between old and new widget
-  /// 
+  ///
   /// Uses fast path checks (reference equality, length) before doing
   /// expensive deep comparison.
-  /// 
+  ///
   /// Returns true if items have changed, false otherwise.
   static bool hasItemsChanged<T>(
     List<ItemDropperItem<T>> oldItems,
@@ -65,4 +65,3 @@ class ItemDropperItemsUtils {
     return !areItemsEqual(newItems, oldItems);
   }
 }
-

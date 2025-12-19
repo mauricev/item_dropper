@@ -2,11 +2,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 /// Manages live region announcements for screen readers.
-/// 
+///
 /// Live regions allow screen readers to announce messages without requiring
 /// user navigation. This is useful for providing confirmation feedback when
 /// actions complete (e.g., "Apple selected", "Maximum 5 items reached").
-/// 
+///
 /// Messages are automatically cleared after 1 second to prevent stale
 /// announcements from being read later.
 class LiveRegionManager {
@@ -17,16 +17,16 @@ class LiveRegionManager {
   final VoidCallback onUpdate;
 
   /// Creates a [LiveRegionManager].
-  /// 
+  ///
   /// [onUpdate] is called when a message is announced or cleared, allowing
   /// the parent widget to rebuild and show/hide the live region.
   LiveRegionManager({required this.onUpdate});
 
   /// Announces a message to screen readers.
-  /// 
+  ///
   /// The message will be read immediately by VoiceOver/TalkBack and
   /// automatically cleared after 1 second.
-  /// 
+  ///
   /// Example:
   /// ```dart
   /// liveRegionManager.announce('Apple selected');
@@ -44,10 +44,10 @@ class LiveRegionManager {
   }
 
   /// Builds the live region widget.
-  /// 
+  ///
   /// Returns a [Semantics] widget with `liveRegion: true` when there's a
   /// message to announce, or an empty widget when there's no message.
-  /// 
+  ///
   /// The text is styled with fontSize: 0 and height: 0 to make it invisible
   /// while still being announced by screen readers.
   Widget build() {
@@ -57,15 +57,12 @@ class LiveRegionManager {
 
     return Semantics(
       liveRegion: true,
-      child: Text(
-        _message!,
-        style: const TextStyle(fontSize: 0, height: 0),
-      ),
+      child: Text(_message!, style: const TextStyle(fontSize: 0, height: 0)),
     );
   }
 
   /// Disposes the manager and cancels any pending timers.
-  /// 
+  ///
   /// Should be called in the parent widget's dispose method.
   void dispose() {
     _clearTimer?.cancel();

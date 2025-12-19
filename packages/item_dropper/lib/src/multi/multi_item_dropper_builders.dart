@@ -4,17 +4,19 @@ part of '../../item_dropper_multi_select.dart';
 extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
   Widget _buildInputField() {
     // Calculate first row height for icon alignment
-    final double chipHeight = _chipHeight ??
+    final double chipHeight =
+        _chipHeight ??
         MultiSelectLayoutCalculator.calculateTextFieldHeight(
           fontSize: widget.fieldTextStyle?.fontSize,
           chipVerticalPadding: MultiSelectConstants.kChipVerticalPadding,
         );
     final double firstRowHeight = chipHeight;
-    final double fontSize = widget.fieldTextStyle?.fontSize ??
+    final double fontSize =
+        widget.fieldTextStyle?.fontSize ??
         ItemDropperConstants.kDropdownItemFontSize;
-    final double iconContainerHeight = fontSize *
-        ItemDropperConstants.kSuffixIconHeightMultiplier;
-    
+    final double iconContainerHeight =
+        fontSize * ItemDropperConstants.kSuffixIconHeightMultiplier;
+
     return GestureDetector(
       onTap: () {
         // When container is tapped (but not on chips or icons), focus the TextField
@@ -36,80 +38,91 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
           customDecoration: widget.fieldDecoration,
         ),
         child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            // Fill available space instead of min
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Integrated chips and text field area
-              Padding(
-                padding: EdgeInsets.fromLTRB(
-                  MultiSelectConstants.kContainerPaddingLeft,
-                  MultiSelectConstants.kContainerPaddingTop,
-                  // Add extra right padding to reserve space for suffix icons (if any are shown)
-                  MultiSelectConstants.kContainerPaddingRight +
-                      ((widget.showDropdownPositionIcon || widget.showDeleteAllIcon)
-                          ? SingleSelectConstants.kSuffixIconWidth
-                          : 0.0),
-                  MultiSelectConstants.kContainerPaddingBottom,
+          clipBehavior: Clip.none,
+          children: [
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              // Fill available space instead of min
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Integrated chips and text field area
+                Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    MultiSelectConstants.kContainerPaddingLeft,
+                    MultiSelectConstants.kContainerPaddingTop,
+                    // Add extra right padding to reserve space for suffix icons (if any are shown)
+                    MultiSelectConstants.kContainerPaddingRight +
+                        ((widget.showDropdownPositionIcon ||
+                                widget.showDeleteAllIcon)
+                            ? SingleSelectConstants.kSuffixIconWidth
+                            : 0.0),
+                    MultiSelectConstants.kContainerPaddingBottom,
+                  ),
+                  child: SmartWrapWithFlexibleLast(
+                    key: _wrapKey,
+                    spacing: MultiSelectConstants.kChipSpacing,
+                    runSpacing: MultiSelectConstants.kChipSpacing,
+                    children: [
+                      // Selected chips
+                      ..._selectionManager.selected.asMap().entries.map((
+                        entry,
+                      ) {
+                        final index = entry.key;
+                        final item = entry.value;
+                        return Container(
+                          key: ValueKey('chip_${item.value}'),
+                          // Unique key for each chip
+                          child: _buildChip(item, null, null, index),
+                        );
+                      }),
+                      _buildTextFieldChip(double.infinity),
+                    ],
+                  ),
                 ),
-                child: SmartWrapWithFlexibleLast(
-                  key: _wrapKey,
-                  spacing: MultiSelectConstants.kChipSpacing,
-                  runSpacing: MultiSelectConstants.kChipSpacing,
-                  children: [
-                    // Selected chips
-                    ..._selectionManager.selected.asMap().entries.map((entry) {
-                      final index = entry.key;
-                      final item = entry.value;
-                      return Container(
-                        key: ValueKey('chip_${item.value}'),
-                        // Unique key for each chip
-                        child: _buildChip(item, null, null, index),
-                      );
-                    }),
-                    _buildTextFieldChip(double.infinity),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          // Container-level suffix icons aligned with first row (only if at least one icon is enabled)
-          if (widget.showDropdownPositionIcon || widget.showDeleteAllIcon)
-            Positioned(
-              top: MultiSelectConstants.kContainerPaddingTop +
-                  (firstRowHeight - iconContainerHeight) / 2,
-              right: MultiSelectConstants.kContainerPaddingRight,
-              child: ItemDropperSuffixIcons(
-                isDropdownShowing: _overlayController.isShowing,
-                enabled: widget.enabled,
-                onClearPressed: _handleClearPressed,
-                onArrowPressed: _handleArrowPressed,
-                iconSize: SingleSelectConstants.kIconSize,
-                suffixIconWidth: SingleSelectConstants.kSuffixIconWidth,
-                iconButtonSize: SingleSelectConstants.kIconButtonSize,
-                clearButtonRightPosition: SingleSelectConstants.kClearButtonRightPosition,
-                arrowButtonRightPosition: SingleSelectConstants.kArrowButtonRightPosition,
-                textSize: fontSize,
-                showDropdownPositionIcon: widget.showDropdownPositionIcon,
-                showDeleteAllIcon: widget.showDeleteAllIcon,
-              ),
+              ],
             ),
-        ],
-      ),
+            // Container-level suffix icons aligned with first row (only if at least one icon is enabled)
+            if (widget.showDropdownPositionIcon || widget.showDeleteAllIcon)
+              Positioned(
+                top:
+                    MultiSelectConstants.kContainerPaddingTop +
+                    (firstRowHeight - iconContainerHeight) / 2,
+                right: MultiSelectConstants.kContainerPaddingRight,
+                child: ItemDropperSuffixIcons(
+                  isDropdownShowing: _overlayController.isShowing,
+                  enabled: widget.enabled,
+                  onClearPressed: _handleClearPressed,
+                  onArrowPressed: _handleArrowPressed,
+                  iconSize: SingleSelectConstants.kIconSize,
+                  suffixIconWidth: SingleSelectConstants.kSuffixIconWidth,
+                  iconButtonSize: SingleSelectConstants.kIconButtonSize,
+                  clearButtonRightPosition:
+                      SingleSelectConstants.kClearButtonRightPosition,
+                  arrowButtonRightPosition:
+                      SingleSelectConstants.kArrowButtonRightPosition,
+                  textSize: fontSize,
+                  showDropdownPositionIcon: widget.showDropdownPositionIcon,
+                  showDeleteAllIcon: widget.showDeleteAllIcon,
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildChip(ItemDropperItem<T> item,
-      [GlobalKey? chipKey, Key? valueKey, int? chipIndex]) {
+  Widget _buildChip(
+    ItemDropperItem<T> item, [
+    GlobalKey? chipKey,
+    Key? valueKey,
+    int? chipIndex,
+  ]) {
     final index = chipIndex ?? _selectionManager.selected.indexOf(item);
     final isFocused = _focusManager.isChipFocused(index);
-    
+
     // Only measure the first chip (index 0) to avoid GlobalKey conflicts
-    final bool isFirstChip = _selectionManager.selected.isNotEmpty &&
+    final bool isFirstChip =
+        _selectionManager.selected.isNotEmpty &&
         _selectionManager.selected.first.value == item.value;
     final GlobalKey? rowKey = isFirstChip ? _chipRowKey : null;
 
@@ -128,7 +141,8 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
               _measureChip(
                 context: context,
                 rowKey: rowKey,
-                textSize: widget.fieldTextStyle?.fontSize ??
+                textSize:
+                    widget.fieldTextStyle?.fontSize ??
                     ItemDropperConstants.kDropdownItemFontSize,
                 chipVerticalPadding: MultiSelectConstants.kChipVerticalPadding,
               );
@@ -139,37 +153,33 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
         // Determine chip decoration.
         // - If a custom BoxDecoration is provided, use it as-is.
         // - Otherwise, fall back to the default blue vertical gradient.
-        final BoxDecoration effectiveDecoration = widget
-            .selectedChipDecoration ??
+        final BoxDecoration effectiveDecoration =
+            widget.selectedChipDecoration ??
             BoxDecoration(
               gradient: LinearGradient(
-                colors: [
-                  Colors.blue.shade100,
-                  Colors.blue.shade200,
-                ],
+                colors: [Colors.blue.shade100, Colors.blue.shade200],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
               ),
-              borderRadius:
-              BorderRadius.circular(MultiSelectConstants.kChipBorderRadius),
+              borderRadius: BorderRadius.circular(
+                MultiSelectConstants.kChipBorderRadius,
+              ),
             );
 
         // Add focus border if focused
         final BoxDecoration focusedDecoration = isFocused
             ? effectiveDecoration.copyWith(
-                border: Border.all(
-                  color: Colors.blue.shade600,
-                  width: 2.0,
-                ),
+                border: Border.all(color: Colors.blue.shade600, width: 2.0),
               )
             : effectiveDecoration;
-        
+
         // Get or create FocusNode for this chip
         final chipFocusNode = _chipFocusNodes.putIfAbsent(
           index,
-          () => FocusNode(skipTraversal: false, canRequestFocus: widget.enabled),
+          () =>
+              FocusNode(skipTraversal: false, canRequestFocus: widget.enabled),
         );
-        
+
         // Request focus when this chip becomes focused
         if (isFocused) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -179,7 +189,7 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
             }
           });
         }
-        
+
         return Semantics(
           label: '${item.label}${_localizations.selectedSuffix}',
           button: true,
@@ -212,7 +222,8 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
                   vertical: MultiSelectConstants.kChipVerticalPadding,
                 ),
                 margin: const EdgeInsets.only(
-                  right: MultiSelectConstants.kChipMarginRight,),
+                  right: MultiSelectConstants.kChipMarginRight,
+                ),
                 child: Row(
                   key: rowKey, // Only first chip gets the key
                   mainAxisSize: MainAxisSize.min,
@@ -220,13 +231,18 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
                   children: [
                     Text(
                       item.label,
-                      style: (widget.fieldTextStyle ?? const TextStyle(
-                          fontSize: ItemDropperConstants.kDropdownItemFontSize))
-                          .copyWith(
-                        color: widget.enabled
-                            ? (widget.fieldTextStyle?.color ?? Colors.black)
-                            : Colors.grey.shade500,
-                      ),
+                      style:
+                          (widget.fieldTextStyle ??
+                                  const TextStyle(
+                                    fontSize: ItemDropperConstants
+                                        .kDropdownItemFontSize,
+                                  ))
+                              .copyWith(
+                                color: widget.enabled
+                                    ? (widget.fieldTextStyle?.color ??
+                                          Colors.black)
+                                    : Colors.grey.shade500,
+                              ),
                     ),
                     if (widget.enabled)
                       Container(
@@ -237,9 +253,11 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
                           onTap: () {
                             _removeChip(item);
                           },
-                          child: Icon(Icons.close,
-                              size: MultiSelectConstants.kChipDeleteIconSize,
-                              color: Colors.grey.shade700),
+                          child: Icon(
+                            Icons.close,
+                            size: MultiSelectConstants.kChipDeleteIconSize,
+                            color: Colors.grey.shade700,
+                          ),
                         ),
                       ),
                   ],
@@ -254,12 +272,14 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
 
   Widget _buildTextFieldChip(double width) {
     // Use measured chip dimensions if available, otherwise fall back to calculation
-    final double chipHeight = _chipHeight ??
+    final double chipHeight =
+        _chipHeight ??
         MultiSelectLayoutCalculator.calculateTextFieldHeight(
           fontSize: widget.fieldTextStyle?.fontSize,
           chipVerticalPadding: MultiSelectConstants.kChipVerticalPadding,
         );
-    final double fontSize = widget.fieldTextStyle?.fontSize ??
+    final double fontSize =
+        widget.fieldTextStyle?.fontSize ??
         ItemDropperConstants.kDropdownItemFontSize;
     final padding = _calculateTextFieldPadding(
       chipHeight: chipHeight,
@@ -281,34 +301,38 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
           child: TextField(
             controller: _searchController,
             focusNode: _focusNode,
-          style: widget.fieldTextStyle ??
-              const TextStyle(fontSize: ItemDropperConstants
-                  .kDropdownItemFontSize),
-          decoration: InputDecoration(
-            contentPadding: EdgeInsets.only(
-              right: ((widget.showDropdownPositionIcon || widget.showDeleteAllIcon)
-                      ? SingleSelectConstants.kSuffixIconWidth
-                      : 0.0) +
-                  MultiSelectConstants.kContainerPaddingRight,
-              top: textFieldPaddingTop,
-              bottom: textFieldPaddingBottom,
+            style:
+                widget.fieldTextStyle ??
+                const TextStyle(
+                  fontSize: ItemDropperConstants.kDropdownItemFontSize,
+                ),
+            decoration: InputDecoration(
+              contentPadding: EdgeInsets.only(
+                right:
+                    ((widget.showDropdownPositionIcon ||
+                            widget.showDeleteAllIcon)
+                        ? SingleSelectConstants.kSuffixIconWidth
+                        : 0.0) +
+                    MultiSelectConstants.kContainerPaddingRight,
+                top: textFieldPaddingTop,
+                bottom: textFieldPaddingBottom,
+              ),
+              border: InputBorder.none,
+              hintText: widget.hintText,
             ),
-            border: InputBorder.none,
-            hintText: widget.hintText,
-          ),
-          onChanged: (value) => _handleTextChanged(value),
-          onSubmitted: (value) => _handleEnter(),
-          enabled: widget.enabled,
-          // Ensure TextField can receive focus
-          autofocus: false,
-          onTap: () {
-            // When TextField is tapped, focus it and clear chip focus
-            _focusManager.focusTextField();
-            _focusManager.gainFocus();
-            // Show overlay immediately
-            _showOverlay();
-          },
-        ), // Close TextField
+            onChanged: (value) => _handleTextChanged(value),
+            onSubmitted: (value) => _handleEnter(),
+            enabled: widget.enabled,
+            // Ensure TextField can receive focus
+            autofocus: false,
+            onTap: () {
+              // When TextField is tapped, focus it and clear chip focus
+              _focusManager.focusTextField();
+              _focusManager.gainFocus();
+              // Show overlay immediately
+              _showOverlay();
+            },
+          ), // Close TextField
         ), // Close Semantics
       ), // Close IgnorePointer
     );
@@ -322,8 +346,8 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
 
     // Use the context from build() method for proper positioning
     // Fall back to key-based context if needed, but prefer the passed context
-    final BuildContext inputContext = (widget.inputKey ?? _fieldKey)
-        .currentContext ?? context;
+    final BuildContext inputContext =
+        (widget.inputKey ?? _fieldKey).currentContext ?? context;
 
     final double effectiveItemHeight = _calculateEffectiveItemHeight();
 
@@ -331,7 +355,7 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
     if (_selectionManager.isMaxReached()) {
       return _buildMaxReachedOverlay(inputContext);
     }
-    
+
     // Show empty state if user is searching but no results found
     if (filteredItems.isEmpty) {
       if (_searchController.text.isNotEmpty) {
@@ -341,7 +365,11 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
       // No search text and no filtered items - check if we have items to show
       // If widget.items has items (excluding selected), show them
       final availableItems = widget.items
-          .where((item) => item.isGroupHeader || !_selectionManager.selectedValues.contains(item.value))
+          .where(
+            (item) =>
+                item.isGroupHeader ||
+                !_selectionManager.selectedValues.contains(item.value),
+          )
           .toList();
       if (availableItems.isEmpty) {
         // No items available - hide overlay
@@ -370,16 +398,18 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
     if (widget.itemHeight != null) {
       return widget.itemHeight!;
     }
-    
+
     // Otherwise, calculate from popupTextStyle
-    final TextStyle resolvedStyle = widget.popupTextStyle ??
+    final TextStyle resolvedStyle =
+        widget.popupTextStyle ??
         const TextStyle(fontSize: ItemDropperConstants.kDropdownItemFontSize);
-    final double fontSize = resolvedStyle.fontSize ??
-        ItemDropperConstants.kDropdownItemFontSize;
-    final double lineHeight = fontSize * (resolvedStyle.height ??
-        MultiSelectConstants.kTextLineHeightMultiplier);
-    return lineHeight +
-        (ItemDropperConstants.kDropdownItemVerticalPadding * 2);
+    final double fontSize =
+        resolvedStyle.fontSize ?? ItemDropperConstants.kDropdownItemFontSize;
+    final double lineHeight =
+        fontSize *
+        (resolvedStyle.height ??
+            MultiSelectConstants.kTextLineHeightMultiplier);
+    return lineHeight + (ItemDropperConstants.kDropdownItemVerticalPadding * 2);
   }
 
   /// Gets the item builder function for a given item in a list
@@ -391,12 +421,12 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
     if (widget.popupItemBuilder != null) {
       return widget.popupItemBuilder!;
     }
-    
+
     // Otherwise, use default builder with style parameters
     final bool hasPrevious = itemIndex > 0;
-    final bool previousIsGroupHeader = hasPrevious &&
-        items[itemIndex - 1].isGroupHeader;
-    
+    final bool previousIsGroupHeader =
+        hasPrevious && items[itemIndex - 1].isGroupHeader;
+
     return (context, item, isSelected) {
       return ItemDropperRenderUtils.defaultDropdownPopupItemBuilder(
         context,
@@ -428,28 +458,37 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
       controller: _overlayController,
       scrollController: _scrollController,
       layerLink: _layerLink,
-      isSelected: (ItemDropperItem<T> item) => _selectionManager.isSelected(item),
-      builder: (BuildContext builderContext, ItemDropperItem<T> item, bool isSelected) {
-        final int itemIndex = items.indexWhere((x) => x.value == item.value);
-        final itemBuilder = _getItemBuilder(items, itemIndex);
-        
-        return ItemDropperRenderUtils.buildDropdownItemWithHover<T>(
-          context: builderContext,
-          item: item,
-          isSelected: isSelected,
-          filteredItems: items,
-          hoverIndex: _keyboardNavManager.hoverIndex,
-          keyboardHighlightIndex: _keyboardNavManager.keyboardHighlightIndex,
-          safeSetState: _safeSetState,
-          setHoverIndex: (index) => _keyboardNavManager.hoverIndex = index,
-          onTap: () {
-            _toggleItem(item);
+      isSelected: (ItemDropperItem<T> item) =>
+          _selectionManager.isSelected(item),
+      builder:
+          (
+            BuildContext builderContext,
+            ItemDropperItem<T> item,
+            bool isSelected,
+          ) {
+            final int itemIndex = items.indexWhere(
+              (x) => x.value == item.value,
+            );
+            final itemBuilder = _getItemBuilder(items, itemIndex);
+
+            return ItemDropperRenderUtils.buildDropdownItemWithHover<T>(
+              context: builderContext,
+              item: item,
+              isSelected: isSelected,
+              filteredItems: items,
+              hoverIndex: _keyboardNavManager.hoverIndex,
+              keyboardHighlightIndex:
+                  _keyboardNavManager.keyboardHighlightIndex,
+              safeSetState: _safeSetState,
+              setHoverIndex: (index) => _keyboardNavManager.hoverIndex = index,
+              onTap: () {
+                _toggleItem(item);
+              },
+              customBuilder: itemBuilder,
+              itemHeight: effectiveItemHeight,
+              onRequestDelete: _handleRequestDeleteFromOverlay,
+            );
           },
-          customBuilder: itemBuilder,
-          itemHeight: effectiveItemHeight,
-          onRequestDelete: _handleRequestDeleteFromOverlay,
-        );
-      },
       itemHeight: effectiveItemHeight,
       // Don't pass preferredFieldHeight - use Container's full height from inputBox
     );
@@ -467,7 +506,7 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
     // Use actual measured field width to ensure overlay matches field width exactly
     final double actualFieldWidth = inputBox.size.width;
     final double maxDropdownHeight = widget.maxDropdownHeight;
-    
+
     final position = DropdownPositionCalculator.calculate(
       context: inputContext,
       inputBox: inputBox,
@@ -490,10 +529,14 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
             ),
             child: Text(
               _localizations.maxItemsReachedOverlay,
-              style: (widget.popupTextStyle ?? widget.fieldTextStyle ?? const TextStyle(fontSize: ItemDropperConstants
-                  .kDropdownItemFontSize)).copyWith(
-                color: Colors.grey.shade600,
-              ),
+              style:
+                  (widget.popupTextStyle ??
+                          widget.fieldTextStyle ??
+                          const TextStyle(
+                            fontSize:
+                                ItemDropperConstants.kDropdownItemFontSize,
+                          ))
+                      .copyWith(color: Colors.grey.shade600),
             ),
           ),
         ),
@@ -513,7 +556,7 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
     // Use actual measured field width to ensure overlay matches field width exactly
     final double actualFieldWidth = inputBox.size.width;
     final double maxDropdownHeight = widget.maxDropdownHeight;
-    
+
     final position = DropdownPositionCalculator.calculate(
       context: inputContext,
       inputBox: inputBox,
@@ -536,10 +579,14 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
             ),
             child: Text(
               _localizations.noResultsFound,
-              style: (widget.popupTextStyle ?? widget.fieldTextStyle ?? const TextStyle(fontSize: ItemDropperConstants
-                  .kDropdownItemFontSize)).copyWith(
-                color: Colors.grey.shade600,
-              ),
+              style:
+                  (widget.popupTextStyle ??
+                          widget.fieldTextStyle ??
+                          const TextStyle(
+                            fontSize:
+                                ItemDropperConstants.kDropdownItemFontSize,
+                          ))
+                      .copyWith(color: Colors.grey.shade600),
             ),
           ),
         ),

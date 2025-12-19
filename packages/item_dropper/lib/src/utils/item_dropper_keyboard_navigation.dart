@@ -11,12 +11,12 @@ class ItemDropperKeyboardNavigation {
     required bool goingDown,
   }) {
     if (items.isEmpty) return ItemDropperConstants.kNoHighlight;
-    
+
     int nextIndex = currentIndex;
     final int itemCount = items.length;
     int attempts = 0;
     final int maxAttempts = itemCount; // Prevent infinite loop
-    
+
     // Find next selectable item
     while (attempts < maxAttempts) {
       if (goingDown) {
@@ -24,20 +24,21 @@ class ItemDropperKeyboardNavigation {
       } else {
         nextIndex = (nextIndex - 1 + itemCount) % itemCount; // Wrap around
       }
-      
+
       // If we found a selectable item, return it
       if (!items[nextIndex].isGroupHeader) {
         return nextIndex;
       }
-      
+
       attempts++;
     }
-    
+
     // If all items are group headers, return no highlight
     return ItemDropperConstants.kNoHighlight;
   }
+
   /// Handle arrow down navigation
-  /// 
+  ///
   /// [items] is required to check for group headers and skip them.
   /// If [items] is null, falls back to old behavior (for backward compatibility).
   static int handleArrowDown<T>({
@@ -82,7 +83,7 @@ class ItemDropperKeyboardNavigation {
   }
 
   /// Handle arrow up navigation
-  /// 
+  ///
   /// [items] is required to check for group headers and skip them.
   /// If [items] is null, falls back to old behavior (for backward compatibility).
   static int handleArrowUp<T>({
