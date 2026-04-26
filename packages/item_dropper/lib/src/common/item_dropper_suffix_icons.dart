@@ -46,8 +46,9 @@ class ItemDropperSuffixIcons extends StatelessWidget {
     // Add clear icon if enabled
     if (showDeleteAllIcon) {
       children.add(
-        Positioned(
-          right: clearButtonRightPosition,
+        SizedBox(
+          width: iconButtonSize,
+          height: iconButtonSize,
           child: IconButton(
             icon: Icon(
               Icons.clear,
@@ -69,8 +70,9 @@ class ItemDropperSuffixIcons extends StatelessWidget {
     // Add arrow icon if enabled
     if (showDropdownPositionIcon) {
       children.add(
-        Positioned(
-          right: arrowButtonRightPosition,
+        SizedBox(
+          width: iconButtonSize,
+          height: iconButtonSize,
           child: IconButton(
             icon: Icon(
               isDropdownShowing ? Icons.arrow_drop_up : Icons.arrow_drop_down,
@@ -97,9 +99,9 @@ class ItemDropperSuffixIcons extends StatelessWidget {
     return SizedBox(
       width: suffixIconWidth,
       height: textSize * ItemDropperConstants.kSuffixIconHeightMultiplier,
-      child: Stack(
-        alignment: Alignment.centerRight,
-        clipBehavior: Clip.none,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        mainAxisSize: MainAxisSize.min,
         children: children,
       ),
     );

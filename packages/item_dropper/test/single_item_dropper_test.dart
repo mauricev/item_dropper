@@ -37,7 +37,9 @@ void main() {
       expect(find.text('Item 3'), findsOneWidget);
     });
 
-    testWidgets('should select an item when tapped', (WidgetTester tester) async {
+    testWidgets('should select an item when tapped', (
+      WidgetTester tester,
+    ) async {
       final items = [
         ItemDropperItem<String>(value: '1', label: 'Item 1'),
         ItemDropperItem<String>(value: '2', label: 'Item 2'),
@@ -70,7 +72,9 @@ void main() {
       expect(selectedItem?.label, equals('Item 1'));
     });
 
-    testWidgets('should display selected item in text field', (WidgetTester tester) async {
+    testWidgets('should display selected item in text field', (
+      WidgetTester tester,
+    ) async {
       final items = [
         ItemDropperItem<String>(value: '1', label: 'Item 1'),
         ItemDropperItem<String>(value: '2', label: 'Item 2'),
@@ -95,7 +99,9 @@ void main() {
       expect(find.text('Item 1'), findsWidgets);
     });
 
-    testWidgets('should clear selection when clear button is tapped', (WidgetTester tester) async {
+    testWidgets('should clear selection when clear button is tapped', (
+      WidgetTester tester,
+    ) async {
       final items = [
         ItemDropperItem<String>(value: '1', label: 'Item 1'),
         ItemDropperItem<String>(value: '2', label: 'Item 2'),
@@ -126,46 +132,44 @@ void main() {
 
       // Verify initial state: TextField shows the selected item
       final textField = find.byType(TextField);
-      expect(tester.widget<TextField>(textField).controller?.text, equals('Item 1'));
-      
+      expect(
+        tester.widget<TextField>(textField).controller?.text,
+        equals('Item 1'),
+      );
+
       // Focus the field first (clear button may need focus to be enabled)
       await tester.tap(find.byType(SingleItemDropper<String>));
       await tester.pumpAndSettle();
-      
+
       // Find clear button
       final clearIcon = find.byIcon(Icons.clear);
       expect(clearIcon, findsOneWidget);
-      
+
       final iconButtonFinder = find.ancestor(
         of: clearIcon,
         matching: find.byType(IconButton),
       );
       expect(iconButtonFinder, findsOneWidget);
-      
-      await tester.ensureVisible(iconButtonFinder);
-      await tester.pumpAndSettle();
-      
-      // Verify button is enabled before invoking
-      final iconButton = tester.widget<IconButton>(iconButtonFinder);
-      if (iconButton.onPressed != null) {
-        // Call the clear handler directly to avoid hit-test flakiness in tests
-        iconButton.onPressed!();
-        await tester.pumpAndSettle();
 
-        // Verify observable UI change: TextField text is cleared
-        final controllerText = tester.widget<TextField>(textField).controller?.text ?? '';
-        expect(controllerText, isEmpty, 
-          reason: 'TextField should be empty after tapping clear button. Current text: "$controllerText"');
-      } else {
-        // If button is disabled, call onPressed directly to test the functionality
-        // This tests the clear logic even if the button state isn't correct in tests
-        fail('Clear button should be enabled when an item is selected');
-      }
+      await tester.tap(iconButtonFinder);
+      await tester.pumpAndSettle();
+
+      // Verify observable UI change: TextField text is cleared
+      final controllerText =
+          tester.widget<TextField>(textField).controller?.text ?? '';
+      expect(
+        controllerText,
+        isEmpty,
+        reason:
+            'TextField should be empty after tapping clear button. Current text: "$controllerText"',
+      );
     });
   });
 
   group('SingleItemDropper - Filtering', () {
-    testWidgets('should filter items based on search text', (WidgetTester tester) async {
+    testWidgets('should filter items based on search text', (
+      WidgetTester tester,
+    ) async {
       final items = [
         ItemDropperItem<String>(value: '1', label: 'Apple'),
         ItemDropperItem<String>(value: '2', label: 'Banana'),
@@ -199,7 +203,9 @@ void main() {
       expect(find.text('Cherry'), findsNothing);
     });
 
-    testWidgets('should show all items when search is cleared', (WidgetTester tester) async {
+    testWidgets('should show all items when search is cleared', (
+      WidgetTester tester,
+    ) async {
       final items = [
         ItemDropperItem<String>(value: '1', label: 'Apple'),
         ItemDropperItem<String>(value: '2', label: 'Banana'),
@@ -237,10 +243,10 @@ void main() {
   });
 
   group('SingleItemDropper - Enabled/Disabled', () {
-    testWidgets('should not accept focus when disabled', (WidgetTester tester) async {
-      final items = [
-        ItemDropperItem<String>(value: '1', label: 'Item 1'),
-      ];
+    testWidgets('should not accept focus when disabled', (
+      WidgetTester tester,
+    ) async {
+      final items = [ItemDropperItem<String>(value: '1', label: 'Item 1')];
 
       await tester.pumpWidget(
         MaterialApp(
@@ -266,10 +272,10 @@ void main() {
       expect(find.text('Item 1'), findsNothing);
     });
 
-    testWidgets('should display disabled styling when disabled', (WidgetTester tester) async {
-      final items = [
-        ItemDropperItem<String>(value: '1', label: 'Item 1'),
-      ];
+    testWidgets('should display disabled styling when disabled', (
+      WidgetTester tester,
+    ) async {
+      final items = [ItemDropperItem<String>(value: '1', label: 'Item 1')];
 
       await tester.pumpWidget(
         MaterialApp(
@@ -291,11 +297,20 @@ void main() {
       expect(find.byType(SingleItemDropper<String>), findsOneWidget);
     });
 
-    testWidgets('should not select a disabled item when tapped',
-        (WidgetTester tester) async {
+    testWidgets('should not select a disabled item when tapped', (
+      WidgetTester tester,
+    ) async {
       final items = [
-        ItemDropperItem<String>(value: '1', label: 'Enabled 1', isEnabled: true),
-        ItemDropperItem<String>(value: '2', label: 'Disabled 2', isEnabled: false),
+        ItemDropperItem<String>(
+          value: '1',
+          label: 'Enabled 1',
+          isEnabled: true,
+        ),
+        ItemDropperItem<String>(
+          value: '2',
+          label: 'Disabled 2',
+          isEnabled: false,
+        ),
       ];
 
       ItemDropperItem<String>? selectedItem;
@@ -328,45 +343,48 @@ void main() {
   });
 
   group('SingleItemDropper - Add Item Feature', () {
-    testWidgets('should show add item row when no matches and onAddItem provided', (WidgetTester tester) async {
-      final items = [
-        ItemDropperItem<String>(value: '1', label: 'Apple'),
-        ItemDropperItem<String>(value: '2', label: 'Banana'),
-      ];
+    testWidgets(
+      'should show add item row when no matches and onAddItem provided',
+      (WidgetTester tester) async {
+        final items = [
+          ItemDropperItem<String>(value: '1', label: 'Apple'),
+          ItemDropperItem<String>(value: '2', label: 'Banana'),
+        ];
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: SingleItemDropper<String>(
-              items: items,
-              width: 300,
-              showKeyboard: true,
-              onChanged: (_) {},
-              onAddItem: (searchText) => ItemDropperItem<String>(
-                value: searchText,
-                label: searchText,
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SingleItemDropper<String>(
+                items: items,
+                width: 300,
+                showKeyboard: true,
+                onChanged: (_) {},
+                onAddItem: (searchText) => ItemDropperItem<String>(
+                  value: searchText,
+                  label: searchText,
+                ),
               ),
             ),
           ),
-        ),
-      );
+        );
 
-      // Tap to focus
-      await tester.tap(find.byType(SingleItemDropper<String>));
-      await tester.pumpAndSettle();
+        // Tap to focus
+        await tester.tap(find.byType(SingleItemDropper<String>));
+        await tester.pumpAndSettle();
 
-      // Type non-matching text
-      await tester.enterText(find.byType(TextField), 'Orange');
-      await tester.pumpAndSettle();
+        // Type non-matching text
+        await tester.enterText(find.byType(TextField), 'Orange');
+        await tester.pumpAndSettle();
 
-      // Verify add item row appears
-      expect(find.textContaining('Add'), findsOneWidget);
-    });
+        // Verify add item row appears
+        expect(find.textContaining('Add'), findsOneWidget);
+      },
+    );
 
-    testWidgets('should call onAddItem when add row is selected', (WidgetTester tester) async {
-      final items = [
-        ItemDropperItem<String>(value: '1', label: 'Apple'),
-      ];
+    testWidgets('should call onAddItem when add row is selected', (
+      WidgetTester tester,
+    ) async {
+      final items = [ItemDropperItem<String>(value: '1', label: 'Apple')];
 
       ItemDropperItem<String>? addedItem;
 
@@ -408,10 +426,10 @@ void main() {
       expect(addedItem?.label, equals('Orange'));
     });
 
-    testWidgets('should not show add item row when onAddItem is null', (WidgetTester tester) async {
-      final items = [
-        ItemDropperItem<String>(value: '1', label: 'Apple'),
-      ];
+    testWidgets('should not show add item row when onAddItem is null', (
+      WidgetTester tester,
+    ) async {
+      final items = [ItemDropperItem<String>(value: '1', label: 'Apple')];
 
       await tester.pumpWidget(
         MaterialApp(
@@ -441,7 +459,9 @@ void main() {
   });
 
   group('SingleItemDropper - Items List Updates', () {
-    testWidgets('should update dropdown when items list changes', (WidgetTester tester) async {
+    testWidgets('should update dropdown when items list changes', (
+      WidgetTester tester,
+    ) async {
       List<ItemDropperItem<String>> items = [
         ItemDropperItem<String>(value: '1', label: 'Item 1'),
         ItemDropperItem<String>(value: '2', label: 'Item 2'),
@@ -505,7 +525,9 @@ void main() {
       expect(find.text('Item 3'), findsOneWidget);
     });
 
-    testWidgets('should update dropdown when items list is replaced', (WidgetTester tester) async {
+    testWidgets('should update dropdown when items list is replaced', (
+      WidgetTester tester,
+    ) async {
       List<ItemDropperItem<String>> items = [
         ItemDropperItem<String>(value: '1', label: 'Item 1'),
         ItemDropperItem<String>(value: '2', label: 'Item 2'),
@@ -571,7 +593,9 @@ void main() {
       expect(find.text('Banana'), findsOneWidget);
     });
 
-    testWidgets('should update filtered results when items list changes', (WidgetTester tester) async {
+    testWidgets('should update filtered results when items list changes', (
+      WidgetTester tester,
+    ) async {
       List<ItemDropperItem<String>> items = [
         ItemDropperItem<String>(value: '1', label: 'Apple'),
         ItemDropperItem<String>(value: '2', label: 'Banana'),
@@ -657,9 +681,7 @@ void main() {
     });
 
     testWidgets('should handle null selectedItem', (WidgetTester tester) async {
-      final items = [
-        ItemDropperItem<String>(value: '1', label: 'Item 1'),
-      ];
+      final items = [ItemDropperItem<String>(value: '1', label: 'Item 1')];
 
       await tester.pumpWidget(
         MaterialApp(
@@ -682,7 +704,11 @@ void main() {
 
     testWidgets('should handle group headers', (WidgetTester tester) async {
       final items = [
-        ItemDropperItem<String>(value: 'header1', label: 'Group 1', isGroupHeader: true),
+        ItemDropperItem<String>(
+          value: 'header1',
+          label: 'Group 1',
+          isGroupHeader: true,
+        ),
         ItemDropperItem<String>(value: '1', label: 'Item 1'),
         ItemDropperItem<String>(value: '2', label: 'Item 2'),
       ];
@@ -747,7 +773,7 @@ void main() {
       // So we press arrow down to highlight second item, then arrow up to go to first
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
       await tester.pumpAndSettle();
-      
+
       // Press arrow up to go to first item
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
       await tester.pumpAndSettle();
@@ -761,4 +787,3 @@ void main() {
     });
   });
 }
-
