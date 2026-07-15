@@ -7,7 +7,8 @@ class MultiSelectChipLayoutController {
   double? _chipHeight;
   double? _chipTextCenter;
   double? _lastContainerHeight;
-  bool _isMeasuringChip = false;
+  bool _chipMeasurementScheduled = false;
+  _PendingChipMeasurement? _pendingChipMeasurement;
 
   bool get hasMeasuredChip => _chipHeight != null;
 
@@ -42,16 +43,30 @@ class MultiSelectChipLayoutController {
     required GlobalKey rowKey,
     required bool Function() isMounted,
   }) {
-    if (_isMeasuringChip || hasMeasuredChip) return;
+    if (hasMeasuredChip) return;
 
-    _isMeasuringChip = true;
+    _pendingChipMeasurement = _PendingChipMeasurement(
+      context: context,
+      rowKey: rowKey,
+      isMounted: isMounted,
+    );
+
+    if (_chipMeasurementScheduled) return;
+
+    _chipMeasurementScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _isMeasuringChip = false;
-      if (!isMounted() || hasMeasuredChip) return;
+      _chipMeasurementScheduled = false;
 
-      final RenderBox? chipBox = context.findRenderObject() as RenderBox?;
+      final measurement = _pendingChipMeasurement;
+      _pendingChipMeasurement = null;
+      if (measurement == null || !measurement.isMounted() || hasMeasuredChip) {
+        return;
+      }
+
+      final RenderBox? chipBox =
+          measurement.context.findRenderObject() as RenderBox?;
       final RenderBox? rowBox =
-          rowKey.currentContext?.findRenderObject() as RenderBox?;
+          measurement.rowKey.currentContext?.findRenderObject() as RenderBox?;
       if (chipBox == null || rowBox == null) return;
 
       _chipHeight = chipBox.size.height;
@@ -96,4 +111,16 @@ class MultiSelectChipLayoutController {
 
     return MultiSelectConstants.kChipVerticalPadding + (rowContentHeight / 2.0);
   }
+}
+
+class _PendingChipMeasurement {
+  final BuildContext context;
+  final GlobalKey rowKey;
+  final bool Function() isMounted;
+
+  const _PendingChipMeasurement({
+    required this.context,
+    required this.rowKey,
+    required this.isMounted,
+  });
 }

@@ -76,6 +76,51 @@ void main() {
       expect(controller.chipHeight(fontSize: 10), greaterThan(0));
     });
 
+    testWidgets('uses latest chip measurement request before frame fires', (
+      tester,
+    ) async {
+      final controller = MultiSelectChipLayoutController();
+      final rowKey = GlobalKey();
+      late BuildContext chipContext;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Center(
+            child: Builder(
+              builder: (context) {
+                chipContext = context;
+                return Container(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: MultiSelectConstants.kChipVerticalPadding,
+                  ),
+                  child: Row(
+                    key: rowKey,
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [Text('Apple')],
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+
+      controller.scheduleChipMeasurement(
+        context: chipContext,
+        rowKey: rowKey,
+        isMounted: () => false,
+      );
+      controller.scheduleChipMeasurement(
+        context: chipContext,
+        rowKey: rowKey,
+        isMounted: () => true,
+      );
+
+      await tester.pump();
+
+      expect(controller.hasMeasuredChip, isTrue);
+    });
+
     testWidgets('notifies when measured container height changes', (
       tester,
     ) async {
