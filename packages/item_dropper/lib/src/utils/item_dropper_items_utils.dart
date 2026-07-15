@@ -2,8 +2,7 @@ import '../common/item_dropper_item.dart';
 
 /// Utility functions for comparing and handling ItemDropperItem lists
 class ItemDropperItemsUtils {
-  /// Threshold for using simple iteration vs Set-based comparison
-  /// For small lists, simple iteration is more cache-friendly
+  /// Threshold retained for compatibility with existing performance docs.
   static const int kListComparisonThreshold = 10;
 
   /// Check if two item lists are equal (by value)
@@ -29,20 +28,26 @@ class ItemDropperItemsUtils {
     // Fast path: empty lists
     if (a.isEmpty) return true;
 
-    // For small lists, use simple iteration (more cache-friendly)
-    if (a.length <= kListComparisonThreshold) {
-      final Set<T> bValues = b.map((item) => item.value).toSet();
-      return a.every((item) => bValues.contains(item.value));
+    final valueCounts = <T, int>{};
+
+    for (final item in a) {
+      valueCounts[item.value] = (valueCounts[item.value] ?? 0) + 1;
     }
 
-    // For larger lists, use Set-based comparison
-    final Set<T> aValues = a.map((item) => item.value).toSet();
-    final Set<T> bValues = b.map((item) => item.value).toSet();
+    for (final item in b) {
+      final count = valueCounts[item.value];
+      if (count == null) {
+        return false;
+      }
 
-    // If lengths are equal and all a values are in b, then all b values must be in a
-    // (since Set length equals list length when there are no duplicates)
-    return aValues.length == bValues.length &&
-        aValues.every((value) => bValues.contains(value));
+      if (count == 1) {
+        valueCounts.remove(item.value);
+      } else {
+        valueCounts[item.value] = count - 1;
+      }
+    }
+
+    return valueCounts.isEmpty;
   }
 
   /// Check if items list has changed between old and new widget
