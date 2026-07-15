@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../common/item_dropper_constants.dart';
 import '../common/item_dropper_item.dart';
 import 'dropdown_position_calculator.dart';
+import 'item_dropper_overlay_content.dart';
 
 /// Builds positioned dropdown overlays and their scrollable list chrome.
 class ItemDropperOverlayBuilder {
@@ -24,7 +25,33 @@ class ItemDropperOverlayBuilder {
     required double itemHeight,
     double? preferredFieldHeight,
   }) {
-    if (items.isEmpty) return const SizedBox.shrink();
+    return buildContent<T>(
+      context: context,
+      content: ItemDropperListOverlayContent<T>(
+        items: items,
+        isSelected: isSelected,
+        builder: builder,
+        showScrollbar: showScrollbar,
+        scrollbarThickness: scrollbarThickness,
+        itemHeight: itemHeight,
+      ),
+      maxDropdownHeight: maxDropdownHeight,
+      scrollController: scrollController,
+      layerLink: layerLink,
+      preferredFieldHeight: preferredFieldHeight,
+    );
+  }
+
+  /// Builds a dropdown overlay with caller-provided content.
+  static Widget buildContent<T>({
+    required BuildContext context,
+    required ItemDropperOverlayContent<T> content,
+    required double maxDropdownHeight,
+    required ScrollController scrollController,
+    required LayerLink layerLink,
+    double? preferredFieldHeight,
+  }) {
+    if (content.isEmpty) return const SizedBox.shrink();
 
     final RenderBox? inputBox = context.findRenderObject() as RenderBox?;
     if (inputBox == null) return const SizedBox.shrink();
@@ -32,15 +59,7 @@ class ItemDropperOverlayBuilder {
     final double inputFieldHeight =
         preferredFieldHeight ?? inputBox.size.height;
     final double actualFieldWidth = inputBox.size.width;
-    final double effectiveItemHeight = itemHeight;
-
-    final double requestedMaxHeight = maxDropdownHeight;
-    final int maxVisibleItems = (requestedMaxHeight / effectiveItemHeight)
-        .floor();
-    final int actualVisibleItems = maxVisibleItems < items.length
-        ? maxVisibleItems
-        : items.length;
-    final double adjustedMaxHeight = actualVisibleItems * effectiveItemHeight;
+    final double adjustedMaxHeight = content.maxHeightFor(maxDropdownHeight);
 
     final DropdownPositionResult position =
         DropdownPositionCalculator.calculate(
@@ -69,21 +88,7 @@ class ItemDropperOverlayBuilder {
                 style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                   fontSize: ItemDropperConstants.kDropdownItemFontSize,
                 ),
-                child: Scrollbar(
-                  controller: scrollController,
-                  thumbVisibility: showScrollbar,
-                  thickness: scrollbarThickness,
-                  child: ListView.builder(
-                    controller: scrollController,
-                    padding: EdgeInsets.zero,
-                    itemCount: items.length,
-                    itemExtent: effectiveItemHeight,
-                    itemBuilder: (c, i) {
-                      final item = items[i];
-                      return builder(context, item, isSelected(item));
-                    },
-                  ),
-                ),
+                child: content.build(context, scrollController),
               ),
             ),
           ),

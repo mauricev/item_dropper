@@ -14,7 +14,7 @@ import 'package:item_dropper/src/multi/multi_select_selection_manager.dart';
 import 'package:item_dropper/src/multi/smartwrap.dart'
     show SmartWrapWithFlexibleLast;
 import 'package:item_dropper/src/utils/item_dropper_selection_handler.dart';
-import 'package:item_dropper/src/utils/dropdown_position_calculator.dart';
+import 'package:item_dropper/src/utils/item_dropper_overlay_content.dart';
 import 'package:item_dropper/src/utils/item_dropper_items_utils.dart';
 import 'package:item_dropper/src/single/single_select_constants.dart';
 import 'package:item_dropper/src/common/item_dropper_localizations.dart';
@@ -1353,45 +1353,32 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
     // Don't build overlay if disabled
     if (!widget.enabled) return const SizedBox.shrink();
 
-    final RenderBox? inputBox = inputContext.findRenderObject() as RenderBox?;
-    if (inputBox == null) return const SizedBox.shrink();
-
-    final double inputFieldHeight = inputBox.size.height;
-    // Use actual measured field width to ensure overlay matches field width exactly
-    final double actualFieldWidth = inputBox.size.width;
-    final double maxDropdownHeight = widget.maxDropdownHeight;
-
-    final position = DropdownPositionCalculator.calculate(
+    return ItemDropperRenderUtils.buildDropdownOverlay<T>(
       context: inputContext,
-      inputBox: inputBox,
-      inputFieldHeight: inputFieldHeight,
-      maxDropdownHeight: maxDropdownHeight,
-    );
-
-    return CompositedTransformFollower(
-      link: _layerLink,
-      showWhenUnlinked: false,
-      offset: position.offset,
-      child: SizedBox(
-        width: actualFieldWidth,
-        child: Material(
-          elevation: ItemDropperConstants.kDropdownElevation,
-          child: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: MultiSelectConstants.kEmptyStatePaddingHorizontal,
-              vertical: MultiSelectConstants.kEmptyStatePaddingVertical,
-            ),
-            child: Text(
-              message,
-              style:
-                  (widget.popupTextStyle ??
-                          widget.fieldTextStyle ??
-                          const TextStyle(
-                            fontSize:
-                                ItemDropperConstants.kDropdownItemFontSize,
-                          ))
-                      .copyWith(color: Colors.grey.shade600),
-            ),
+      items: const [],
+      maxDropdownHeight: widget.maxDropdownHeight,
+      width: widget.width,
+      controller: _overlayController,
+      scrollController: _scrollController,
+      layerLink: _layerLink,
+      isSelected: (_) => false,
+      builder: (_, item, isSelected) => const SizedBox.shrink(),
+      itemHeight: _calculateEffectiveItemHeight(),
+      content: ItemDropperWidgetOverlayContent<T>(
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: MultiSelectConstants.kEmptyStatePaddingHorizontal,
+            vertical: MultiSelectConstants.kEmptyStatePaddingVertical,
+          ),
+          child: Text(
+            message,
+            style:
+                (widget.popupTextStyle ??
+                        widget.fieldTextStyle ??
+                        const TextStyle(
+                          fontSize: ItemDropperConstants.kDropdownItemFontSize,
+                        ))
+                    .copyWith(color: Colors.grey.shade600),
           ),
         ),
       ),

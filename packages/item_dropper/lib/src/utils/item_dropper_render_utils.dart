@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../common/item_dropper_constants.dart';
 import '../common/item_dropper_item.dart';
 import 'item_dropper_dropdown_item_renderer.dart';
+import 'item_dropper_overlay_content.dart';
 import 'item_dropper_overlay_builder.dart';
 import 'item_dropper_popup_item_builder.dart';
 
@@ -113,20 +114,23 @@ class ItemDropperRenderUtils {
     double scrollbarThickness = ItemDropperConstants.kDefaultScrollbarThickness,
     required double itemHeight,
     double? preferredFieldHeight,
+    ItemDropperOverlayContent<T>? content,
   }) {
-    return ItemDropperOverlayBuilder.build<T>(
+    return ItemDropperOverlayBuilder.buildContent<T>(
       context: context,
-      items: items,
+      content:
+          content ??
+          ItemDropperListOverlayContent<T>(
+            items: items,
+            isSelected: isSelected,
+            builder: builder,
+            showScrollbar: showScrollbar,
+            scrollbarThickness: scrollbarThickness,
+            itemHeight: itemHeight,
+          ),
       maxDropdownHeight: maxDropdownHeight,
-      width: width,
-      controller: controller,
       scrollController: scrollController,
       layerLink: layerLink,
-      isSelected: isSelected,
-      builder: builder,
-      showScrollbar: showScrollbar,
-      scrollbarThickness: scrollbarThickness,
-      itemHeight: itemHeight,
       preferredFieldHeight: preferredFieldHeight,
     );
   }
