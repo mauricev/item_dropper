@@ -5,6 +5,31 @@ class ItemDropperItemsUtils {
   /// Threshold retained for compatibility with existing performance docs.
   static const int kListComparisonThreshold = 10;
 
+  /// Finds [item] while preserving duplicate-instance position when possible.
+  ///
+  /// Identity is preferred because two rows may intentionally share a value.
+  /// A value-and-role fallback supports equivalent items reconstructed by a
+  /// filtering or mapping step without confusing normal rows, group headers,
+  /// and add-item sentinels that reuse the same value.
+  static int findItemIndex<T>(
+    List<ItemDropperItem<T>> items,
+    ItemDropperItem<T> item,
+  ) {
+    final identityIndex = items.indexWhere(
+      (candidate) => identical(candidate, item),
+    );
+    if (identityIndex >= 0) {
+      return identityIndex;
+    }
+
+    return items.indexWhere(
+      (candidate) =>
+          candidate.value == item.value &&
+          candidate.isAddItem == item.isAddItem &&
+          candidate.isGroupHeader == item.isGroupHeader,
+    );
+  }
+
   /// Check if two item lists are equal (by value)
   ///
   /// Optimized for performance: early returns and efficient Set-based comparison

@@ -652,8 +652,9 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
               customBuilder:
                   widget.popupItemBuilder ??
                   (context, item, isSelected) {
-                    final int itemIndex = filteredItems.indexWhere(
-                      (x) => identical(x, item),
+                    final int itemIndex = ItemDropperItemsUtils.findItemIndex(
+                      filteredItems,
+                      item,
                     );
                     final bool hasPrevious = itemIndex > 0;
                     final bool previousIsGroupHeader =

@@ -194,7 +194,9 @@ The package uses several bounded caches:
 
 List comparison counts values rather than comparing only distinct-value sets, so duplicate
 multiplicity is preserved. `ItemDropperItem` value equality makes comparisons deterministic across
-newly constructed equivalent item instances.
+newly constructed equivalent item instances. Popup row lookup prefers identity to preserve the
+position of duplicate instances, then falls back to value plus structural role for reconstructed
+items.
 
 ## Accessibility and Localization
 

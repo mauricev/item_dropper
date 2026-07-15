@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../common/item_dropper_constants.dart';
 import '../common/item_dropper_item.dart';
+import 'item_dropper_items_utils.dart';
 
 /// Renders individual dropdown rows and their interaction states.
 class ItemDropperDropdownItemRenderer {
@@ -24,7 +25,10 @@ class ItemDropperDropdownItemRenderer {
     void Function(BuildContext context, ItemDropperItem<T> item)?
     onRequestDelete,
   }) {
-    final int itemIndex = filteredItems.indexWhere((x) => identical(x, item));
+    final int itemIndex = ItemDropperItemsUtils.findItemIndex(
+      filteredItems,
+      item,
+    );
 
     if (item.isGroupHeader) {
       return build<T>(
@@ -44,9 +48,6 @@ class ItemDropperDropdownItemRenderer {
 
     return MouseRegion(
       onEnter: (event) {
-        final int itemIndex = filteredItems.indexWhere(
-          (i) => identical(i, item),
-        );
         if (keyboardHighlightIndex == ItemDropperConstants.kNoHighlight) {
           safeSetState(() => setHoverIndex(itemIndex));
         }
@@ -57,9 +58,11 @@ class ItemDropperDropdownItemRenderer {
         context: context,
         item: item,
         isHovered:
+            itemIndex >= 0 &&
             itemIndex == hoverIndex &&
             keyboardHighlightIndex == ItemDropperConstants.kNoHighlight,
-        isKeyboardHighlighted: itemIndex == keyboardHighlightIndex,
+        isKeyboardHighlighted:
+            itemIndex >= 0 && itemIndex == keyboardHighlightIndex,
         isSelected: isSelected,
         isSingleItem: filteredItems.length == 1,
         isGroupHeader: false,
