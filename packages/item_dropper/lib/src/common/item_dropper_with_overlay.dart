@@ -24,33 +24,6 @@ class ItemDropperWithOverlay extends StatefulWidget {
 }
 
 class _ItemDropperWithOverlayState extends State<ItemDropperWithOverlay> {
-  // GlobalKey to track overlay bounds for dismiss detection
-  final GlobalKey _overlayKey = GlobalKey();
-
-  /// Check if a pointer event occurred within the overlay bounds
-  bool _isClickOnOverlay(PointerDownEvent event) {
-    final RenderBox? overlayRenderBox =
-        _overlayKey.currentContext?.findRenderObject() as RenderBox?;
-
-    if (overlayRenderBox == null) return false;
-
-    final RenderBox? fieldRenderBox =
-        widget.fieldKey.currentContext?.findRenderObject() as RenderBox?;
-
-    if (fieldRenderBox == null) return false;
-
-    final Offset fieldGlobalPos = fieldRenderBox.localToGlobal(Offset.zero);
-    final double fieldHeight = fieldRenderBox.size.height;
-    final Offset estimatedOverlayPos = Offset(
-      fieldGlobalPos.dx,
-      fieldGlobalPos.dy + fieldHeight,
-    );
-    final Size overlaySize = overlayRenderBox.size;
-    final Rect estimatedOverlayRect = estimatedOverlayPos & overlaySize;
-
-    return estimatedOverlayRect.contains(event.position);
-  }
-
   /// Check if a pointer event occurred outside the field bounds
   bool _isClickOutsideField(PointerDownEvent event) {
     final RenderBox? renderBox =
@@ -67,13 +40,7 @@ class _ItemDropperWithOverlayState extends State<ItemDropperWithOverlay> {
 
   /// Handle pointer down events for dismissal logic
   void _handlePointerDown(PointerDownEvent event) {
-    // Check if click is on overlay first - dismiss after item interaction
-    if (_isClickOnOverlay(event)) {
-      widget.onDismiss();
-      return;
-    }
-
-    // Check if click is outside the field - dismiss immediately
+    // Current behavior dismisses for any overlay-portal click outside the field.
     if (_isClickOutsideField(event)) {
       widget.onDismiss();
       return;
@@ -88,7 +55,6 @@ class _ItemDropperWithOverlayState extends State<ItemDropperWithOverlay> {
         controller: widget.overlayController,
         overlayChildBuilder: (context) => Stack(
           children: [
-            // Dismiss dropdown when clicking outside the text field AND outside the overlay
             // Listener uses translucent behavior to allow child widgets to handle taps first
             Positioned.fill(
               child: Listener(
@@ -97,7 +63,6 @@ class _ItemDropperWithOverlayState extends State<ItemDropperWithOverlay> {
               ),
             ),
             CompositedTransformFollower(
-              key: _overlayKey,
               link: widget.layerLink,
               showWhenUnlinked: false,
               offset: const Offset(0.0, 0.0), // Position relative to target
