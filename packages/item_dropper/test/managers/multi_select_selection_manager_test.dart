@@ -86,6 +86,34 @@ void main() {
 
         expect(manager.isSelected(item2), isTrue);
       });
+
+      test('isSelected returns false for add item with colliding value', () {
+        final item = ItemDropperItem<String>(value: 'a', label: 'A');
+        final addItem = ItemDropperItem<String>(
+          value: 'a',
+          label: 'Add "Apricot"',
+          isAddItem: true,
+        );
+
+        manager.addItem(item);
+
+        expect(manager.isSelected(addItem), isFalse);
+      });
+
+      test('addItem ignores add item sentinel', () {
+        final addItem = ItemDropperItem<String>(
+          value: 'a',
+          label: 'Add "Apricot"',
+          isAddItem: true,
+        );
+
+        manager.addItem(addItem);
+
+        expect(manager.selected, isEmpty);
+        expect(manager.selectedValues, isEmpty);
+        expect(onSelectionChangedCallCount, 0);
+        expect(onFilterCacheInvalidatedCallCount, 0);
+      });
     });
 
     group('Remove Item', () {
@@ -148,11 +176,13 @@ void main() {
         expect(managerWithLimit.isMaxReached(), isFalse);
 
         managerWithLimit.addItem(
-            ItemDropperItem<String>(value: 'a', label: 'A'));
+          ItemDropperItem<String>(value: 'a', label: 'A'),
+        );
         expect(managerWithLimit.isMaxReached(), isFalse);
 
         managerWithLimit.addItem(
-            ItemDropperItem<String>(value: 'b', label: 'B'));
+          ItemDropperItem<String>(value: 'b', label: 'B'),
+        );
         expect(managerWithLimit.isMaxReached(), isTrue);
       });
 
@@ -165,11 +195,13 @@ void main() {
         expect(managerWithLimit.isBelowMax(), isTrue);
 
         managerWithLimit.addItem(
-            ItemDropperItem<String>(value: 'a', label: 'A'));
+          ItemDropperItem<String>(value: 'a', label: 'A'),
+        );
         expect(managerWithLimit.isBelowMax(), isTrue);
 
         managerWithLimit.addItem(
-            ItemDropperItem<String>(value: 'b', label: 'B'));
+          ItemDropperItem<String>(value: 'b', label: 'B'),
+        );
         expect(managerWithLimit.isBelowMax(), isFalse);
       });
 
@@ -199,9 +231,7 @@ void main() {
       test('syncItems replaces existing selection', () {
         manager.addItem(ItemDropperItem<String>(value: 'old', label: 'Old'));
 
-        final newItems = [
-          ItemDropperItem<String>(value: 'new', label: 'New'),
-        ];
+        final newItems = [ItemDropperItem<String>(value: 'new', label: 'New')];
         manager.syncItems(newItems);
 
         expect(manager.selected.length, equals(1));
@@ -222,6 +252,23 @@ void main() {
         for (final item in manager.selected) {
           expect(manager.selectedValues.contains(item.value), isTrue);
         }
+      });
+
+      test('syncItems ignores add item sentinels', () {
+        final items = [
+          ItemDropperItem<String>(value: 'a', label: 'A'),
+          ItemDropperItem<String>(
+            value: 'a',
+            label: 'Add "Apricot"',
+            isAddItem: true,
+          ),
+        ];
+
+        manager.syncItems(items);
+
+        expect(manager.selected.length, 1);
+        expect(manager.selected.single.label, 'A');
+        expect(manager.selectedValues, {'a'});
       });
     });
 
@@ -273,7 +320,7 @@ void main() {
         final items = manager.selected;
 
         expect(
-              () => items.add(ItemDropperItem<String>(value: 'b', label: 'B')),
+          () => items.add(ItemDropperItem<String>(value: 'b', label: 'B')),
           throwsUnsupportedError,
         );
       });

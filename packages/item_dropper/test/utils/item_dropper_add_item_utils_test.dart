@@ -26,11 +26,20 @@ void main() {
         expect(result, isTrue);
       });
 
-      test('returns false for normal item', () {
-        final normalItem = ItemDropperItem<String>(
+      test('returns true for explicit add item sentinel', () {
+        final addItem = ItemDropperItem<String>(
           value: '1',
-          label: 'Apple',
+          label: 'Create Orange',
+          isAddItem: true,
         );
+
+        final result = ItemDropperAddItemUtils.isAddItem(addItem, testItems);
+
+        expect(result, isTrue);
+      });
+
+      test('returns false for normal item', () {
+        final normalItem = ItemDropperItem<String>(value: '1', label: 'Apple');
 
         final result = ItemDropperAddItemUtils.isAddItem(normalItem, testItems);
 
@@ -38,10 +47,7 @@ void main() {
       });
 
       test('returns false for item that starts with Add but wrong format', () {
-        final item = ItemDropperItem<String>(
-          value: 'temp',
-          label: 'Add Item',
-        );
+        final item = ItemDropperItem<String>(value: 'temp', label: 'Add Item');
 
         final result = ItemDropperAddItemUtils.isAddItem(item, testItems);
 
@@ -49,41 +55,44 @@ void main() {
       });
 
       test(
-          'returns false for item that has quotes but does not start with Add', () {
-        final item = ItemDropperItem<String>(
-          value: 'temp',
-          label: 'Create "Orange"',
-        );
+        'returns false for item that has quotes but does not start with Add',
+        () {
+          final item = ItemDropperItem<String>(
+            value: 'temp',
+            label: 'Create "Orange"',
+          );
 
-        final result = ItemDropperAddItemUtils.isAddItem(item, testItems);
+          final result = ItemDropperAddItemUtils.isAddItem(item, testItems);
 
-        expect(result, isFalse);
-      });
+          expect(result, isFalse);
+        },
+      );
 
       test('returns false if item exists in original list', () {
         final existingItem = testItems[0];
 
         final result = ItemDropperAddItemUtils.isAddItem(
-            existingItem, testItems);
+          existingItem,
+          testItems,
+        );
 
         expect(result, isFalse);
       });
 
       test(
-          'returns false for add item format that exists in original list', () {
-        final items = [
-          ItemDropperItem<String>(value: '1', label: 'Add "Test"'),
-        ];
+        'returns false for add item format that exists in original list',
+        () {
+          final items = [
+            ItemDropperItem<String>(value: '1', label: 'Add "Test"'),
+          ];
 
-        final item = ItemDropperItem<String>(
-          value: '1',
-          label: 'Add "Test"',
-        );
+          final item = ItemDropperItem<String>(value: '1', label: 'Add "Test"');
 
-        final result = ItemDropperAddItemUtils.isAddItem(item, items);
+          final result = ItemDropperAddItemUtils.isAddItem(item, items);
 
-        expect(result, isFalse); // Item exists in original list
-      });
+          expect(result, isFalse); // Item exists in original list
+        },
+      );
     });
 
     group('extractSearchTextFromAddItem', () {
@@ -94,7 +103,8 @@ void main() {
         );
 
         final searchText = ItemDropperAddItemUtils.extractSearchTextFromAddItem(
-            addItem);
+          addItem,
+        );
 
         expect(searchText, equals('Orange'));
       });
@@ -106,7 +116,8 @@ void main() {
         );
 
         final searchText = ItemDropperAddItemUtils.extractSearchTextFromAddItem(
-            addItem);
+          addItem,
+        );
 
         expect(searchText, equals('Passion Fruit'));
       });
@@ -118,31 +129,28 @@ void main() {
         );
 
         final searchText = ItemDropperAddItemUtils.extractSearchTextFromAddItem(
-            addItem);
+          addItem,
+        );
 
         expect(searchText, equals('Test@123'));
       });
 
       test('returns empty string for invalid format', () {
-        final item = ItemDropperItem<String>(
-          value: 'temp',
-          label: 'Add Item',
-        );
+        final item = ItemDropperItem<String>(value: 'temp', label: 'Add Item');
 
         final searchText = ItemDropperAddItemUtils.extractSearchTextFromAddItem(
-            item);
+          item,
+        );
 
         expect(searchText, isEmpty);
       });
 
       test('returns empty string for empty quotes', () {
-        final item = ItemDropperItem<String>(
-          value: 'temp',
-          label: 'Add ""',
-        );
+        final item = ItemDropperItem<String>(value: 'temp', label: 'Add ""');
 
         final searchText = ItemDropperAddItemUtils.extractSearchTextFromAddItem(
-            item);
+          item,
+        );
 
         expect(searchText, isEmpty);
       });
@@ -158,14 +166,27 @@ void main() {
         expect(addItem.label, equals('Add "Orange"'));
       });
 
-      test('creates add item with value from first item when items exist', () {
+      test('creates explicit add item sentinel', () {
         final addItem = ItemDropperAddItemUtils.createAddItem<String>(
           'Orange',
           testItems,
         );
 
-        expect(addItem.value, equals(testItems.first.value));
+        expect(addItem.isAddItem, isTrue);
       });
+
+      test(
+        'created add item is detected despite placeholder value collision',
+        () {
+          final addItem = ItemDropperAddItemUtils.createAddItem<String>(
+            'Orange',
+            testItems,
+          );
+
+          expect(addItem.value, equals(testItems.first.value));
+          expect(ItemDropperAddItemUtils.isAddItem(addItem, testItems), isTrue);
+        },
+      );
 
       test('created item is not a group header', () {
         final addItem = ItemDropperAddItemUtils.createAddItem<String>(
@@ -193,19 +214,14 @@ void main() {
             e.toString(),
             contains('Cannot create add item when originalItems is empty'),
           );
-          expect(
-            e.toString(),
-            contains('must contain at least one item'),
-          );
+          expect(e.toString(), contains('must contain at least one item'));
         }
       });
     });
 
     group('addAddItemIfNeeded', () {
       test('adds add item when search text exists and callback provided', () {
-        final filtered = [
-          ItemDropperItem<String>(value: '1', label: 'Apple'),
-        ];
+        final filtered = [ItemDropperItem<String>(value: '1', label: 'Apple')];
 
         final result = ItemDropperAddItemUtils.addAddItemIfNeeded<String>(
           filteredItems: filtered,
@@ -220,9 +236,7 @@ void main() {
       });
 
       test('does not add add item when search text is empty', () {
-        final filtered = [
-          ItemDropperItem<String>(value: '1', label: 'Apple'),
-        ];
+        final filtered = [ItemDropperItem<String>(value: '1', label: 'Apple')];
 
         final result = ItemDropperAddItemUtils.addAddItemIfNeeded<String>(
           filteredItems: filtered,
@@ -236,9 +250,7 @@ void main() {
       });
 
       test('does not add add item when callback not provided', () {
-        final filtered = [
-          ItemDropperItem<String>(value: '1', label: 'Apple'),
-        ];
+        final filtered = [ItemDropperItem<String>(value: '1', label: 'Apple')];
 
         final result = ItemDropperAddItemUtils.addAddItemIfNeeded<String>(
           filteredItems: filtered,
@@ -252,42 +264,44 @@ void main() {
       });
 
       test(
-          'does not add add item when exact match exists (case insensitive)', () {
-        final filtered = [
-          ItemDropperItem<String>(value: '1', label: 'Apple'),
-        ];
+        'does not add add item when exact match exists (case insensitive)',
+        () {
+          final filtered = [
+            ItemDropperItem<String>(value: '1', label: 'Apple'),
+          ];
 
-        final result = ItemDropperAddItemUtils.addAddItemIfNeeded<String>(
-          filteredItems: filtered,
-          searchText: 'apple',
-          originalItems: testItems,
-          hasOnAddItemCallback: () => true,
-        );
+          final result = ItemDropperAddItemUtils.addAddItemIfNeeded<String>(
+            filteredItems: filtered,
+            searchText: 'apple',
+            originalItems: testItems,
+            hasOnAddItemCallback: () => true,
+          );
 
-        expect(result.length, equals(1)); // No add item added
-        expect(result.first.label, equals('Apple'));
-      });
+          expect(result.length, equals(1)); // No add item added
+          expect(result.first.label, equals('Apple'));
+        },
+      );
 
       test(
-          'does not add add item when exact match exists (with whitespace)', () {
-        final filtered = [
-          ItemDropperItem<String>(value: '1', label: 'Apple'),
-        ];
+        'does not add add item when exact match exists (with whitespace)',
+        () {
+          final filtered = [
+            ItemDropperItem<String>(value: '1', label: 'Apple'),
+          ];
 
-        final result = ItemDropperAddItemUtils.addAddItemIfNeeded<String>(
-          filteredItems: filtered,
-          searchText: '  Apple  ',
-          originalItems: testItems,
-          hasOnAddItemCallback: () => true,
-        );
+          final result = ItemDropperAddItemUtils.addAddItemIfNeeded<String>(
+            filteredItems: filtered,
+            searchText: '  Apple  ',
+            originalItems: testItems,
+            hasOnAddItemCallback: () => true,
+          );
 
-        expect(result.length, equals(1)); // No add item added
-      });
+          expect(result.length, equals(1)); // No add item added
+        },
+      );
 
       test('adds add item when partial match exists but not exact', () {
-        final filtered = [
-          ItemDropperItem<String>(value: '1', label: 'Apple'),
-        ];
+        final filtered = [ItemDropperItem<String>(value: '1', label: 'Apple')];
 
         final result = ItemDropperAddItemUtils.addAddItemIfNeeded<String>(
           filteredItems: filtered,
@@ -303,13 +317,14 @@ void main() {
       test('ignores group headers when checking for exact match', () {
         final itemsWithHeader = [
           ItemDropperItem<String>(
-              value: 'h1', label: 'Fruits', isGroupHeader: true),
+            value: 'h1',
+            label: 'Fruits',
+            isGroupHeader: true,
+          ),
           ItemDropperItem<String>(value: '1', label: 'Apple'),
         ];
 
-        final filtered = [
-          ItemDropperItem<String>(value: '1', label: 'Apple'),
-        ];
+        final filtered = [ItemDropperItem<String>(value: '1', label: 'Apple')];
 
         final result = ItemDropperAddItemUtils.addAddItemIfNeeded<String>(
           filteredItems: filtered,

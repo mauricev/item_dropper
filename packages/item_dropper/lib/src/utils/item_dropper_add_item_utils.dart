@@ -9,6 +9,10 @@ class ItemDropperAddItemUtils {
     List<ItemDropperItem<T>> originalItems, {
     ItemDropperLocalizations? localizations,
   }) {
+    if (item.isAddItem) {
+      return true;
+    }
+
     final loc = localizations ?? ItemDropperLocalizations.english;
     // Check label pattern using localizations
     final expectedPrefix = loc.addItemPrefix;
@@ -50,9 +54,10 @@ class ItemDropperAddItemUtils {
   /// [originalItems] - The original list of items (must not be empty)
   /// [localizations] - Optional localizations (defaults to English)
   ///
-  /// The value for the add item is taken from the first item in [originalItems].
-  /// Since add items are detected by their label pattern, the exact
-  /// value doesn't affect functionality as long as it has the correct type T.
+  /// The value for the add item is a placeholder taken from the first item in
+  /// [originalItems], because Dart cannot synthesize an arbitrary unique [T].
+  /// Use [ItemDropperItem.isAddItem] to identify the sentinel; do not rely on
+  /// its value.
   ///
   /// Throws [ArgumentError] if [originalItems] is empty. When using the add item
   /// feature, always ensure your items list has at least one item, or provide
@@ -79,6 +84,7 @@ class ItemDropperAddItemUtils {
       value: addItemValue,
       label: '${loc.addItemPrefix}$searchText${loc.addItemSuffix}',
       isGroupHeader: false,
+      isAddItem: true,
     );
   }
 

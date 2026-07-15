@@ -16,11 +16,19 @@ class ItemDropperItem<T> {
   /// Disabled items are rendered but cannot be selected.
   final bool isEnabled;
 
+  /// Whether this item is the internal "add item" sentinel row.
+  ///
+  /// Add rows still carry a placeholder [value] to satisfy the generic item
+  /// shape, but value-based selection logic must treat them as non-selected
+  /// sentinels rather than real data items.
+  final bool isAddItem;
+
   const ItemDropperItem({
     required this.value,
     required this.label,
     this.isGroupHeader = false,
     this.isDeletable = false,
     this.isEnabled = true,
+    this.isAddItem = false,
   });
 }

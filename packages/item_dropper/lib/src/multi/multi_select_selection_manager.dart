@@ -27,6 +27,9 @@ class MultiSelectSelectionManager<T> {
 
   /// Check if an item is selected
   bool isSelected(ItemDropperItem<T> item) {
+    if (item.isAddItem) {
+      return false;
+    }
     return _selectedValues.contains(item.value);
   }
 
@@ -42,6 +45,9 @@ class MultiSelectSelectionManager<T> {
 
   /// Add an item to the selection (keeps both List and Set in sync)
   void addItem(ItemDropperItem<T> item) {
+    if (item.isAddItem) {
+      return;
+    }
     if (!_selectedValues.contains(item.value)) {
       _selected.add(item);
       _selectedValues.add(item.value);
@@ -62,7 +68,7 @@ class MultiSelectSelectionManager<T> {
 
   /// Sync selected items from external source (keeps both List and Set in sync)
   void syncItems(List<ItemDropperItem<T>> items) {
-    _selected = List.from(items);
+    _selected = items.where((item) => !item.isAddItem).toList();
     _selectedValues = _selected.map((item) => item.value).toSet();
   }
 

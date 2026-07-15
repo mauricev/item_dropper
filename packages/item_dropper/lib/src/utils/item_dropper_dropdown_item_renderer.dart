@@ -24,9 +24,7 @@ class ItemDropperDropdownItemRenderer {
     void Function(BuildContext context, ItemDropperItem<T> item)?
     onRequestDelete,
   }) {
-    final int itemIndex = filteredItems.indexWhere(
-      (x) => x.value == item.value,
-    );
+    final int itemIndex = filteredItems.indexWhere((x) => identical(x, item));
 
     if (item.isGroupHeader) {
       return build<T>(
@@ -47,7 +45,7 @@ class ItemDropperDropdownItemRenderer {
     return MouseRegion(
       onEnter: (event) {
         final int itemIndex = filteredItems.indexWhere(
-          (i) => i.value == item.value,
+          (i) => identical(i, item),
         );
         if (keyboardHighlightIndex == ItemDropperConstants.kNoHighlight) {
           safeSetState(() => setHoverIndex(itemIndex));

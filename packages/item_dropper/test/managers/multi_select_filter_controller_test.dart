@@ -43,7 +43,7 @@ void main() {
         );
 
         expect(filtered.first.label, 'Add "Orange"');
-        expect(filtered.first.value, 'apple');
+        expect(filtered.first.isAddItem, isTrue);
       },
     );
 

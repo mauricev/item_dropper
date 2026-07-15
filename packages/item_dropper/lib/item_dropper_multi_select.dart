@@ -1323,9 +1323,7 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
             ItemDropperItem<T> item,
             bool isSelected,
           ) {
-            final int itemIndex = items.indexWhere(
-              (x) => x.value == item.value,
-            );
+            final int itemIndex = items.indexWhere((x) => identical(x, item));
             final itemBuilder = _getItemBuilder(items, itemIndex);
 
             return ItemDropperRenderUtils.buildDropdownItemWithHover<T>(

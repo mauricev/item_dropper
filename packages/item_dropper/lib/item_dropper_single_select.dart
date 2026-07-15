@@ -634,7 +634,8 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
       layerLink: _layerLink,
       showScrollbar: widget.showScrollbar,
       scrollbarThickness: widget.scrollbarThickness,
-      isSelected: (ItemDropperItem<T> item) => item.value == _selected?.value,
+      isSelected: (ItemDropperItem<T> item) =>
+          !item.isAddItem && item.value == _selected?.value,
       builder:
           (
             BuildContext builderContext,
@@ -658,7 +659,7 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
                   widget.popupItemBuilder ??
                   (context, item, isSelected) {
                     final int itemIndex = filteredItems.indexWhere(
-                      (x) => x.value == item.value,
+                      (x) => identical(x, item),
                     );
                     final bool hasPrevious = itemIndex > 0;
                     final bool previousIsGroupHeader =
