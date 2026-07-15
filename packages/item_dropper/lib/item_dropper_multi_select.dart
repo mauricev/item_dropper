@@ -583,6 +583,26 @@ extension _MultiItemDropperStateHelpers<T> on _MultiItemDropperState<T> {
     );
   }
 
+  bool _hasOverlayContent(List<ItemDropperItem<T>> filteredItems) {
+    if (_selectionManager.isMaxReached()) {
+      return true;
+    }
+
+    if (filteredItems.isNotEmpty) {
+      return true;
+    }
+
+    if (_searchController.text.isNotEmpty) {
+      return true;
+    }
+
+    return widget.items.any(
+      (item) =>
+          item.isGroupHeader ||
+          !_selectionManager.selectedValues.contains(item.value),
+    );
+  }
+
   // Helper to check if two item lists are equal (by value)
   // Delegates to shared utility
   bool _areItemsEqual(List<ItemDropperItem<T>>? a, List<ItemDropperItem<T>> b) {
@@ -869,12 +889,16 @@ extension _MultiItemDropperStateHandlers<T> on _MultiItemDropperState<T> {
       _clearHighlights();
     });
 
-    // Show overlay if focused - if max is reached, overlay will show max reached message
-    // This allows continued selection after clearing search text
-    // When we clear text after selection, focus is already set, so overlay stays open
+    final filteredItems = _filtered;
+
+    // Show overlay only when focused and the overlay has a visible state to render.
     if (_focusManager.isFocused) {
-      _showOverlay();
-    } else if (_filtered.isEmpty && !_selectionManager.isMaxReached()) {
+      if (_hasOverlayContent(filteredItems)) {
+        _showOverlay();
+      } else if (_overlayController.isShowing) {
+        _overlayController.hide();
+      }
+    } else if (filteredItems.isEmpty && !_selectionManager.isMaxReached()) {
       // Hide overlay if no filtered items and not focused and not at max
       if (_overlayController.isShowing) {
         _overlayController.hide();

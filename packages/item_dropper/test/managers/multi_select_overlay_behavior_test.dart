@@ -33,7 +33,9 @@ void main() {
       expect(find.text('Item 2'), findsNothing);
     });
 
-    testWidgets('overlay shows when field is tapped', (WidgetTester tester) async {
+    testWidgets('overlay shows when field is tapped', (
+      WidgetTester tester,
+    ) async {
       final items = [
         ItemDropperItem<String>(value: '1', label: 'Item 1'),
         ItemDropperItem<String>(value: '2', label: 'Item 2'),
@@ -63,7 +65,9 @@ void main() {
       expect(find.text('Item 2'), findsOneWidget);
     });
 
-    testWidgets('overlay hides when field loses focus', (WidgetTester tester) async {
+    testWidgets('overlay hides when field loses focus', (
+      WidgetTester tester,
+    ) async {
       final items = [
         ItemDropperItem<String>(value: '1', label: 'Item 1'),
         ItemDropperItem<String>(value: '2', label: 'Item 2'),
@@ -99,7 +103,9 @@ void main() {
       expect(find.text('Item 1'), findsNothing);
     });
 
-    testWidgets('overlay does not show when disabled', (WidgetTester tester) async {
+    testWidgets('overlay does not show when disabled', (
+      WidgetTester tester,
+    ) async {
       final items = [
         ItemDropperItem<String>(value: '1', label: 'Item 1'),
         ItemDropperItem<String>(value: '2', label: 'Item 2'),
@@ -122,14 +128,19 @@ void main() {
       await tester.pumpAndSettle();
 
       // Try to tap (should not work when disabled)
-      await tester.tap(find.byType(MultiItemDropper<String>), warnIfMissed: false);
+      await tester.tap(
+        find.byType(MultiItemDropper<String>),
+        warnIfMissed: false,
+      );
       await tester.pumpAndSettle();
 
       // Overlay should not be showing
       expect(find.text('Item 1'), findsNothing);
     });
 
-    testWidgets('overlay shows when max is reached', (WidgetTester tester) async {
+    testWidgets('overlay shows when max is reached', (
+      WidgetTester tester,
+    ) async {
       final items = [
         ItemDropperItem<String>(value: '1', label: 'Item 1'),
         ItemDropperItem<String>(value: '2', label: 'Item 2'),
@@ -164,7 +175,9 @@ void main() {
       expect(find.text('Item 1'), findsOneWidget);
     });
 
-    testWidgets('overlay does not show when items list is empty', (WidgetTester tester) async {
+    testWidgets('overlay does not show when items list is empty', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -184,11 +197,42 @@ void main() {
       await tester.tap(find.byType(MultiItemDropper<String>));
       await tester.pumpAndSettle();
 
-      // Overlay should not be showing (no items to show)
-      // The overlay widget itself might be built but empty
+      expect(find.text('No results found'), findsNothing);
     });
 
-    testWidgets('overlay can be shown, hidden, and shown again', (WidgetTester tester) async {
+    testWidgets('clearing empty search hides no-content overlay', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: MultiItemDropper<String>(
+              items: [],
+              selectedItems: [],
+              width: 300,
+              onChanged: (_) {},
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byType(MultiItemDropper<String>));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), 'Nothing');
+      await tester.pumpAndSettle();
+
+      expect(find.text('No results found'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField), '');
+      await tester.pumpAndSettle();
+
+      expect(find.text('No results found'), findsNothing);
+    });
+
+    testWidgets('overlay can be shown, hidden, and shown again', (
+      WidgetTester tester,
+    ) async {
       final items = [
         ItemDropperItem<String>(value: '1', label: 'Item 1'),
         ItemDropperItem<String>(value: '2', label: 'Item 2'),
@@ -225,7 +269,9 @@ void main() {
       expect(find.text('Item 1'), findsOneWidget);
     });
 
-    testWidgets('overlay shows when TextField is tapped', (WidgetTester tester) async {
+    testWidgets('overlay shows when TextField is tapped', (
+      WidgetTester tester,
+    ) async {
       final items = [
         ItemDropperItem<String>(value: '1', label: 'Item 1'),
         ItemDropperItem<String>(value: '2', label: 'Item 2'),
@@ -254,7 +300,9 @@ void main() {
       expect(find.text('Item 1'), findsOneWidget);
     });
 
-    testWidgets('overlay shows when arrow button is pressed', (WidgetTester tester) async {
+    testWidgets('overlay shows when arrow button is pressed', (
+      WidgetTester tester,
+    ) async {
       final items = [
         ItemDropperItem<String>(value: '1', label: 'Item 1'),
         ItemDropperItem<String>(value: '2', label: 'Item 2'),
@@ -279,7 +327,7 @@ void main() {
       // Find and tap the arrow button
       final arrowButton = find.byIcon(Icons.arrow_drop_down);
       expect(arrowButton, findsOneWidget);
-      
+
       await tester.tap(arrowButton);
       await tester.pumpAndSettle();
 
@@ -287,7 +335,9 @@ void main() {
       expect(find.text('Item 1'), findsOneWidget);
     });
 
-    testWidgets('overlay hides when arrow button is pressed again', (WidgetTester tester) async {
+    testWidgets('overlay hides when arrow button is pressed again', (
+      WidgetTester tester,
+    ) async {
       final items = [
         ItemDropperItem<String>(value: '1', label: 'Item 1'),
         ItemDropperItem<String>(value: '2', label: 'Item 2'),
@@ -323,7 +373,9 @@ void main() {
       expect(find.text('Item 1'), findsNothing);
     });
 
-    testWidgets('overlay shows when typing in TextField', (WidgetTester tester) async {
+    testWidgets('overlay shows when typing in TextField', (
+      WidgetTester tester,
+    ) async {
       final items = [
         ItemDropperItem<String>(value: '1', label: 'Item 1'),
         ItemDropperItem<String>(value: '2', label: 'Item 2'),
@@ -354,7 +406,9 @@ void main() {
       expect(find.text('Item 2'), findsOneWidget);
     });
 
-    testWidgets('overlay does not show when max reached and trying to add item', (WidgetTester tester) async {
+    testWidgets('overlay does not show when max reached and trying to add item', (
+      WidgetTester tester,
+    ) async {
       final items = [
         ItemDropperItem<String>(value: '1', label: 'Item 1'),
         ItemDropperItem<String>(value: '2', label: 'Item 2'),
@@ -387,22 +441,25 @@ void main() {
       // When max is reached, overlay shows max reached message
       // Item 3 might be in the list but tapping it should close overlay (max reached)
       // Let's verify overlay is showing first
-      final overlayShowing = find.text('Item 1').evaluate().isNotEmpty || 
-                             find.text('Item 2').evaluate().isNotEmpty ||
-                             find.text('Item 3').evaluate().isNotEmpty;
+      final overlayShowing =
+          find.text('Item 1').evaluate().isNotEmpty ||
+          find.text('Item 2').evaluate().isNotEmpty ||
+          find.text('Item 3').evaluate().isNotEmpty;
       expect(overlayShowing, isTrue);
-      
+
       // Try to tap Item 3 if it's visible (should close overlay due to max reached)
       if (find.text('Item 3').evaluate().isNotEmpty) {
         await tester.tap(find.text('Item 3'));
         await tester.pumpAndSettle();
-        
+
         // Overlay should close (max reached, can't select)
         expect(find.text('Item 3'), findsNothing);
       }
     });
 
-    testWidgets('overlay shows again when item removed below max', (WidgetTester tester) async {
+    testWidgets('overlay shows again when item removed below max', (
+      WidgetTester tester,
+    ) async {
       final items = [
         ItemDropperItem<String>(value: '1', label: 'Item 1'),
         ItemDropperItem<String>(value: '2', label: 'Item 2'),
@@ -434,7 +491,7 @@ void main() {
       // Remove a chip
       final deleteButtons = find.byIcon(Icons.close);
       expect(deleteButtons, findsWidgets);
-      
+
       await tester.tap(deleteButtons.first);
       await tester.pumpAndSettle();
 
@@ -448,4 +505,3 @@ void main() {
     });
   });
 }
-
