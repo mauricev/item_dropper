@@ -1,9 +1,11 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../common/item_dropper_constants.dart';
 import '../common/item_dropper_item.dart';
 
-/// Shared keyboard navigation behavior for dropdowns
+/// Pure keyboard-navigation decisions for dropdowns.
+///
+/// This class does not mutate widget state, request rebuilds, or scroll. The
+/// stateful [KeyboardNavigationManager] owns those side effects.
 class ItemDropperKeyboardNavigation {
   /// Whether [logicalKey] is used to open a closed dropdown.
   static bool isOpenDropdownKey(LogicalKeyboardKey logicalKey) {
@@ -57,15 +59,42 @@ class ItemDropperKeyboardNavigation {
     return ItemDropperConstants.kNoHighlight;
   }
 
-  /// Handle arrow down navigation
-  ///
-  /// [items] is required to check for group headers and skip them.
-  /// If [items] is null, falls back to old behavior (for backward compatibility).
-  static int handleArrowDown<T>({
+  /// Returns the next highlighted index for arrow-down navigation.
+  static int nextIndexForArrowDown<T>({
+    required int currentIndex,
+    required int hoverIndex,
+    required List<ItemDropperItem<T>> items,
+  }) {
+    return _nextIndexForArrow<T>(
+      currentIndex: currentIndex,
+      hoverIndex: hoverIndex,
+      itemCount: items.length,
+      items: items,
+      goingDown: true,
+    );
+  }
+
+  /// Returns the next highlighted index for arrow-up navigation.
+  static int nextIndexForArrowUp<T>({
+    required int currentIndex,
+    required int hoverIndex,
+    required List<ItemDropperItem<T>> items,
+  }) {
+    return _nextIndexForArrow<T>(
+      currentIndex: currentIndex,
+      hoverIndex: hoverIndex,
+      itemCount: items.length,
+      items: items,
+      goingDown: false,
+    );
+  }
+
+  static int _nextIndexForArrow<T>({
     required int currentIndex,
     required int hoverIndex,
     required int itemCount,
-    List<ItemDropperItem<T>>? items,
+    required List<ItemDropperItem<T>> items,
+    required bool goingDown,
   }) {
     if (itemCount == 0) return ItemDropperConstants.kNoHighlight;
 
@@ -77,115 +106,14 @@ class ItemDropperKeyboardNavigation {
       nextIndex = hoverIndex;
     }
 
-    // If items list is provided, use new logic that skips group headers
-    if (items != null) {
-      // Ensure we start from a valid index
-      if (nextIndex == ItemDropperConstants.kNoHighlight) {
-        nextIndex = 0;
-      }
-      // Find next selectable item, skipping group headers
-      return findNextSelectableIndex<T>(
-        currentIndex: nextIndex,
-        items: items,
-        goingDown: true,
-      );
+    if (nextIndex == ItemDropperConstants.kNoHighlight) {
+      nextIndex = goingDown ? 0 : itemCount - 1;
     }
 
-    // Fallback to old behavior (backward compatibility)
-    // Move down (with wrapping to top)
-    if (nextIndex < itemCount - 1) {
-      nextIndex++;
-    } else {
-      nextIndex = 0;
-    }
-
-    return nextIndex;
-  }
-
-  /// Handle arrow up navigation
-  ///
-  /// [items] is required to check for group headers and skip them.
-  /// If [items] is null, falls back to old behavior (for backward compatibility).
-  static int handleArrowUp<T>({
-    required int currentIndex,
-    required int hoverIndex,
-    required int itemCount,
-    List<ItemDropperItem<T>>? items,
-  }) {
-    if (itemCount == 0) return ItemDropperConstants.kNoHighlight;
-
-    int nextIndex = currentIndex;
-
-    // If no keyboard highlight but hover index exists, start from there
-    if (nextIndex == ItemDropperConstants.kNoHighlight &&
-        hoverIndex != ItemDropperConstants.kNoHighlight) {
-      nextIndex = hoverIndex;
-    }
-
-    // If items list is provided, use new logic that skips group headers
-    if (items != null) {
-      // Ensure we start from a valid index
-      if (nextIndex == ItemDropperConstants.kNoHighlight) {
-        nextIndex = itemCount - 1;
-      }
-      // Find previous selectable item, skipping group headers
-      return findNextSelectableIndex<T>(
-        currentIndex: nextIndex,
-        items: items,
-        goingDown: false,
-      );
-    }
-
-    // Fallback to old behavior (backward compatibility)
-    // Move up (with wrapping to bottom)
-    if (nextIndex > 0) {
-      nextIndex--;
-    } else {
-      nextIndex = itemCount - 1;
-    }
-
-    return nextIndex;
-  }
-
-  /// Scroll to make the highlighted item visible
-  static void scrollToHighlight({
-    required int highlightIndex,
-    required ScrollController scrollController,
-    required bool mounted,
-  }) {
-    if (highlightIndex < 0) return;
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-
-      try {
-        if (scrollController.hasClients &&
-            scrollController.position.hasContentDimensions) {
-          final double itemTop =
-              highlightIndex * ItemDropperConstants.kDropdownItemHeight;
-          final double itemBottom =
-              itemTop + ItemDropperConstants.kDropdownItemHeight;
-          final double viewportStart = scrollController.offset;
-          final double viewportEnd =
-              viewportStart + scrollController.position.viewportDimension;
-
-          if (itemTop < viewportStart) {
-            scrollController.animateTo(
-              itemTop,
-              duration: ItemDropperConstants.kScrollAnimationDuration,
-              curve: Curves.easeInOut,
-            );
-          } else if (itemBottom > viewportEnd) {
-            scrollController.animateTo(
-              itemBottom - scrollController.position.viewportDimension,
-              duration: ItemDropperConstants.kScrollAnimationDuration,
-              curve: Curves.easeInOut,
-            );
-          }
-        }
-      } catch (e) {
-        debugPrint('[KEYBOARD NAV] Scroll failed: $e');
-      }
-    });
+    return findNextSelectableIndex<T>(
+      currentIndex: nextIndex,
+      items: items,
+      goingDown: goingDown,
+    );
   }
 }

@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'item_dropper_common.dart';
 
-/// Manages keyboard navigation state and event handling for dropdown widgets.
+/// Manages keyboard navigation state, event dispatch, and scroll side effects.
 ///
-/// Handles arrow key navigation, highlight state, and keyboard event processing.
-/// Provides a unified interface for both single-select and multi-select dropdowns.
+/// Pure key/index decisions live in [ItemDropperKeyboardNavigation]. This
+/// manager stores the current highlight/hover state, invokes callbacks, and
+/// keeps the highlighted row in view.
 ///
 /// Example usage:
 /// ```dart
@@ -101,20 +102,14 @@ class KeyboardNavigationManager<T> {
     required ScrollController scrollController,
     required bool mounted,
   }) {
-    _keyboardHighlightIndex = ItemDropperKeyboardNavigation.handleArrowDown<T>(
-      currentIndex: _keyboardHighlightIndex,
-      hoverIndex: hoverIndex,
-      itemCount: filteredItems.length,
-      items: filteredItems,
-    );
+    _keyboardHighlightIndex =
+        ItemDropperKeyboardNavigation.nextIndexForArrowDown<T>(
+          currentIndex: _keyboardHighlightIndex,
+          hoverIndex: hoverIndex,
+          items: filteredItems,
+        );
 
-    // Clear hover when keyboard nav becomes active
-    hoverIndex = ItemDropperConstants.kNoHighlight;
-    onRequestRebuild();
-
-    // Scroll to highlighted item
-    ItemDropperKeyboardNavigation.scrollToHighlight(
-      highlightIndex: _keyboardHighlightIndex,
+    _afterHighlightChanged(
       scrollController: scrollController,
       mounted: mounted,
     );
@@ -126,23 +121,67 @@ class KeyboardNavigationManager<T> {
     required ScrollController scrollController,
     required bool mounted,
   }) {
-    _keyboardHighlightIndex = ItemDropperKeyboardNavigation.handleArrowUp<T>(
-      currentIndex: _keyboardHighlightIndex,
-      hoverIndex: hoverIndex,
-      itemCount: filteredItems.length,
-      items: filteredItems,
-    );
+    _keyboardHighlightIndex =
+        ItemDropperKeyboardNavigation.nextIndexForArrowUp<T>(
+          currentIndex: _keyboardHighlightIndex,
+          hoverIndex: hoverIndex,
+          items: filteredItems,
+        );
 
-    // Clear hover when keyboard nav becomes active
-    hoverIndex = ItemDropperConstants.kNoHighlight;
-    onRequestRebuild();
-
-    // Scroll to highlighted item
-    ItemDropperKeyboardNavigation.scrollToHighlight(
-      highlightIndex: _keyboardHighlightIndex,
+    _afterHighlightChanged(
       scrollController: scrollController,
       mounted: mounted,
     );
+  }
+
+  void _afterHighlightChanged({
+    required ScrollController scrollController,
+    required bool mounted,
+  }) {
+    hoverIndex = ItemDropperConstants.kNoHighlight;
+    onRequestRebuild();
+    _scrollToHighlight(scrollController: scrollController, mounted: mounted);
+  }
+
+  void _scrollToHighlight({
+    required ScrollController scrollController,
+    required bool mounted,
+  }) {
+    if (_keyboardHighlightIndex < 0) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      try {
+        if (scrollController.hasClients &&
+            scrollController.position.hasContentDimensions) {
+          final double itemTop =
+              _keyboardHighlightIndex *
+              ItemDropperConstants.kDropdownItemHeight;
+          final double itemBottom =
+              itemTop + ItemDropperConstants.kDropdownItemHeight;
+          final double viewportStart = scrollController.offset;
+          final double viewportEnd =
+              viewportStart + scrollController.position.viewportDimension;
+
+          if (itemTop < viewportStart) {
+            scrollController.animateTo(
+              itemTop,
+              duration: ItemDropperConstants.kScrollAnimationDuration,
+              curve: Curves.easeInOut,
+            );
+          } else if (itemBottom > viewportEnd) {
+            scrollController.animateTo(
+              itemBottom - scrollController.position.viewportDimension,
+              duration: ItemDropperConstants.kScrollAnimationDuration,
+              curve: Curves.easeInOut,
+            );
+          }
+        }
+      } catch (e) {
+        debugPrint('[KEYBOARD NAV] Scroll failed: $e');
+      }
+    });
   }
 
   /// Clears both keyboard and hover highlights
