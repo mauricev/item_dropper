@@ -31,4 +31,28 @@ class ItemDropperItem<T> {
     this.isEnabled = true,
     this.isAddItem = false,
   });
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is ItemDropperItem<T> &&
+            other.value == value &&
+            other.label == label &&
+            other.isGroupHeader == isGroupHeader &&
+            other.isDeletable == isDeletable &&
+            other.isEnabled == isEnabled &&
+            other.isAddItem == isAddItem;
+  }
+
+  @override
+  int get hashCode {
+    return Object.hash(
+      value,
+      label,
+      isGroupHeader,
+      isDeletable,
+      isEnabled,
+      isAddItem,
+    );
+  }
 }
