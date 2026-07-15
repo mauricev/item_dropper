@@ -9,6 +9,7 @@ import 'package:item_dropper/src/multi/multi_select_chip_layout_controller.dart'
 import 'package:item_dropper/src/multi/multi_select_constants.dart';
 import 'package:item_dropper/src/multi/multi_select_filter_controller.dart';
 import 'package:item_dropper/src/multi/multi_select_focus_manager.dart';
+import 'package:item_dropper/src/multi/multi_select_highlight_policy.dart';
 import 'package:item_dropper/src/multi/multi_select_selection_manager.dart';
 import 'package:item_dropper/src/multi/smartwrap.dart'
     show SmartWrapWithFlexibleLast;
@@ -167,6 +168,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       MultiSelectChipLayoutController();
   final MultiSelectChipFocusNodeController _chipFocusNodeController =
       MultiSelectChipFocusNodeController();
+  final MultiSelectHighlightPolicy _highlightPolicy =
+      const MultiSelectHighlightPolicy();
 
   // Live region for screen reader announcements
   late final LiveRegionManager _liveRegionManager;
@@ -459,9 +462,9 @@ extension _MultiItemDropperStateHelpers<T> on _MultiItemDropperState<T> {
 
   void _updateSelection(void Function() selectionUpdate) {
     // Preserve keyboard highlight state - only reset if keyboard navigation was active
-    final bool wasKeyboardActive =
-        _keyboardNavManager.keyboardHighlightIndex !=
-        ItemDropperConstants.kNoHighlight;
+    final bool wasKeyboardActive = _highlightPolicy.isKeyboardActive(
+      _keyboardNavManager.keyboardHighlightIndex,
+    );
     final int previousHoverIndex = _keyboardNavManager.hoverIndex;
 
     // Use unified selection change handler
@@ -480,26 +483,19 @@ extension _MultiItemDropperStateHelpers<T> on _MultiItemDropperState<T> {
         // Update highlights based on filtered items
         final List<ItemDropperItem<T>> remainingFilteredItems = _filtered;
 
-        if (remainingFilteredItems.isNotEmpty) {
-          // Only reset keyboard highlight if keyboard navigation was active
-          if (wasKeyboardActive) {
-            _keyboardNavManager.clearHighlights();
-            // Set keyboard highlight to first item
-            // Note: We can't directly set the index, so we'll clear it
-            // The manager will handle resetting on next arrow key
-          } else {
-            // Preserve hover index if still valid
-            if (previousHoverIndex >= 0 &&
-                previousHoverIndex < remainingFilteredItems.length) {
-              // Hover index is still valid, keep it
-              _keyboardNavManager.hoverIndex = previousHoverIndex;
-            } else {
-              // Hover index is invalid, clear it
-              _keyboardNavManager.clearHighlights();
-            }
-          }
-        } else {
+        final highlightResult = _highlightPolicy.afterSelectionChange(
+          wasKeyboardActive: wasKeyboardActive,
+          previousHoverIndex: previousHoverIndex,
+          remainingFilteredItemCount: remainingFilteredItems.length,
+        );
+
+        if (highlightResult.clearHighlights) {
           _clearHighlights();
+        } else if (highlightResult.hoverIndex != null) {
+          _keyboardNavManager.hoverIndex = highlightResult.hoverIndex!;
+        }
+
+        if (highlightResult.hideOverlay) {
           if (_overlayController.isShowing) {
             _overlayController.hide();
           }
