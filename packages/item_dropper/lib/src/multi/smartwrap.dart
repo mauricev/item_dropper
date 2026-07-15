@@ -46,6 +46,18 @@ class SmartWrapWithFlexibleLast extends MultiChildRenderObjectWidget {
 
 class _SmartWrapParentData extends ContainerBoxParentData<RenderBox> {}
 
+class _SmartWrapChildLayout {
+  const _SmartWrapChildLayout({
+    required this.child,
+    required this.x,
+    required this.size,
+  });
+
+  final RenderBox child;
+  final double x;
+  final Size size;
+}
+
 class _RenderSmartWrapWithFlexibleLast extends RenderBox
     with
         ContainerRenderObjectMixin<RenderBox, _SmartWrapParentData>,
@@ -96,13 +108,40 @@ class _RenderSmartWrapWithFlexibleLast extends RenderBox
     double currentRowX = 0.0;
     double currentRowY = 0.0;
     double currentRowHeight = 0.0;
+    final rowChildren = <_SmartWrapChildLayout>[];
+
+    void addChildToRow(RenderBox child, double x, Size size) {
+      rowChildren.add(_SmartWrapChildLayout(child: child, x: x, size: size));
+      currentRowX = x + size.width;
+      currentRowHeight = currentRowHeight > size.height
+          ? currentRowHeight
+          : size.height;
+    }
+
+    void finishCurrentRow() {
+      for (final childLayout in rowChildren) {
+        final _SmartWrapParentData parentData =
+            childLayout.child.parentData as _SmartWrapParentData;
+        parentData.offset = Offset(
+          childLayout.x,
+          currentRowY + (currentRowHeight - childLayout.size.height) / 2,
+        );
+      }
+
+      if (rowChildren.isEmpty) {
+        return;
+      }
+
+      currentRowY += currentRowHeight + runSpacing;
+      currentRowX = 0.0;
+      currentRowHeight = 0.0;
+      rowChildren.clear();
+    }
 
     RenderBox? child = firstChild;
 
     while (child != null) {
       final bool isLastChildInList = childAfter(child) == null;
-      final _SmartWrapParentData parentData =
-          child.parentData as _SmartWrapParentData;
 
       if (!isLastChildInList) {
         // Normal wrap behavior for all but the last child.
@@ -120,19 +159,12 @@ class _RenderSmartWrapWithFlexibleLast extends RenderBox
         // If it doesn't fit and we already have something on this row,
         // move to a new row.
         if (proposedRowEndX > maxRowWidth && currentRowX != 0.0) {
-          currentRowX = 0.0;
-          currentRowY += currentRowHeight + runSpacing;
-          currentRowHeight = 0.0;
+          finishCurrentRow();
         }
 
         // Final x position for this child on this row.
         final double childX = currentRowX == 0.0 ? 0.0 : currentRowX + spacing;
-        parentData.offset = Offset(childX, currentRowY);
-
-        currentRowX = childX + childSize.width;
-        currentRowHeight = currentRowHeight > childSize.height
-            ? currentRowHeight
-            : childSize.height;
+        addChildToRow(child, childX, childSize);
       } else {
         // Special logic for the last child in the *whole* widget.
         double childX = currentRowX;
@@ -153,9 +185,7 @@ class _RenderSmartWrapWithFlexibleLast extends RenderBox
             availableWidthForLastChild = remainingWidthOnRow;
           } else {
             // Move to the next row and use full width.
-            currentRowX = 0.0;
-            currentRowY += currentRowHeight + runSpacing;
-            currentRowHeight = 0.0;
+            finishCurrentRow();
 
             childX = 0.0;
             availableWidthForLastChild = maxRowWidth;
@@ -168,14 +198,19 @@ class _RenderSmartWrapWithFlexibleLast extends RenderBox
         );
         final Size childSize = child.size;
 
-        parentData.offset = Offset(childX, currentRowY);
-        currentRowX = childX + childSize.width;
-        currentRowHeight = currentRowHeight > childSize.height
-            ? currentRowHeight
-            : childSize.height;
+        addChildToRow(child, childX, childSize);
       }
 
       child = childAfter(child);
+    }
+
+    for (final childLayout in rowChildren) {
+      final _SmartWrapParentData parentData =
+          childLayout.child.parentData as _SmartWrapParentData;
+      parentData.offset = Offset(
+        childLayout.x,
+        currentRowY + (currentRowHeight - childLayout.size.height) / 2,
+      );
     }
 
     final double layoutWidth = maxRowWidth;
