@@ -16,6 +16,18 @@ class _DeleteCallbackTracker<T> {
 
 void main() {
   group('MultiItemDropper - Basic Functionality', () {
+    test('asserts when maxSelected is less than one', () {
+      expect(
+        () => MultiItemDropper<String>(
+          items: const [],
+          width: 300,
+          maxSelected: 0,
+          onChanged: (_) {},
+        ),
+        throwsAssertionError,
+      );
+    });
+
     testWidgets('should display items list', (WidgetTester tester) async {
       final items = [
         ItemDropperItem<String>(value: '1', label: 'Item 1'),
@@ -96,7 +108,9 @@ void main() {
       expect(selectedItems.any((item) => item.value == '2'), isTrue);
     });
 
-    testWidgets('should display selected items as chips', (WidgetTester tester) async {
+    testWidgets('should display selected items as chips', (
+      WidgetTester tester,
+    ) async {
       final items = [
         ItemDropperItem<String>(value: '1', label: 'Item 1'),
         ItemDropperItem<String>(value: '2', label: 'Item 2'),
@@ -122,7 +136,9 @@ void main() {
       expect(find.text('Item 2'), findsWidgets);
     });
 
-    testWidgets('should remove item when chip delete button is tapped', (WidgetTester tester) async {
+    testWidgets('should remove item when chip delete button is tapped', (
+      WidgetTester tester,
+    ) async {
       final items = [
         ItemDropperItem<String>(value: '1', label: 'Item 1'),
         ItemDropperItem<String>(value: '2', label: 'Item 2'),
@@ -164,7 +180,9 @@ void main() {
   });
 
   group('MultiItemDropper - Filtering', () {
-    testWidgets('should filter items based on search text', (WidgetTester tester) async {
+    testWidgets('should filter items based on search text', (
+      WidgetTester tester,
+    ) async {
       final items = [
         ItemDropperItem<String>(value: '1', label: 'Apple'),
         ItemDropperItem<String>(value: '2', label: 'Banana'),
@@ -201,7 +219,64 @@ void main() {
   });
 
   group('MultiItemDropper - Max Selected', () {
-    testWidgets('should hide overlay when maxSelected is reached', (WidgetTester tester) async {
+    testWidgets('supports maxSelected of one', (WidgetTester tester) async {
+      final items = [
+        ItemDropperItem<String>(value: '1', label: 'Item 1'),
+        ItemDropperItem<String>(value: '2', label: 'Item 2'),
+      ];
+
+      List<ItemDropperItem<String>> selectedItems = [];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: StatefulBuilder(
+              builder: (context, setState) {
+                return MultiItemDropper<String>(
+                  items: items,
+                  selectedItems: selectedItems,
+                  width: 300,
+                  maxSelected: 1,
+                  onChanged: (items) {
+                    setState(() => selectedItems = items);
+                  },
+                );
+              },
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byType(MultiItemDropper<String>));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Item 1'));
+      await tester.pumpAndSettle();
+
+      expect(selectedItems.length, equals(1));
+      expect(selectedItems.single.value, equals('1'));
+
+      await tester.tap(find.byType(MultiItemDropper<String>));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Reached maximum allowed items'), findsOneWidget);
+      expect(find.text('Item 2'), findsNothing);
+
+      await tester.tap(find.byIcon(Icons.close).first);
+      await tester.pumpAndSettle();
+
+      expect(selectedItems, isEmpty);
+
+      await tester.tap(find.byType(MultiItemDropper<String>));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Item 1'), findsOneWidget);
+      expect(find.text('Item 2'), findsOneWidget);
+    });
+
+    testWidgets('should hide overlay when maxSelected is reached', (
+      WidgetTester tester,
+    ) async {
       final items = [
         ItemDropperItem<String>(value: '1', label: 'Item 1'),
         ItemDropperItem<String>(value: '2', label: 'Item 2'),
@@ -253,61 +328,64 @@ void main() {
       // (This is a behavior test - the overlay should be hidden)
     });
 
-    testWidgets('should show overlay again when item is removed below maxSelected', (WidgetTester tester) async {
-      final items = [
-        ItemDropperItem<String>(value: '1', label: 'Item 1'),
-        ItemDropperItem<String>(value: '2', label: 'Item 2'),
-      ];
+    testWidgets(
+      'should show overlay again when item is removed below maxSelected',
+      (WidgetTester tester) async {
+        final items = [
+          ItemDropperItem<String>(value: '1', label: 'Item 1'),
+          ItemDropperItem<String>(value: '2', label: 'Item 2'),
+        ];
 
-      List<ItemDropperItem<String>> selectedItems = [items[0], items[1]];
+        List<ItemDropperItem<String>> selectedItems = [items[0], items[1]];
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: StatefulBuilder(
-              builder: (context, setState) {
-                return MultiItemDropper<String>(
-                  items: items,
-                  selectedItems: selectedItems,
-                  width: 300,
-                  maxSelected: 2,
-                  onChanged: (items) {
-                    setState(() => selectedItems = items);
-                  },
-                );
-              },
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: StatefulBuilder(
+                builder: (context, setState) {
+                  return MultiItemDropper<String>(
+                    items: items,
+                    selectedItems: selectedItems,
+                    width: 300,
+                    maxSelected: 2,
+                    onChanged: (items) {
+                      setState(() => selectedItems = items);
+                    },
+                  );
+                },
+              ),
             ),
           ),
-        ),
-      );
+        );
 
-      await tester.pumpAndSettle();
-
-      // Remove one item
-      final deleteButtons = find.byIcon(Icons.close);
-      if (deleteButtons.evaluate().isNotEmpty) {
-        await tester.tap(deleteButtons.first);
         await tester.pumpAndSettle();
 
-        // Verify one item was removed
-        expect(selectedItems.length, equals(1));
+        // Remove one item
+        final deleteButtons = find.byIcon(Icons.close);
+        if (deleteButtons.evaluate().isNotEmpty) {
+          await tester.tap(deleteButtons.first);
+          await tester.pumpAndSettle();
 
-        // Tap to focus - overlay should show again
-        await tester.tap(find.byType(MultiItemDropper<String>));
-        await tester.pumpAndSettle();
+          // Verify one item was removed
+          expect(selectedItems.length, equals(1));
 
-        // Overlay should be visible again
-        expect(find.text('Item 1'), findsWidgets);
-        expect(find.text('Item 2'), findsWidgets);
-      }
-    });
+          // Tap to focus - overlay should show again
+          await tester.tap(find.byType(MultiItemDropper<String>));
+          await tester.pumpAndSettle();
+
+          // Overlay should be visible again
+          expect(find.text('Item 1'), findsWidgets);
+          expect(find.text('Item 2'), findsWidgets);
+        }
+      },
+    );
   });
 
   group('MultiItemDropper - Enabled/Disabled', () {
-    testWidgets('should not accept focus when disabled', (WidgetTester tester) async {
-      final items = [
-        ItemDropperItem<String>(value: '1', label: 'Item 1'),
-      ];
+    testWidgets('should not accept focus when disabled', (
+      WidgetTester tester,
+    ) async {
+      final items = [ItemDropperItem<String>(value: '1', label: 'Item 1')];
 
       await tester.pumpWidget(
         MaterialApp(
@@ -333,10 +411,10 @@ void main() {
       expect(find.text('Item 1'), findsNothing);
     });
 
-    testWidgets('should display disabled styling when disabled', (WidgetTester tester) async {
-      final items = [
-        ItemDropperItem<String>(value: '1', label: 'Item 1'),
-      ];
+    testWidgets('should display disabled styling when disabled', (
+      WidgetTester tester,
+    ) async {
+      final items = [ItemDropperItem<String>(value: '1', label: 'Item 1')];
 
       await tester.pumpWidget(
         MaterialApp(
@@ -358,11 +436,20 @@ void main() {
       expect(find.byType(MultiItemDropper<String>), findsOneWidget);
     });
 
-    testWidgets('should not select a disabled item when tapped',
-        (WidgetTester tester) async {
+    testWidgets('should not select a disabled item when tapped', (
+      WidgetTester tester,
+    ) async {
       final items = [
-        ItemDropperItem<String>(value: '1', label: 'Enabled 1', isEnabled: true),
-        ItemDropperItem<String>(value: '2', label: 'Disabled 2', isEnabled: false),
+        ItemDropperItem<String>(
+          value: '1',
+          label: 'Enabled 1',
+          isEnabled: true,
+        ),
+        ItemDropperItem<String>(
+          value: '2',
+          label: 'Disabled 2',
+          isEnabled: false,
+        ),
       ];
 
       List<ItemDropperItem<String>> selectedItems = [];
@@ -402,46 +489,49 @@ void main() {
   });
 
   group('MultiItemDropper - Add Item Feature', () {
-    testWidgets('should show add item row when no matches and onAddItem provided', (WidgetTester tester) async {
-      final items = [
-        ItemDropperItem<String>(value: '1', label: 'Apple'),
-        ItemDropperItem<String>(value: '2', label: 'Banana'),
-      ];
+    testWidgets(
+      'should show add item row when no matches and onAddItem provided',
+      (WidgetTester tester) async {
+        final items = [
+          ItemDropperItem<String>(value: '1', label: 'Apple'),
+          ItemDropperItem<String>(value: '2', label: 'Banana'),
+        ];
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: MultiItemDropper<String>(
-              items: items,
-              selectedItems: [],
-              width: 300,
-              onChanged: (_) {},
-              onAddItem: (searchText) => ItemDropperItem<String>(
-                value: searchText,
-                label: searchText,
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: MultiItemDropper<String>(
+                items: items,
+                selectedItems: [],
+                width: 300,
+                onChanged: (_) {},
+                onAddItem: (searchText) => ItemDropperItem<String>(
+                  value: searchText,
+                  label: searchText,
+                ),
               ),
             ),
           ),
-        ),
-      );
+        );
 
-      // Tap to focus
-      await tester.tap(find.byType(MultiItemDropper<String>));
-      await tester.pumpAndSettle();
+        // Tap to focus
+        await tester.tap(find.byType(MultiItemDropper<String>));
+        await tester.pumpAndSettle();
 
-      // Type non-matching text
-      final textField = find.byType(TextField);
-      await tester.enterText(textField, 'Orange');
-      await tester.pumpAndSettle();
+        // Type non-matching text
+        final textField = find.byType(TextField);
+        await tester.enterText(textField, 'Orange');
+        await tester.pumpAndSettle();
 
-      // Verify add item row appears
-      expect(find.textContaining('Add'), findsOneWidget);
-    });
+        // Verify add item row appears
+        expect(find.textContaining('Add'), findsOneWidget);
+      },
+    );
 
-    testWidgets('should call onAddItem when add row is selected', (WidgetTester tester) async {
-      final items = [
-        ItemDropperItem<String>(value: '1', label: 'Apple'),
-      ];
+    testWidgets('should call onAddItem when add row is selected', (
+      WidgetTester tester,
+    ) async {
+      final items = [ItemDropperItem<String>(value: '1', label: 'Apple')];
 
       ItemDropperItem<String>? addedItem;
 
@@ -484,10 +574,10 @@ void main() {
       expect(addedItem?.label, equals('Orange'));
     });
 
-    testWidgets('should not show add item row when onAddItem is null', (WidgetTester tester) async {
-      final items = [
-        ItemDropperItem<String>(value: '1', label: 'Apple'),
-      ];
+    testWidgets('should not show add item row when onAddItem is null', (
+      WidgetTester tester,
+    ) async {
+      final items = [ItemDropperItem<String>(value: '1', label: 'Apple')];
 
       await tester.pumpWidget(
         MaterialApp(
@@ -518,7 +608,9 @@ void main() {
   });
 
   group('MultiItemDropper - Items List Updates', () {
-    testWidgets('should update dropdown when items list changes', (WidgetTester tester) async {
+    testWidgets('should update dropdown when items list changes', (
+      WidgetTester tester,
+    ) async {
       List<ItemDropperItem<String>> items = [
         ItemDropperItem<String>(value: '1', label: 'Item 1'),
         ItemDropperItem<String>(value: '2', label: 'Item 2'),
@@ -585,7 +677,9 @@ void main() {
       expect(find.text('Item 3'), findsOneWidget);
     });
 
-    testWidgets('should update dropdown when items list is replaced', (WidgetTester tester) async {
+    testWidgets('should update dropdown when items list is replaced', (
+      WidgetTester tester,
+    ) async {
       List<ItemDropperItem<String>> items = [
         ItemDropperItem<String>(value: '1', label: 'Item 1'),
         ItemDropperItem<String>(value: '2', label: 'Item 2'),
@@ -653,7 +747,9 @@ void main() {
       expect(find.text('Banana'), findsOneWidget);
     });
 
-    testWidgets('should update filtered results when items list changes', (WidgetTester tester) async {
+    testWidgets('should update filtered results when items list changes', (
+      WidgetTester tester,
+    ) async {
       List<ItemDropperItem<String>> items = [
         ItemDropperItem<String>(value: '1', label: 'Apple'),
         ItemDropperItem<String>(value: '2', label: 'Banana'),
@@ -739,10 +835,10 @@ void main() {
       expect(find.byType(MultiItemDropper<String>), findsOneWidget);
     });
 
-    testWidgets('should handle empty selectedItems list', (WidgetTester tester) async {
-      final items = [
-        ItemDropperItem<String>(value: '1', label: 'Item 1'),
-      ];
+    testWidgets('should handle empty selectedItems list', (
+      WidgetTester tester,
+    ) async {
+      final items = [ItemDropperItem<String>(value: '1', label: 'Item 1')];
 
       await tester.pumpWidget(
         MaterialApp(
@@ -763,10 +859,10 @@ void main() {
       expect(find.byType(MultiItemDropper<String>), findsOneWidget);
     });
 
-    testWidgets('should handle null selectedItems', (WidgetTester tester) async {
-      final items = [
-        ItemDropperItem<String>(value: '1', label: 'Item 1'),
-      ];
+    testWidgets('should handle null selectedItems', (
+      WidgetTester tester,
+    ) async {
+      final items = [ItemDropperItem<String>(value: '1', label: 'Item 1')];
 
       await tester.pumpWidget(
         MaterialApp(
@@ -789,7 +885,11 @@ void main() {
 
     testWidgets('should handle group headers', (WidgetTester tester) async {
       final items = [
-        ItemDropperItem<String>(value: 'header1', label: 'Group 1', isGroupHeader: true),
+        ItemDropperItem<String>(
+          value: 'header1',
+          label: 'Group 1',
+          isGroupHeader: true,
+        ),
         ItemDropperItem<String>(value: '1', label: 'Item 1'),
         ItemDropperItem<String>(value: '2', label: 'Item 2'),
       ];
@@ -855,7 +955,7 @@ void main() {
       // So we press arrow down to highlight second item, then arrow up to go to first
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
       await tester.pumpAndSettle();
-      
+
       // Press arrow up to go to first item
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
       await tester.pumpAndSettle();
@@ -871,15 +971,25 @@ void main() {
   });
 
   group('MultiItemDropper - Deletable Items', () {
-    testWidgets('shows trash icon only for deletable items',
-        (WidgetTester tester) async {
+    testWidgets('shows trash icon only for deletable items', (
+      WidgetTester tester,
+    ) async {
       final items = [
         ItemDropperItem<String>(
-            value: 'd1', label: 'Deletable 1', isDeletable: true),
+          value: 'd1',
+          label: 'Deletable 1',
+          isDeletable: true,
+        ),
         ItemDropperItem<String>(
-            value: 'd2', label: 'Deletable 2', isDeletable: true),
+          value: 'd2',
+          label: 'Deletable 2',
+          isDeletable: true,
+        ),
         ItemDropperItem<String>(
-            value: 'k3', label: 'Keep 3', isDeletable: false),
+          value: 'k3',
+          label: 'Keep 3',
+          isDeletable: false,
+        ),
       ];
 
       await tester.pumpWidget(
@@ -910,57 +1020,68 @@ void main() {
     });
 
     testWidgets(
-        'long-press on deletable item shows confirm dialog and calls onDeleteItem',
-        (WidgetTester tester) async {
-      final items = [
-        ItemDropperItem<String>(
-            value: 'd1', label: 'Deletable 1', isDeletable: true),
-        ItemDropperItem<String>(
-            value: 'k2', label: 'Keep 2', isDeletable: false),
-      ];
+      'long-press on deletable item shows confirm dialog and calls onDeleteItem',
+      (WidgetTester tester) async {
+        final items = [
+          ItemDropperItem<String>(
+            value: 'd1',
+            label: 'Deletable 1',
+            isDeletable: true,
+          ),
+          ItemDropperItem<String>(
+            value: 'k2',
+            label: 'Keep 2',
+            isDeletable: false,
+          ),
+        ];
 
-      final tracker = _DeleteCallbackTracker<String>();
+        final tracker = _DeleteCallbackTracker<String>();
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: MultiItemDropper<String>(
-              items: items,
-              selectedItems: const [],
-              width: 300,
-              onChanged: (_) {},
-              onDeleteItem: tracker.record,
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: MultiItemDropper<String>(
+                items: items,
+                selectedItems: const [],
+                width: 300,
+                onChanged: (_) {},
+                onDeleteItem: tracker.record,
+              ),
             ),
           ),
-        ),
-      );
+        );
 
-      // Open overlay
-      await tester.tap(find.byType(MultiItemDropper<String>));
-      await tester.pumpAndSettle();
+        // Open overlay
+        await tester.tap(find.byType(MultiItemDropper<String>));
+        await tester.pumpAndSettle();
 
-      // Long-press the deletable item row
-      await tester.longPress(find.text('Deletable 1').last);
-      await tester.pumpAndSettle();
+        // Long-press the deletable item row
+        await tester.longPress(find.text('Deletable 1').last);
+        await tester.pumpAndSettle();
 
-      // Confirm dialog should appear
-      expect(find.text('Delete "Deletable 1"?'), findsOneWidget);
+        // Confirm dialog should appear
+        expect(find.text('Delete "Deletable 1"?'), findsOneWidget);
 
-      // Tap the Delete button
-      await tester.tap(find.text('Delete'));
-      await tester.pumpAndSettle();
+        // Tap the Delete button
+        await tester.tap(find.text('Delete'));
+        await tester.pumpAndSettle();
 
-      // onDeleteItem should have been called once with the deletable item
-      expect(tracker.callCount, equals(1));
-      expect(tracker.lastItem, isNotNull);
-      expect(tracker.lastItem!.value, equals('d1'));
-    });
+        // onDeleteItem should have been called once with the deletable item
+        expect(tracker.callCount, equals(1));
+        expect(tracker.lastItem, isNotNull);
+        expect(tracker.lastItem!.value, equals('d1'));
+      },
+    );
 
-    testWidgets('cancelling delete dialog does not call onDeleteItem',
-        (WidgetTester tester) async {
+    testWidgets('cancelling delete dialog does not call onDeleteItem', (
+      WidgetTester tester,
+    ) async {
       final items = [
         ItemDropperItem<String>(
-            value: 'd1', label: 'Deletable 1', isDeletable: true),
+          value: 'd1',
+          label: 'Deletable 1',
+          isDeletable: true,
+        ),
       ];
 
       final tracker = _DeleteCallbackTracker<String>();
@@ -998,11 +1119,15 @@ void main() {
       expect(tracker.callCount, equals(0));
     });
 
-    testWidgets('long-press on non-deletable item does nothing',
-        (WidgetTester tester) async {
+    testWidgets('long-press on non-deletable item does nothing', (
+      WidgetTester tester,
+    ) async {
       final items = [
         ItemDropperItem<String>(
-            value: 'k1', label: 'Keep 1', isDeletable: false),
+          value: 'k1',
+          label: 'Keep 1',
+          isDeletable: false,
+        ),
       ];
 
       final tracker = _DeleteCallbackTracker<String>();
@@ -1036,4 +1161,3 @@ void main() {
     });
   });
 }
-

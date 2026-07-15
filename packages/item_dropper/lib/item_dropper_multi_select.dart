@@ -147,8 +147,8 @@ class MultiItemDropper<T> extends ItemDropperBase<T> {
     this.localizations,
     this.dependencies,
   }) : assert(
-         maxSelected == null || maxSelected >= 2,
-         'maxSelected must be null or >= 2',
+         maxSelected == null || maxSelected >= 1,
+         'maxSelected must be null or >= 1',
        );
 
   @override
