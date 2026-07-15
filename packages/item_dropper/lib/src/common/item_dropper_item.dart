@@ -4,12 +4,17 @@ typedef ItemDropperItemCallback<T> =
 
 /// Generic dropdown item with value and display label
 class ItemDropperItem<T> {
+  /// Value associated with this item.
   final T value;
+
+  /// Text displayed for this item.
   final String label;
 
   /// Whether this item is a group header (non-selectable label).
   /// Group headers are displayed but cannot be selected.
   final bool isGroupHeader;
+
+  /// Whether this item can be deleted through the dropdown UI.
   final bool isDeletable;
 
   /// Whether this item is enabled (selectable) in the dropdown.

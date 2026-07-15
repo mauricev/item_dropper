@@ -58,7 +58,7 @@ Add `item_dropper` to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  item_dropper: ^0.0.1
+  item_dropper: ^0.0.4
 ```
 
 Then run:
@@ -364,13 +364,14 @@ See `ItemDropperLocalizations` class for all available strings.
 | `showDeleteAllIcon`        | `bool`                                  | `true`   | Show the clear (X) icon                                            |
 | `localizations`            | `ItemDropperLocalizations?`             | `null`   | Localization strings for user-facing text (optional)               |
 | `inputKey`                 | `GlobalKey?`                            | `null`   | Key for programmatic access                                        |
+| `dependencies`             | `SingleItemDropperDependencies<T>?`     | `null`   | Dependency factory hooks for tests and advanced integrations       |
 
 ### MultiItemDropper Parameters
 
 | Parameter                  | Type                                    | Default  | Description                                                        |
 |----------------------------|-----------------------------------------|----------|--------------------------------------------------------------------|
 | `items`                    | `List<ItemDropperItem<T>>`              | required | The items to display in the dropdown                               |
-| `selectedItems`            | `List<ItemDropperItem<T>>`              | required | The currently selected items                                       |
+| `selectedItems`            | `List<ItemDropperItem<T>>?`             | `null`   | The currently selected items                                       |
 | `onChanged`                | `Function(List<ItemDropperItem<T>>)`    | required | Called when the selection changes                                  |
 | `popupItemBuilder`         | `Widget Function(...)?`                 | `null`   | Optional custom builder for popup items                            |
 | `width`                    | `double`                                | required | The width of the dropdown field                                    |
@@ -379,7 +380,7 @@ See `ItemDropperLocalizations` class for all available strings.
 | `maxSelected`              | `int?`                                  | `null`   | Maximum number of items selectable in multi-select dropdown        |
 | `onAddItem`                | `ItemDropperItem<T>? Function(String)?` | `null`   | Callback for adding new items based on search text entered by user |
 | `onDeleteItem`             | `Function(ItemDropperItem<T>)?`         | `null`   | Callback for deleting items                                        |
-| `maxDropdownHeight`        | `double?`                               | `200.0`  | Maximum dropdown popup height                                      |
+| `maxDropdownHeight`        | `double`                                | `200.0`  | Maximum dropdown popup height                                      |
 | `showScrollbar`            | `bool`                                  | `true`   | Whether to show a vertical scrollbar in popup                      |
 | `scrollbarThickness`       | `double`                                | `6.0`    | Popup vertical scrollbar thickness                                 |
 | `itemHeight`               | `double?`                               | `null`   | Height for popup dropdown items                                    |
@@ -393,16 +394,32 @@ See `ItemDropperLocalizations` class for all available strings.
 | `showDropdownPositionIcon` | `bool`                                  | `true`   | Show the dropdown position arrow (down/up)                         |
 | `showDeleteAllIcon`        | `bool`                                  | `true`   | Show the clear (X) icon (clears search/all selections)             |
 | `localizations`            | `ItemDropperLocalizations?`             | `null`   | Localization strings for user-facing text (optional)               |
+| `dependencies`             | `MultiItemDropperDependencies<T>?`      | `null`   | Dependency factory hooks for tests and advanced integrations       |
 
 ### ItemDropperItem Properties
 
-| Property        | Type     | Default  | Description                    |
-|-----------------|----------|----------|--------------------------------|
-| `value`         | `T`      | required | Unique identifier for the item |
-| `label`         | `String` | required | Display text                   |
-| `isGroupHeader` | `bool`   | `false`  | Whether item is a group header |
-| `isEnabled`     | `bool`   | `true`   | Whether item can be selected   |
-| `isDeletable`   | `bool`   | `false`  | Whether item can be deleted    |
+| Property        | Type     | Default  | Description                                             |
+|-----------------|----------|----------|---------------------------------------------------------|
+| `value`         | `T`      | required | Value associated with the item                          |
+| `label`         | `String` | required | Display text                                            |
+| `isGroupHeader` | `bool`   | `false`  | Whether item is a group header                          |
+| `isEnabled`     | `bool`   | `true`   | Whether item can be selected                            |
+| `isDeletable`   | `bool`   | `false`  | Whether item can be deleted                             |
+| `isAddItem`     | `bool`   | `false`  | Reserved sentinel for internally generated add-item rows |
+
+`ItemDropperItem` uses value equality across all six properties, so equivalent items behave
+consistently in comparisons, sets, and map keys.
+
+### Shared Widget Contract
+
+`SingleItemDropper<T>` and `MultiItemDropper<T>` implement `ItemDropperBase<T>`. Use this shared
+type when application code needs to accept either widget while reading their common configuration.
+
+### Dependency Hooks
+
+`SingleItemDropperDependencies<T>` and `MultiItemDropperDependencies<T>` provide optional factory
+hooks for substituting managers and controllers in focused tests or advanced integrations. Normal
+application usage does not need to pass `dependencies`.
 
 ---
 

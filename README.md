@@ -3,7 +3,7 @@
 A customizable, accessible dropdown package for Flutter with powerful single-select and multi-select
 capabilities, built-in search filtering, and full keyboard navigation support.
 
-**[📦 View Package on pub.dev](https://pub.dev/packages/item_dropper)** (after publishing)
+**[📦 View Package on pub.dev](https://pub.dev/packages/item_dropper)**
 
 ---
 
@@ -68,7 +68,7 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  item_dropper: ^0.0.1
+  item_dropper: ^0.0.4
 ```
 
 **Basic usage:**
@@ -109,7 +109,7 @@ item_dropper/
 ├── packages/
 │   └── item_dropper/                # 📦 The Package
 │       ├── lib/                      # Package source code
-│       ├── test/                     # 164 passing tests
+│       ├── test/                     # Package test suite
 │       ├── example/                  # Simple usage example
 │       ├── README.md                 # 📖 Full documentation
 │       ├── LICENSE                   # MIT License
@@ -146,7 +146,7 @@ cd packages/item_dropper
 flutter test
 ```
 
-**Result:** 164 tests, all passing ✅
+**Result:** 242 tests, all passing ✅
 
 ---
 
@@ -187,7 +187,7 @@ components.
 
 - **[Package on pub.dev](https://pub.dev/packages/item_dropper)** (after publishing)
 - **[Package Documentation](packages/item_dropper/README.md)**
-- **[API Reference](https://pub.dev/documentation/item_dropper/latest/)** (after publishing)
+- **[API Reference](https://pub.dev/documentation/item_dropper/latest/)**
 - **[Example Code](packages/item_dropper/example/)**
 - **[Issue Tracker](https://github.com/mauricev/item_dropper/issues)**
 

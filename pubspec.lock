@@ -81,7 +81,7 @@ packages:
       path: "packages/item_dropper"
       relative: true
     source: path
-    version: "0.0.3"
+    version: "0.0.4"
   json_annotation:
     dependency: transitive
     description:
