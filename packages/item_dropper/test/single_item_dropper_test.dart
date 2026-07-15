@@ -785,5 +785,41 @@ void main() {
       // Verify first item was selected
       expect(selectedItem?.value, equals('1'));
     });
+
+    testWidgets('submit selects single selectable item without highlight', (
+      WidgetTester tester,
+    ) async {
+      final items = [
+        ItemDropperItem<String>(
+          value: 'header',
+          label: 'Group',
+          isGroupHeader: true,
+        ),
+        ItemDropperItem<String>(value: '1', label: 'Item 1'),
+      ];
+
+      ItemDropperItem<String>? selectedItem;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SingleItemDropper<String>(
+              items: items,
+              width: 300,
+              showKeyboard: true,
+              onChanged: (item) => selectedItem = item,
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byType(SingleItemDropper<String>));
+      await tester.pumpAndSettle();
+
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pumpAndSettle();
+
+      expect(selectedItem?.value, equals('1'));
+    });
   });
 }

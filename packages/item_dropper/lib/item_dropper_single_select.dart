@@ -488,14 +488,21 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
     _keyboardNavManager.clearHighlights();
   }
 
-  void _selectKeyboardHighlightedItem() {
+  ItemDropperItem<T>? _submitCandidate() {
     final List<ItemDropperItem<T>> filteredItems = _filtered;
     if (_keyboardNavManager.keyboardHighlightIndex >= 0 &&
         _keyboardNavManager.keyboardHighlightIndex < filteredItems.length) {
-      final ItemDropperItem<T> item =
-          filteredItems[_keyboardNavManager.keyboardHighlightIndex];
-      _selectDropdownItem(item);
+      return filteredItems[_keyboardNavManager.keyboardHighlightIndex];
     }
+
+    final selectableItems = filteredItems
+        .where((item) => !item.isGroupHeader)
+        .toList();
+    if (selectableItems.length == 1) {
+      return selectableItems.first;
+    }
+
+    return null;
   }
 
   void _selectDropdownItem(ItemDropperItem<T> item) {
@@ -589,21 +596,9 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
   }
 
   void _handleSubmit(String value) {
-    // When Enter is pressed, select keyboard-highlighted item or the single item
-    if (_keyboardNavManager.keyboardHighlightIndex >= 0) {
-      // Keyboard navigation is active, select highlighted item
-      _selectKeyboardHighlightedItem();
-    } else {
-      // No keyboard navigation, check for single item auto-select
-      final filteredList = _filtered;
-      // Find first selectable item
-      final selectableItems = filteredList
-          .where((item) => !item.isGroupHeader)
-          .toList();
-      if (selectableItems.length == 1) {
-        final item = selectableItems.first;
-        _selectDropdownItem(item);
-      }
+    final candidate = _submitCandidate();
+    if (candidate != null) {
+      _selectDropdownItem(candidate);
     }
   }
 
