@@ -9,7 +9,6 @@ import 'package:item_dropper/src/common/item_dropper_semantics.dart';
 import 'package:item_dropper/src/common/item_dropper_localizations.dart';
 import 'package:item_dropper/src/common/live_region_manager.dart';
 import 'package:item_dropper/src/common/keyboard_navigation_manager.dart';
-import 'package:item_dropper/src/common/decoration_cache_manager.dart';
 import 'package:item_dropper/src/utils/item_dropper_items_utils.dart';
 
 /// Single-select dropdown widget

@@ -100,43 +100,23 @@ extension _MultiItemDropperStateHelpers<T> on _MultiItemDropperState<T> {
     if (_rebuildScheduled) {
       return;
     }
-    // Invalidate decoration cache - will be recreated on next build with new focus state
-    _cachedDecoration = null;
-    _cachedFocusState = null;
+    _decorationManager.invalidate();
     // Note: setState must be called from main class, so we'll call _safeSetState from there
     // This is a helper that just invalidates the cache - the caller should trigger rebuild
   }
 
-  /// Get decoration for the input field container (simplified from DecorationCacheManager)
+  /// Get decoration for the input field container.
   BoxDecoration _getDecoration({
     required bool isFocused,
     BoxDecoration? customDecoration,
   }) {
-    // If custom decoration provided, use it as-is (no caching)
-    if (customDecoration != null) {
-      return customDecoration;
-    }
-
-    // Only recreate if cache is null or focus state changed
-    if (_cachedDecoration == null || _cachedFocusState != isFocused) {
-      _cachedFocusState = isFocused;
-      _cachedDecoration = BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Colors.white, Color(0xFFE5E5E5)],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
-        border: Border.all(
-          color: isFocused ? Colors.blue : Colors.grey.shade400,
-          width: MultiSelectConstants.kContainerBorderWidth,
-        ),
-        borderRadius: BorderRadius.circular(
-          MultiSelectConstants.kContainerBorderRadius,
-        ),
-      );
-    }
-
-    return _cachedDecoration!;
+    return _decorationManager.get(
+      isFocused: isFocused,
+      customDecoration: customDecoration,
+      borderRadius: MultiSelectConstants.kContainerBorderRadius,
+      borderWidth: MultiSelectConstants.kContainerBorderWidth,
+      gradientEndColor: const Color(0xFFE5E5E5),
+    );
   }
 
   void _updateSelection(void Function() selectionUpdate) {

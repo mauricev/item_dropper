@@ -175,9 +175,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   // Unified focus manager handles both TextField and chip focus
   late final MultiSelectFocusManager<T> _focusManager;
 
-  // Cached decoration state (simplified from DecorationCacheManager)
-  BoxDecoration? _cachedDecoration;
-  bool? _cachedFocusState;
+  final DecorationCacheManager _decorationManager = DecorationCacheManager();
 
   // Use shared filter utils
   final ItemDropperFilterUtils<T> _filterUtils = ItemDropperFilterUtils<T>();
