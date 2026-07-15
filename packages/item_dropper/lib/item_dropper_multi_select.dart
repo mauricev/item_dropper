@@ -178,8 +178,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   ItemDropperLocalizations get _localizations =>
       widget.localizations ?? ItemDropperLocalizations.english;
 
-  // State flag for rebuild scheduling
-  bool _rebuildScheduled = false;
+  final RebuildScheduler _rebuildScheduler = RebuildScheduler();
 
   // Unified focus manager handles both TextField and chip focus
   late final MultiSelectFocusManager<T> _focusManager;
@@ -357,7 +356,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       _selectionManager.syncItems(widgetSelection);
       // Don't trigger rebuild here if we're already rebuilding
       // Parent change will be reflected in the current rebuild cycle
-      // _requestRebuild() already checks _rebuildScheduled internally
+      // _requestRebuild() coalesces nested requests internally
       _requestRebuild();
     }
 
@@ -366,7 +365,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       _filterController.initializeItems(widget.items);
       // Cache removed - overlay rebuilds automatically
       // Use central rebuild mechanism instead of direct setState
-      // _requestRebuild() already checks _rebuildScheduled internally
+      // _requestRebuild() coalesces nested requests internally
       _requestRebuild();
     }
   }
@@ -465,7 +464,7 @@ extension _MultiItemDropperStateHelpers<T> on _MultiItemDropperState<T> {
 
   // Update visual state (border color) based on manual focus state
   void _updateFocusVisualState() {
-    if (_rebuildScheduled) {
+    if (_rebuildScheduler.isRebuilding) {
       return;
     }
     _decorationManager.invalidate();
@@ -539,36 +538,13 @@ extension _MultiItemDropperStateHelpers<T> on _MultiItemDropperState<T> {
     );
   }
 
-  // Central rebuild mechanism - prevents cascading rebuilds
-  // Only allows one rebuild at a time - ignores further requests until rebuild completes
+  // Central rebuild mechanism - coalesces nested rebuild requests.
   void _requestRebuild([void Function()? stateUpdate]) {
-    if (!mounted) {
-      return;
-    }
-
-    // If rebuild already in progress, ignore this request
-    if (_rebuildScheduled) {
-      return;
-    }
-
-    // Mark that rebuild is scheduled and trigger it immediately
-    _rebuildScheduled = true;
-
-    // Trigger immediate rebuild - state updates happen inside setState callback
-    // setState is synchronous, so the rebuild completes before setState returns
-    _safeSetState(() {
-      // Execute state update callback if provided
-      if (stateUpdate != null) {
-        stateUpdate.call();
-      }
-    });
-
-    // Reset flag immediately after setState completes
-    // setState is synchronous, so the rebuild has already completed
-    // No need to wait for the frame to complete
-    if (mounted) {
-      _rebuildScheduled = false;
-    }
+    _rebuildScheduler.request(
+      mounted: mounted,
+      rebuild: _safeSetState,
+      update: stateUpdate,
+    );
   }
 
   /// Unified method to handle selection changes: rebuild + notify parent + cleanup
@@ -819,7 +795,7 @@ extension _MultiItemDropperStateHandlers<T> on _MultiItemDropperState<T> {
 
     // Invalidate filtered cache and request a rebuild so overlay updates.
     _invalidateFilteredCache();
-    // _requestRebuild() already checks _rebuildScheduled internally
+    // _requestRebuild() coalesces nested requests internally
     _requestRebuild();
   }
 
