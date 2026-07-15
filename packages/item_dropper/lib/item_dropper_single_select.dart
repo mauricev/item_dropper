@@ -512,7 +512,6 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
 
     final addItemResult = ItemDropperSelectionHandler.handleAddItemIfNeeded<T>(
       item: item,
-      originalItems: widget.items,
       onAddItem: widget.onAddItem,
       localizations: _localizations,
       onItemCreated: _selectCreatedItem,

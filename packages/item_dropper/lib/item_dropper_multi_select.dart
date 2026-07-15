@@ -620,7 +620,6 @@ extension _MultiItemDropperStateHandlers<T> on _MultiItemDropperState<T> {
     // Handle add item selection using shared handler
     final addItemResult = ItemDropperSelectionHandler.handleAddItemIfNeeded<T>(
       item: item,
-      originalItems: widget.items,
       onAddItem: widget.onAddItem,
       localizations: _localizations,
       onItemCreated: (newItem) {

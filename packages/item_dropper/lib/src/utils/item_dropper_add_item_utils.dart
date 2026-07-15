@@ -3,32 +3,8 @@ import '../common/item_dropper_localizations.dart';
 
 /// Shared utilities for "add item" functionality in dropdowns
 class ItemDropperAddItemUtils {
-  /// Check if an item is the special "add" item
-  static bool isAddItem<T>(
-    ItemDropperItem<T> item,
-    List<ItemDropperItem<T>> originalItems, {
-    ItemDropperLocalizations? localizations,
-  }) {
-    if (item.isAddItem) {
-      return true;
-    }
-
-    final loc = localizations ?? ItemDropperLocalizations.english;
-    // Check label pattern using localizations
-    final expectedPrefix = loc.addItemPrefix;
-    final expectedSuffix = loc.addItemSuffix;
-    if (!item.label.startsWith(expectedPrefix) ||
-        !item.label.endsWith(expectedSuffix)) {
-      return false;
-    }
-    // Also verify it's not in the original items list (safety check)
-    // Check both value and label to be safe
-    final bool notInOriginalList = !originalItems.any(
-      (originalItem) =>
-          originalItem.value == item.value && originalItem.label == item.label,
-    );
-    return notInOriginalList;
-  }
+  /// Check if an item is the special "add" item.
+  static bool isAddItem<T>(ItemDropperItem<T> item) => item.isAddItem;
 
   /// Extract search text from add item label
   /// Label format: '{prefix}search text{suffix}'
@@ -56,8 +32,8 @@ class ItemDropperAddItemUtils {
   ///
   /// The value for the add item is a placeholder taken from the first item in
   /// [originalItems], because Dart cannot synthesize an arbitrary unique [T].
-  /// Use [ItemDropperItem.isAddItem] to identify the sentinel; do not rely on
-  /// its value.
+  /// The [ItemDropperItem.isAddItem] flag identifies the sentinel; neither its
+  /// value nor its localized label participates in identification.
   ///
   /// Throws [ArgumentError] if [originalItems] is empty. When using the add item
   /// feature, always ensure your items list has at least one item, or provide
@@ -76,8 +52,7 @@ class ItemDropperAddItemUtils {
     }
 
     final loc = localizations ?? ItemDropperLocalizations.english;
-    // Use first item's value as a template (type T reference)
-    // The actual value doesn't matter since we detect add items by label pattern
+    // Use the first item's value as a type-compatible placeholder.
     final T addItemValue = originalItems.first.value;
 
     return ItemDropperItem<T>(

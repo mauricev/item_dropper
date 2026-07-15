@@ -15,15 +15,15 @@ void main() {
     });
 
     group('isAddItem', () {
-      test('returns true for add item with correct format', () {
+      test('returns false for an unflagged add-item-shaped label', () {
         final addItem = ItemDropperItem<String>(
           value: 'temp',
           label: 'Add "Orange"',
         );
 
-        final result = ItemDropperAddItemUtils.isAddItem(addItem, testItems);
+        final result = ItemDropperAddItemUtils.isAddItem(addItem);
 
-        expect(result, isTrue);
+        expect(result, isFalse);
       });
 
       test('returns true for explicit add item sentinel', () {
@@ -33,7 +33,7 @@ void main() {
           isAddItem: true,
         );
 
-        final result = ItemDropperAddItemUtils.isAddItem(addItem, testItems);
+        final result = ItemDropperAddItemUtils.isAddItem(addItem);
 
         expect(result, isTrue);
       });
@@ -41,7 +41,7 @@ void main() {
       test('returns false for normal item', () {
         final normalItem = ItemDropperItem<String>(value: '1', label: 'Apple');
 
-        final result = ItemDropperAddItemUtils.isAddItem(normalItem, testItems);
+        final result = ItemDropperAddItemUtils.isAddItem(normalItem);
 
         expect(result, isFalse);
       });
@@ -49,7 +49,7 @@ void main() {
       test('returns false for item that starts with Add but wrong format', () {
         final item = ItemDropperItem<String>(value: 'temp', label: 'Add Item');
 
-        final result = ItemDropperAddItemUtils.isAddItem(item, testItems);
+        final result = ItemDropperAddItemUtils.isAddItem(item);
 
         expect(result, isFalse);
       });
@@ -62,7 +62,7 @@ void main() {
             label: 'Create "Orange"',
           );
 
-          final result = ItemDropperAddItemUtils.isAddItem(item, testItems);
+          final result = ItemDropperAddItemUtils.isAddItem(item);
 
           expect(result, isFalse);
         },
@@ -71,28 +71,10 @@ void main() {
       test('returns false if item exists in original list', () {
         final existingItem = testItems[0];
 
-        final result = ItemDropperAddItemUtils.isAddItem(
-          existingItem,
-          testItems,
-        );
+        final result = ItemDropperAddItemUtils.isAddItem(existingItem);
 
         expect(result, isFalse);
       });
-
-      test(
-        'returns false for add item format that exists in original list',
-        () {
-          final items = [
-            ItemDropperItem<String>(value: '1', label: 'Add "Test"'),
-          ];
-
-          final item = ItemDropperItem<String>(value: '1', label: 'Add "Test"');
-
-          final result = ItemDropperAddItemUtils.isAddItem(item, items);
-
-          expect(result, isFalse); // Item exists in original list
-        },
-      );
     });
 
     group('extractSearchTextFromAddItem', () {
@@ -184,7 +166,7 @@ void main() {
           );
 
           expect(addItem.value, equals(testItems.first.value));
-          expect(ItemDropperAddItemUtils.isAddItem(addItem, testItems), isTrue);
+          expect(ItemDropperAddItemUtils.isAddItem(addItem), isTrue);
         },
       );
 
