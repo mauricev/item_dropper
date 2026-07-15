@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:item_dropper/item_dropper.dart';
 import 'package:item_dropper/src/utils/item_dropper_keyboard_navigation.dart';
@@ -15,21 +16,86 @@ void main() {
       ];
     });
 
+    group('shouldOpenDropdownOnKey', () {
+      test('returns true for Space when closed and text is empty', () {
+        expect(
+          ItemDropperKeyboardNavigation.shouldOpenDropdownOnKey(
+            logicalKey: LogicalKeyboardKey.space,
+            isDropdownOpen: false,
+            text: '',
+            selection: const TextSelection.collapsed(offset: 0),
+          ),
+          isTrue,
+        );
+      });
+
+      test('returns true for Enter when closed and cursor is at start', () {
+        expect(
+          ItemDropperKeyboardNavigation.shouldOpenDropdownOnKey(
+            logicalKey: LogicalKeyboardKey.enter,
+            isDropdownOpen: false,
+            text: 'Apple',
+            selection: const TextSelection.collapsed(offset: 0),
+          ),
+          isTrue,
+        );
+      });
+
+      test('returns false for Space when cursor is inside text', () {
+        expect(
+          ItemDropperKeyboardNavigation.shouldOpenDropdownOnKey(
+            logicalKey: LogicalKeyboardKey.space,
+            isDropdownOpen: false,
+            text: 'Apple',
+            selection: const TextSelection.collapsed(offset: 3),
+          ),
+          isFalse,
+        );
+      });
+
+      test('returns false when dropdown is already open', () {
+        expect(
+          ItemDropperKeyboardNavigation.shouldOpenDropdownOnKey(
+            logicalKey: LogicalKeyboardKey.enter,
+            isDropdownOpen: true,
+            text: '',
+            selection: const TextSelection.collapsed(offset: 0),
+          ),
+          isFalse,
+        );
+      });
+
+      test('returns false for non-open keys', () {
+        expect(
+          ItemDropperKeyboardNavigation.shouldOpenDropdownOnKey(
+            logicalKey: LogicalKeyboardKey.keyA,
+            isDropdownOpen: false,
+            text: '',
+            selection: const TextSelection.collapsed(offset: 0),
+          ),
+          isFalse,
+        );
+      });
+    });
+
     group('findNextSelectableIndex', () {
       test('finds next selectable item going down', () {
         final items = [
           ItemDropperItem<String>(value: '1', label: 'Item 1'),
           ItemDropperItem<String>(
-              value: 'h1', label: 'Header', isGroupHeader: true),
+            value: 'h1',
+            label: 'Header',
+            isGroupHeader: true,
+          ),
           ItemDropperItem<String>(value: '2', label: 'Item 2'),
         ];
 
-        final nextIndex = ItemDropperKeyboardNavigation.findNextSelectableIndex<
-            String>(
-          currentIndex: 0,
-          items: items,
-          goingDown: true,
-        );
+        final nextIndex =
+            ItemDropperKeyboardNavigation.findNextSelectableIndex<String>(
+              currentIndex: 0,
+              items: items,
+              goingDown: true,
+            );
 
         expect(nextIndex, equals(2)); // Skips group header at index 1
       });
@@ -38,38 +104,41 @@ void main() {
         final items = [
           ItemDropperItem<String>(value: '1', label: 'Item 1'),
           ItemDropperItem<String>(
-              value: 'h1', label: 'Header', isGroupHeader: true),
+            value: 'h1',
+            label: 'Header',
+            isGroupHeader: true,
+          ),
           ItemDropperItem<String>(value: '2', label: 'Item 2'),
         ];
 
-        final nextIndex = ItemDropperKeyboardNavigation.findNextSelectableIndex<
-            String>(
-          currentIndex: 2,
-          items: items,
-          goingDown: false,
-        );
+        final nextIndex =
+            ItemDropperKeyboardNavigation.findNextSelectableIndex<String>(
+              currentIndex: 2,
+              items: items,
+              goingDown: false,
+            );
 
         expect(nextIndex, equals(0)); // Skips group header at index 1
       });
 
       test('wraps around when going down past last item', () {
-        final nextIndex = ItemDropperKeyboardNavigation.findNextSelectableIndex<
-            String>(
-          currentIndex: 2,
-          items: testItems,
-          goingDown: true,
-        );
+        final nextIndex =
+            ItemDropperKeyboardNavigation.findNextSelectableIndex<String>(
+              currentIndex: 2,
+              items: testItems,
+              goingDown: true,
+            );
 
         expect(nextIndex, equals(0)); // Wraps to first item
       });
 
       test('wraps around when going up past first item', () {
-        final nextIndex = ItemDropperKeyboardNavigation.findNextSelectableIndex<
-            String>(
-          currentIndex: 0,
-          items: testItems,
-          goingDown: false,
-        );
+        final nextIndex =
+            ItemDropperKeyboardNavigation.findNextSelectableIndex<String>(
+              currentIndex: 0,
+              items: testItems,
+              goingDown: false,
+            );
 
         expect(nextIndex, equals(2)); // Wraps to last item
       });
@@ -77,28 +146,34 @@ void main() {
       test('returns kNoHighlight when all items are group headers', () {
         final items = [
           ItemDropperItem<String>(
-              value: 'h1', label: 'Header 1', isGroupHeader: true),
+            value: 'h1',
+            label: 'Header 1',
+            isGroupHeader: true,
+          ),
           ItemDropperItem<String>(
-              value: 'h2', label: 'Header 2', isGroupHeader: true),
+            value: 'h2',
+            label: 'Header 2',
+            isGroupHeader: true,
+          ),
         ];
 
-        final nextIndex = ItemDropperKeyboardNavigation.findNextSelectableIndex<
-            String>(
-          currentIndex: 0,
-          items: items,
-          goingDown: true,
-        );
+        final nextIndex =
+            ItemDropperKeyboardNavigation.findNextSelectableIndex<String>(
+              currentIndex: 0,
+              items: items,
+              goingDown: true,
+            );
 
         expect(nextIndex, equals(ItemDropperConstants.kNoHighlight));
       });
 
       test('returns kNoHighlight when items list is empty', () {
-        final nextIndex = ItemDropperKeyboardNavigation.findNextSelectableIndex<
-            String>(
-          currentIndex: 0,
-          items: [],
-          goingDown: true,
-        );
+        final nextIndex =
+            ItemDropperKeyboardNavigation.findNextSelectableIndex<String>(
+              currentIndex: 0,
+              items: [],
+              goingDown: true,
+            );
 
         expect(nextIndex, equals(ItemDropperConstants.kNoHighlight));
       });
@@ -107,20 +182,29 @@ void main() {
         final items = [
           ItemDropperItem<String>(value: '1', label: 'Item 1'),
           ItemDropperItem<String>(
-              value: 'h1', label: 'Header 1', isGroupHeader: true),
+            value: 'h1',
+            label: 'Header 1',
+            isGroupHeader: true,
+          ),
           ItemDropperItem<String>(
-              value: 'h2', label: 'Header 2', isGroupHeader: true),
+            value: 'h2',
+            label: 'Header 2',
+            isGroupHeader: true,
+          ),
           ItemDropperItem<String>(
-              value: 'h3', label: 'Header 3', isGroupHeader: true),
+            value: 'h3',
+            label: 'Header 3',
+            isGroupHeader: true,
+          ),
           ItemDropperItem<String>(value: '2', label: 'Item 2'),
         ];
 
-        final nextIndex = ItemDropperKeyboardNavigation.findNextSelectableIndex<
-            String>(
-          currentIndex: 0,
-          items: items,
-          goingDown: true,
-        );
+        final nextIndex =
+            ItemDropperKeyboardNavigation.findNextSelectableIndex<String>(
+              currentIndex: 0,
+              items: items,
+              goingDown: true,
+            );
 
         expect(nextIndex, equals(4)); // Skips all three headers
       });
@@ -164,7 +248,10 @@ void main() {
         final items = [
           ItemDropperItem<String>(value: '1', label: 'Item 1'),
           ItemDropperItem<String>(
-              value: 'h1', label: 'Header', isGroupHeader: true),
+            value: 'h1',
+            label: 'Header',
+            isGroupHeader: true,
+          ),
           ItemDropperItem<String>(value: '2', label: 'Item 2'),
         ];
 
@@ -239,7 +326,10 @@ void main() {
         final items = [
           ItemDropperItem<String>(value: '1', label: 'Item 1'),
           ItemDropperItem<String>(
-              value: 'h1', label: 'Header', isGroupHeader: true),
+            value: 'h1',
+            label: 'Header',
+            isGroupHeader: true,
+          ),
           ItemDropperItem<String>(value: '2', label: 'Item 2'),
         ];
 
@@ -305,10 +395,16 @@ void main() {
         final items = [
           ItemDropperItem<String>(value: '1', label: 'Item 1'),
           ItemDropperItem<String>(
-              value: 'h1', label: 'Header 1', isGroupHeader: true),
+            value: 'h1',
+            label: 'Header 1',
+            isGroupHeader: true,
+          ),
           ItemDropperItem<String>(value: '2', label: 'Item 2'),
           ItemDropperItem<String>(
-              value: 'h2', label: 'Header 2', isGroupHeader: true),
+            value: 'h2',
+            label: 'Header 2',
+            isGroupHeader: true,
+          ),
           ItemDropperItem<String>(value: '3', label: 'Item 3'),
         ];
 

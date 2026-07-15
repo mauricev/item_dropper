@@ -1,9 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../common/item_dropper_constants.dart';
 import '../common/item_dropper_item.dart';
 
 /// Shared keyboard navigation behavior for dropdowns
 class ItemDropperKeyboardNavigation {
+  /// Whether [logicalKey] is used to open a closed dropdown.
+  static bool isOpenDropdownKey(LogicalKeyboardKey logicalKey) {
+    return logicalKey == LogicalKeyboardKey.space ||
+        logicalKey == LogicalKeyboardKey.enter;
+  }
+
+  /// Whether Space/Enter should open the dropdown instead of being handled by
+  /// the text field.
+  static bool shouldOpenDropdownOnKey({
+    required LogicalKeyboardKey logicalKey,
+    required bool isDropdownOpen,
+    required String text,
+    required TextSelection selection,
+  }) {
+    return !isDropdownOpen &&
+        isOpenDropdownKey(logicalKey) &&
+        (text.isEmpty || selection.baseOffset == 0);
+  }
+
   /// Find the next selectable item index, skipping group headers
   static int findNextSelectableIndex<T>({
     required int currentIndex,

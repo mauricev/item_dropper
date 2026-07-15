@@ -80,8 +80,9 @@ class KeyboardNavigationManager<T> {
     } else if (event.logicalKey == LogicalKeyboardKey.escape) {
       onEscape();
       return KeyEventResult.handled;
-    } else if ((event.logicalKey == LogicalKeyboardKey.space ||
-            event.logicalKey == LogicalKeyboardKey.enter) &&
+    } else if (ItemDropperKeyboardNavigation.isOpenDropdownKey(
+          event.logicalKey,
+        ) &&
         !isDropdownOpen &&
         onOpenDropdown != null) {
       // Space or Enter to open dropdown when closed

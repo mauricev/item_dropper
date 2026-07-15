@@ -24,6 +24,9 @@ migrate_working_dir/
 #.vscode/
 
 # Flutter/Dart/Pub related
+# Package examples should resolve dependencies locally rather than committing
+# their generated lockfile.
+/pubspec.lock
 **/doc/api/
 **/ios/Flutter/.last_build_id
 .dart_tool/

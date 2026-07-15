@@ -271,17 +271,16 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         }
       }
 
-      // Check if Space/Enter should open dropdown (only if text is empty or cursor at start)
       final shouldOpenOnSpaceEnter =
-          !_overlayController.isShowing &&
-          (event.logicalKey == LogicalKeyboardKey.space ||
-              event.logicalKey == LogicalKeyboardKey.enter) &&
-          (_searchController.text.isEmpty ||
-              _searchController.selection.baseOffset == 0);
+          ItemDropperKeyboardNavigation.shouldOpenDropdownOnKey(
+            logicalKey: event.logicalKey,
+            isDropdownOpen: _overlayController.isShowing,
+            text: _searchController.text,
+            selection: _searchController.selection,
+          );
 
       // If Space/Enter and shouldn't open dropdown, let TextField handle it normally
-      if ((event.logicalKey == LogicalKeyboardKey.space ||
-              event.logicalKey == LogicalKeyboardKey.enter) &&
+      if (ItemDropperKeyboardNavigation.isOpenDropdownKey(event.logicalKey) &&
           !shouldOpenOnSpaceEnter) {
         return KeyEventResult.ignored;
       }
