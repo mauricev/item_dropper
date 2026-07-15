@@ -4,10 +4,10 @@ import 'package:flutter/services.dart';
 import 'package:item_dropper/src/common/item_dropper_common.dart';
 import 'package:item_dropper/src/common/live_region_manager.dart';
 import 'package:item_dropper/src/common/keyboard_navigation_manager.dart';
+import 'package:item_dropper/src/multi/multi_select_chip_layout_controller.dart';
 import 'package:item_dropper/src/multi/multi_select_constants.dart';
 import 'package:item_dropper/src/multi/multi_select_filter_controller.dart';
 import 'package:item_dropper/src/multi/multi_select_focus_manager.dart';
-import 'package:item_dropper/src/multi/multi_select_layout_calculator.dart';
 import 'package:item_dropper/src/multi/multi_select_selection_manager.dart';
 import 'package:item_dropper/src/multi/smartwrap.dart'
     show SmartWrapWithFlexibleLast;
@@ -144,17 +144,9 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   // Keyboard navigation manager
   late final KeyboardNavigationManager<T> _keyboardNavManager;
 
-  // Chip measurement state
-  double? _chipHeight;
-  double? _chipTextTop;
-  double?
-  _lastContainerHeight; // Track Container height for overlay repositioning
-
   final GlobalKey _chipRowKey = GlobalKey();
   final GlobalKey _textFieldKey = GlobalKey();
   final GlobalKey _wrapKey = GlobalKey();
-
-  bool _isMeasuring = false;
 
   /// Get localizations with defaults
   ItemDropperLocalizations get _localizations =>
@@ -170,6 +162,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
 
   final MultiSelectFilterController<T> _filterController =
       MultiSelectFilterController<T>();
+  final MultiSelectChipLayoutController _chipLayoutController =
+      MultiSelectChipLayoutController();
 
   // Live region for screen reader announcements
   late final LiveRegionManager _liveRegionManager;
@@ -414,45 +408,6 @@ extension _MultiItemDropperStateHelpers<T> on _MultiItemDropperState<T> {
     }
   }
 
-  // TextField padding calculation
-  ({double top, double bottom}) _calculateTextFieldPadding({
-    required double chipHeight,
-    required double fontSize,
-  }) {
-    final double textLineHeight =
-        fontSize * MultiSelectConstants.kTextLineHeightMultiplier;
-
-    if (_chipTextTop != null) {
-      // Use measured chip text center position to align TextField text
-      // chipTextTop is already the text center (rowTop + rowHeight/2)
-      final double chipTextCenter = _chipTextTop!;
-      // Adjust for TextField's text rendering - needs offset upward
-      final double top =
-          chipTextCenter -
-          (textLineHeight / 2.0) -
-          MultiSelectConstants.kTextFieldPaddingOffset;
-      final double bottom = chipHeight - textLineHeight - top;
-      return (top: top, bottom: bottom);
-    } else {
-      // Fallback: calculate same as chip structure
-      // Chip text center = chipVerticalPadding + rowHeight/2
-      final double rowContentHeight =
-          textLineHeight > MultiSelectConstants.kIconHeight
-          ? textLineHeight
-          : MultiSelectConstants.kIconHeight;
-      final double chipTextCenter =
-          MultiSelectConstants.kChipVerticalPadding + (rowContentHeight / 2.0);
-
-      // Same adjustment as measured case
-      final double top =
-          chipTextCenter -
-          (textLineHeight / 2.0) -
-          MultiSelectConstants.kTextFieldPaddingOffset;
-      final double bottom = chipHeight - textLineHeight - top;
-      return (top: top, bottom: bottom);
-    }
-  }
-
   void _handleFocusChange() {
     // When TextField gains focus, ensure chip focus index reflects this
     // (Don't call focusTextField() here as it would cause infinite recursion)
@@ -626,65 +581,18 @@ extension _MultiItemDropperStateHelpers<T> on _MultiItemDropperState<T> {
     }
   }
 
-  // Chip measurement methods
-  void _measureChip({
-    required BuildContext context,
-    required GlobalKey rowKey,
-    required double textSize,
-    required double chipVerticalPadding,
-  }) {
-    if (_isMeasuring) return;
-    _isMeasuring = true;
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _isMeasuring = false;
-
-      final RenderBox? chipBox = context.findRenderObject() as RenderBox?;
-      final RenderBox? rowBox =
-          rowKey.currentContext?.findRenderObject() as RenderBox?;
-
-      if (chipBox != null && rowBox != null) {
-        final double newChipHeight = chipBox.size.height;
-        final double rowHeight = rowBox.size.height;
-        final double rowTop = chipVerticalPadding;
-        final double textCenter = rowTop + (rowHeight / 2.0);
-
-        // Chip measurements only need to be done once - they don't change
-        if (_chipHeight == null) {
-          _chipHeight = newChipHeight;
-          _chipTextTop = textCenter;
-        }
-      }
-    });
-  }
-
   /// Measure Container height and trigger rebuild if it changed
   /// This ensures overlay repositions immediately when chips wrap to a new row
   void _measureContainerHeight() {
-    final fieldContext = (widget.inputKey ?? _fieldKey).currentContext;
-    if (fieldContext == null) return;
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-
-      final RenderBox? containerBox =
-          fieldContext.findRenderObject() as RenderBox?;
-      if (containerBox == null) return;
-
-      final double newContainerHeight = containerBox.size.height;
-
-      // If height changed and overlay is showing, trigger rebuild to reposition overlay
-      if (_lastContainerHeight != null &&
-          _lastContainerHeight != newContainerHeight &&
-          _overlayController.isShowing) {
-        _lastContainerHeight = newContainerHeight;
+    _chipLayoutController.scheduleContainerHeightMeasurement(
+      fieldContext: (widget.inputKey ?? _fieldKey).currentContext,
+      isMounted: () => mounted,
+      isOverlayShowing: () => _overlayController.isShowing,
+      onHeightChanged: () {
         // Trigger rebuild so overlay recalculates position with new height
         _safeSetState(() {});
-      } else {
-        // Update stored height (first measurement or no change)
-        _lastContainerHeight = newContainerHeight;
-      }
-    });
+      },
+    );
   }
 
   // Helper to check if two item lists are equal (by value)
@@ -991,12 +899,9 @@ extension _MultiItemDropperStateHandlers<T> on _MultiItemDropperState<T> {
 extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
   Widget _buildInputField() {
     // Calculate first row height for icon alignment
-    final double chipHeight =
-        _chipHeight ??
-        MultiSelectLayoutCalculator.calculateTextFieldHeight(
-          fontSize: widget.fieldTextStyle?.fontSize,
-          chipVerticalPadding: MultiSelectConstants.kChipVerticalPadding,
-        );
+    final double chipHeight = _chipLayoutController.chipHeight(
+      fontSize: widget.fieldTextStyle?.fontSize,
+    );
     final double firstRowHeight = chipHeight;
     final double fontSize =
         widget.fieldTextStyle?.fontSize ??
@@ -1119,22 +1024,12 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
         // Schedule chip measurement after build completes - don't measure during build
         // Measure chip dimensions after first render (only for first chip, only once)
         // Chip measurements don't change, so we only need to measure once
-        if (isFirstChip && rowKey != null && _chipHeight == null) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (!mounted) return;
-
-            // Re-check conditions in case they changed
-            if (_chipHeight == null && rowKey.currentContext != null) {
-              _measureChip(
-                context: context,
-                rowKey: rowKey,
-                textSize:
-                    widget.fieldTextStyle?.fontSize ??
-                    ItemDropperConstants.kDropdownItemFontSize,
-                chipVerticalPadding: MultiSelectConstants.kChipVerticalPadding,
-              );
-            }
-          });
+        if (isFirstChip && rowKey != null) {
+          _chipLayoutController.scheduleChipMeasurement(
+            context: context,
+            rowKey: rowKey,
+            isMounted: () => mounted,
+          );
         }
 
         // Determine chip decoration.
@@ -1259,16 +1154,13 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
 
   Widget _buildTextFieldChip(double width) {
     // Use measured chip dimensions if available, otherwise fall back to calculation
-    final double chipHeight =
-        _chipHeight ??
-        MultiSelectLayoutCalculator.calculateTextFieldHeight(
-          fontSize: widget.fieldTextStyle?.fontSize,
-          chipVerticalPadding: MultiSelectConstants.kChipVerticalPadding,
-        );
+    final double chipHeight = _chipLayoutController.chipHeight(
+      fontSize: widget.fieldTextStyle?.fontSize,
+    );
     final double fontSize =
         widget.fieldTextStyle?.fontSize ??
         ItemDropperConstants.kDropdownItemFontSize;
-    final padding = _calculateTextFieldPadding(
+    final padding = _chipLayoutController.textFieldPadding(
       chipHeight: chipHeight,
       fontSize: fontSize,
     );
