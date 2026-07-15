@@ -353,14 +353,17 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
 
     // Show max reached overlay if max selection is reached
     if (_selectionManager.isMaxReached()) {
-      return _buildMaxReachedOverlay(inputContext);
+      return _buildInfoOverlay(
+        inputContext,
+        _localizations.maxItemsReachedOverlay,
+      );
     }
 
     // Show empty state if user is searching but no results found
     if (filteredItems.isEmpty) {
       if (_searchController.text.isNotEmpty) {
         // User is searching but no results - show empty state
-        return _buildEmptyStateOverlay(inputContext);
+        return _buildInfoOverlay(inputContext, _localizations.noResultsFound);
       }
       // No search text and no filtered items - check if we have items to show
       // If widget.items has items (excluding selected), show them
@@ -482,8 +485,8 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
     );
   }
 
-  /// Builds a max reached overlay when maximum selection is reached
-  Widget _buildMaxReachedOverlay(BuildContext inputContext) {
+  /// Builds an informational overlay for non-list dropdown states.
+  Widget _buildInfoOverlay(BuildContext inputContext, String message) {
     // Don't build overlay if disabled
     if (!widget.enabled) return const SizedBox.shrink();
 
@@ -516,57 +519,7 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
               vertical: MultiSelectConstants.kEmptyStatePaddingVertical,
             ),
             child: Text(
-              _localizations.maxItemsReachedOverlay,
-              style:
-                  (widget.popupTextStyle ??
-                          widget.fieldTextStyle ??
-                          const TextStyle(
-                            fontSize:
-                                ItemDropperConstants.kDropdownItemFontSize,
-                          ))
-                      .copyWith(color: Colors.grey.shade600),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// Builds an empty state overlay when search returns no results
-  Widget _buildEmptyStateOverlay(BuildContext inputContext) {
-    // Don't build overlay if disabled
-    if (!widget.enabled) return const SizedBox.shrink();
-
-    final RenderBox? inputBox = inputContext.findRenderObject() as RenderBox?;
-    if (inputBox == null) return const SizedBox.shrink();
-
-    final double inputFieldHeight = inputBox.size.height;
-    // Use actual measured field width to ensure overlay matches field width exactly
-    final double actualFieldWidth = inputBox.size.width;
-    final double maxDropdownHeight = widget.maxDropdownHeight;
-
-    final position = DropdownPositionCalculator.calculate(
-      context: inputContext,
-      inputBox: inputBox,
-      inputFieldHeight: inputFieldHeight,
-      maxDropdownHeight: maxDropdownHeight,
-    );
-
-    return CompositedTransformFollower(
-      link: _layerLink,
-      showWhenUnlinked: false,
-      offset: position.offset,
-      child: SizedBox(
-        width: actualFieldWidth,
-        child: Material(
-          elevation: ItemDropperConstants.kDropdownElevation,
-          child: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: MultiSelectConstants.kEmptyStatePaddingHorizontal,
-              vertical: MultiSelectConstants.kEmptyStatePaddingVertical,
-            ),
-            child: Text(
-              _localizations.noResultsFound,
+              message,
               style:
                   (widget.popupTextStyle ??
                           widget.fieldTextStyle ??
