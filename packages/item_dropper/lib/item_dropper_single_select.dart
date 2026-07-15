@@ -5,7 +5,6 @@ import 'package:item_dropper/src/common/item_dropper_common.dart';
 import 'package:item_dropper/src/utils/item_dropper_add_item_utils.dart';
 import 'package:item_dropper/src/utils/item_dropper_selection_handler.dart';
 import 'package:item_dropper/src/single/single_select_constants.dart';
-import 'package:item_dropper/src/multi/multi_select_constants.dart';
 import 'package:item_dropper/src/common/item_dropper_semantics.dart';
 import 'package:item_dropper/src/common/item_dropper_localizations.dart';
 import 'package:item_dropper/src/common/live_region_manager.dart';
@@ -619,25 +618,11 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
         (widget.inputKey ?? _internalFieldKey).currentContext;
     if (inputContext == null) return const SizedBox.shrink();
 
-    // Calculate effective item height:
-    // - If widget.itemHeight is provided, use it
-    // - Otherwise, calculate from popupTextStyle
-    double calculateItemHeightFromStyle() {
-      final TextStyle resolvedStyle =
-          widget.popupTextStyle ??
-          const TextStyle(fontSize: ItemDropperConstants.kDropdownItemFontSize);
-      final double fontSize =
-          resolvedStyle.fontSize ?? ItemDropperConstants.kDropdownItemFontSize;
-      final double lineHeight =
-          fontSize *
-          (resolvedStyle.height ??
-              MultiSelectConstants.kTextLineHeightMultiplier);
-      return lineHeight +
-          (ItemDropperConstants.kDropdownItemVerticalPadding * 2);
-    }
-
     final double effectiveItemHeight =
-        widget.itemHeight ?? calculateItemHeightFromStyle();
+        ItemDropperLayoutUtils.calculateEffectiveItemHeight(
+          itemHeight: widget.itemHeight,
+          popupTextStyle: widget.popupTextStyle,
+        );
 
     return ItemDropperRenderUtils.buildDropdownOverlay(
       context: inputContext,

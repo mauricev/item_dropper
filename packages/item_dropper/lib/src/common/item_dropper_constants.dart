@@ -17,6 +17,7 @@ class ItemDropperConstants {
 
   // Dropdown item styling constants
   static const double kDropdownItemFontSize = 10.0;
+  static const double kDropdownItemLineHeightMultiplier = 1.2;
   static const double kDropdownItemHorizontalPadding = 12.0;
   static const double kDropdownItemVerticalPadding = 8.0;
   static const double kDropdownGroupHeaderVerticalPadding = 6.0;

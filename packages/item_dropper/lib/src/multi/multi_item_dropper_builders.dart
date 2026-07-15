@@ -394,22 +394,10 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
 
   /// Calculates the effective item height from widget.itemHeight or popupTextStyle
   double _calculateEffectiveItemHeight() {
-    // If widget.itemHeight is provided, use it
-    if (widget.itemHeight != null) {
-      return widget.itemHeight!;
-    }
-
-    // Otherwise, calculate from popupTextStyle
-    final TextStyle resolvedStyle =
-        widget.popupTextStyle ??
-        const TextStyle(fontSize: ItemDropperConstants.kDropdownItemFontSize);
-    final double fontSize =
-        resolvedStyle.fontSize ?? ItemDropperConstants.kDropdownItemFontSize;
-    final double lineHeight =
-        fontSize *
-        (resolvedStyle.height ??
-            MultiSelectConstants.kTextLineHeightMultiplier);
-    return lineHeight + (ItemDropperConstants.kDropdownItemVerticalPadding * 2);
+    return ItemDropperLayoutUtils.calculateEffectiveItemHeight(
+      itemHeight: widget.itemHeight,
+      popupTextStyle: widget.popupTextStyle,
+    );
   }
 
   /// Gets the item builder function for a given item in a list
