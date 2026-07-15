@@ -192,6 +192,11 @@ The package uses several bounded caches:
 - field decorations keyed by focus/custom decoration state;
 - measured chip geometry.
 
+Filter caches snapshot exclusion/selection sets and include every output-shaping input in their
+keys, including item-list identity, add-item callback availability, and localized add-row
+delimiters. Correctness therefore does not depend on callers invalidating a cache after each state
+change.
+
 List comparison counts values rather than comparing only distinct-value sets, so duplicate
 multiplicity is preserved. `ItemDropperItem` value equality makes comparisons deterministic across
 newly constructed equivalent item instances. Popup row lookup prefers identity to preserve the

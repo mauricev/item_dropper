@@ -15,7 +15,10 @@ void main() {
         ItemDropperItem<String>(value: '3', label: 'Cherry'),
         ItemDropperItem<String>(value: '4', label: 'Date'),
         ItemDropperItem<String>(
-            value: 'h1', label: 'Fruits', isGroupHeader: true),
+          value: 'h1',
+          label: 'Fruits',
+          isGroupHeader: true,
+        ),
         ItemDropperItem<String>(value: '5', label: 'Elderberry'),
       ];
       filterUtils.initializeItems(testItems);
@@ -38,7 +41,9 @@ void main() {
 
         expect(filtered.length, equals(1));
         expect(
-            filtered[0].label, equals('  APPLE  ')); // Original label preserved
+          filtered[0].label,
+          equals('  APPLE  '),
+        ); // Original label preserved
       });
     });
 
@@ -242,6 +247,69 @@ void main() {
 
         expect(identical(filtered1, filtered2), isFalse);
         expect(filtered2.length, equals(1)); // Same content though
+      });
+
+      test('cache key includes excluded values', () {
+        final first = filterUtils.getFiltered(
+          testItems,
+          'a',
+          isUserEditing: true,
+          excludeValues: {'1'},
+        );
+        final second = filterUtils.getFiltered(
+          testItems,
+          'a',
+          isUserEditing: true,
+          excludeValues: {'2'},
+        );
+
+        expect(first.map((item) => item.value), isNot(contains('1')));
+        expect(second.map((item) => item.value), contains('1'));
+        expect(second.map((item) => item.value), isNot(contains('2')));
+      });
+
+      test('cache snapshots a mutable excluded-values set', () {
+        final excludedValues = {'1'};
+        filterUtils.getFiltered(
+          testItems,
+          'a',
+          isUserEditing: true,
+          excludeValues: excludedValues,
+        );
+
+        excludedValues
+          ..clear()
+          ..add('2');
+        final filtered = filterUtils.getFiltered(
+          testItems,
+          'a',
+          isUserEditing: true,
+          excludeValues: excludedValues,
+        );
+
+        expect(filtered.map((item) => item.value), contains('1'));
+        expect(filtered.map((item) => item.value), isNot(contains('2')));
+      });
+
+      test('initializeItems clears a cached result', () {
+        final first = filterUtils.getFiltered(
+          testItems,
+          'app',
+          isUserEditing: true,
+        );
+        final replacementItems = [
+          ItemDropperItem<String>(value: '7', label: 'Application'),
+        ];
+
+        filterUtils.initializeItems(replacementItems);
+        final second = filterUtils.getFiltered(
+          replacementItems,
+          'app',
+          isUserEditing: true,
+        );
+
+        expect(second, isNot(same(first)));
+        expect(second.single.value, '7');
       });
     });
 

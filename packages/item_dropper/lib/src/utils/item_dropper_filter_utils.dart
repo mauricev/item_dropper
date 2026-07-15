@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../common/item_dropper_item.dart';
 
 /// Shared filtering behavior for dropdown items
@@ -6,6 +8,7 @@ class ItemDropperFilterUtils<T> {
   List<ItemDropperItem<T>>? _lastItemsRef;
   List<ItemDropperItem<T>>? _cachedFilteredItems;
   String _lastFilterInput = '';
+  Set<T> _lastExcludeValues = <T>{};
 
   /// Initialize normalized items for fast filtering
   void initializeItems(List<ItemDropperItem<T>> items) {
@@ -13,6 +16,7 @@ class ItemDropperFilterUtils<T> {
     _normalizedItems = items
         .map((item) => (label: item.label.trim().toLowerCase(), item: item))
         .toList(growable: false);
+    clearCache();
   }
 
   /// Get filtered items based on search text
@@ -27,8 +31,6 @@ class ItemDropperFilterUtils<T> {
     // Reinitialize if items reference changed
     if (!identical(_lastItemsRef, items)) {
       initializeItems(items);
-      _cachedFilteredItems = null;
-      _lastFilterInput = '';
     }
 
     // No filtering if not editing or empty input
@@ -45,7 +47,10 @@ class ItemDropperFilterUtils<T> {
     }
 
     // Return cached result if input hasn't changed
-    if (_lastFilterInput == input && _cachedFilteredItems != null) {
+    final effectiveExcludeValues = excludeValues ?? <T>{};
+    if (_lastFilterInput == input &&
+        setEquals(_lastExcludeValues, effectiveExcludeValues) &&
+        _cachedFilteredItems != null) {
       return _cachedFilteredItems!;
     }
 
@@ -65,6 +70,7 @@ class ItemDropperFilterUtils<T> {
         .toList(growable: false);
 
     _lastFilterInput = input;
+    _lastExcludeValues = Set<T>.of(effectiveExcludeValues);
     _cachedFilteredItems = filteredResult;
     return filteredResult;
   }
@@ -73,5 +79,6 @@ class ItemDropperFilterUtils<T> {
   void clearCache() {
     _cachedFilteredItems = null;
     _lastFilterInput = '';
+    _lastExcludeValues = <T>{};
   }
 }

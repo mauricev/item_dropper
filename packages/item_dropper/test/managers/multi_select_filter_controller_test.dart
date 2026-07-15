@@ -92,5 +92,126 @@ void main() {
 
       expect(third, isNot(same(first)));
     });
+
+    test('cache key includes selected values when count is unchanged', () {
+      final first = controller.filteredItems(
+        items: items,
+        searchText: 'ap',
+        selectedCount: 1,
+        selectedValues: {'apple'},
+        hasOnAddItemCallback: false,
+        localizations: ItemDropperLocalizations.english,
+      );
+      final second = controller.filteredItems(
+        items: items,
+        searchText: 'ap',
+        selectedCount: 1,
+        selectedValues: {'apricot'},
+        hasOnAddItemCallback: false,
+        localizations: ItemDropperLocalizations.english,
+      );
+
+      expect(first.map((item) => item.value), ['apricot']);
+      expect(second.map((item) => item.value), ['apple']);
+    });
+
+    test('cache snapshots a mutable selected-values set', () {
+      final selectedValues = {'apple'};
+      controller.filteredItems(
+        items: items,
+        searchText: 'ap',
+        selectedCount: 1,
+        selectedValues: selectedValues,
+        hasOnAddItemCallback: false,
+        localizations: ItemDropperLocalizations.english,
+      );
+
+      selectedValues
+        ..clear()
+        ..add('apricot');
+      final filtered = controller.filteredItems(
+        items: items,
+        searchText: 'ap',
+        selectedCount: 1,
+        selectedValues: selectedValues,
+        hasOnAddItemCallback: false,
+        localizations: ItemDropperLocalizations.english,
+      );
+
+      expect(filtered.map((item) => item.value), ['apple']);
+    });
+
+    test('cache key includes add-item callback availability', () {
+      final withoutAddItem = controller.filteredItems(
+        items: items,
+        searchText: 'Orange',
+        selectedCount: 0,
+        selectedValues: const {},
+        hasOnAddItemCallback: false,
+        localizations: ItemDropperLocalizations.english,
+      );
+      final withAddItem = controller.filteredItems(
+        items: items,
+        searchText: 'Orange',
+        selectedCount: 0,
+        selectedValues: const {},
+        hasOnAddItemCallback: true,
+        localizations: ItemDropperLocalizations.english,
+      );
+
+      expect(withoutAddItem, isEmpty);
+      expect(withAddItem.single.isAddItem, isTrue);
+    });
+
+    test('cache key includes localized add-item delimiters', () {
+      final english = controller.filteredItems(
+        items: items,
+        searchText: 'Orange',
+        selectedCount: 0,
+        selectedValues: const {},
+        hasOnAddItemCallback: true,
+        localizations: ItemDropperLocalizations.english,
+      );
+      const localized = ItemDropperLocalizations(
+        addItemPrefix: 'Create [',
+        addItemSuffix: ']',
+      );
+      final translated = controller.filteredItems(
+        items: items,
+        searchText: 'Orange',
+        selectedCount: 0,
+        selectedValues: const {},
+        hasOnAddItemCallback: true,
+        localizations: localized,
+      );
+
+      expect(english.single.label, 'Add "Orange"');
+      expect(translated.single.label, 'Create [Orange]');
+    });
+
+    test('cache key includes item-list identity', () {
+      final first = controller.filteredItems(
+        items: items,
+        searchText: 'ap',
+        selectedCount: 0,
+        selectedValues: const {},
+        hasOnAddItemCallback: false,
+        localizations: ItemDropperLocalizations.english,
+      );
+      final replacementItems = [
+        ItemDropperItem<String>(value: 'application', label: 'Application'),
+      ];
+      final second = controller.filteredItems(
+        items: replacementItems,
+        searchText: 'ap',
+        selectedCount: 0,
+        selectedValues: const {},
+        hasOnAddItemCallback: false,
+        localizations: ItemDropperLocalizations.english,
+      );
+
+      expect(first.length, 2);
+      expect(second.single.value, 'application');
+    });
   });
 }

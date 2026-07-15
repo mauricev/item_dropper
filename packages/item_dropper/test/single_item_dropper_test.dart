@@ -600,6 +600,9 @@ void main() {
         ItemDropperItem<String>(value: '1', label: 'Apple'),
         ItemDropperItem<String>(value: '2', label: 'Banana'),
       ];
+      final cherryPopupItem = find.byWidgetPredicate(
+        (widget) => widget is Text && widget.data == 'Cherry',
+      );
 
       await tester.pumpWidget(
         MaterialApp(
@@ -629,7 +632,7 @@ void main() {
       // Note: SingleItemDropper shows all items when not actively editing,
       // but when typing, it filters. However, the overlay might close if no matches.
       // Let's check that Cherry is not found initially
-      expect(find.text('Cherry'), findsNothing);
+      expect(cherryPopupItem, findsNothing);
 
       // Update items list to include "Cherry"
       await tester.pumpWidget(
@@ -656,7 +659,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify "Cherry" now appears in filtered results
-      expect(find.text('Cherry'), findsOneWidget);
+      expect(cherryPopupItem, findsOneWidget);
     });
   });
 
