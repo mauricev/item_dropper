@@ -461,44 +461,45 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
     final List<ItemDropperItem<T>> filteredItems = _filtered;
     if (_keyboardNavManager.keyboardHighlightIndex >= 0 &&
         _keyboardNavManager.keyboardHighlightIndex < filteredItems.length) {
-      final ItemDropperItem<T> selectedItem =
+      final ItemDropperItem<T> item =
           filteredItems[_keyboardNavManager.keyboardHighlightIndex];
-      // Skip group headers
-      if (selectedItem.isGroupHeader) {
-        return;
-      }
-
-      // Handle add item selection using shared handler
-      final addItemResult =
-          ItemDropperSelectionHandler.handleAddItemIfNeeded<T>(
-            item: selectedItem,
-            originalItems: widget.items,
-            onAddItem: widget.onAddItem,
-            localizations: _localizations,
-            onItemCreated: (newItem) {
-              _withSquelch(() {
-                _controller.text = newItem.label;
-                _controller.selection = const TextSelection.collapsed(
-                  offset: 0,
-                );
-              });
-              _setSelected(newItem);
-              _isUserEditing = false;
-              _dismissDropdown();
-            },
-          );
-
-      if (addItemResult.handled) {
-        return;
-      }
-
-      _withSquelch(() {
-        _controller.text = selectedItem.label;
-        _controller.selection = const TextSelection.collapsed(offset: 0);
-      });
-      _attemptSelectByInput(selectedItem.label);
-      _dismissDropdown();
+      _selectDropdownItem(item);
     }
+  }
+
+  void _selectDropdownItem(ItemDropperItem<T> item) {
+    if (item.isGroupHeader) {
+      return;
+    }
+
+    final addItemResult = ItemDropperSelectionHandler.handleAddItemIfNeeded<T>(
+      item: item,
+      originalItems: widget.items,
+      onAddItem: widget.onAddItem,
+      localizations: _localizations,
+      onItemCreated: _selectCreatedItem,
+    );
+
+    if (addItemResult.handled) {
+      return;
+    }
+
+    _withSquelch(() {
+      _controller.text = item.label;
+      _controller.selection = const TextSelection.collapsed(offset: 0);
+    });
+    _attemptSelectByInput(item.label);
+    _dismissDropdown();
+  }
+
+  void _selectCreatedItem(ItemDropperItem<T> newItem) {
+    _withSquelch(() {
+      _controller.text = newItem.label;
+      _controller.selection = const TextSelection.collapsed(offset: 0);
+    });
+    _setSelected(newItem);
+    _isUserEditing = false;
+    _dismissDropdown();
   }
 
   void _waitThenScrollToSelected() {
@@ -570,37 +571,7 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
           .toList();
       if (selectableItems.length == 1) {
         final item = selectableItems.first;
-
-        // Handle add item selection using shared handler
-        final addItemResult =
-            ItemDropperSelectionHandler.handleAddItemIfNeeded<T>(
-              item: item,
-              originalItems: widget.items,
-              onAddItem: widget.onAddItem,
-              localizations: _localizations,
-              onItemCreated: (newItem) {
-                _withSquelch(() {
-                  _controller.text = newItem.label;
-                  _controller.selection = const TextSelection.collapsed(
-                    offset: 0,
-                  );
-                });
-                _setSelected(newItem);
-                _isUserEditing = false;
-                _dismissDropdown();
-              },
-            );
-
-        if (addItemResult.handled) {
-          return;
-        }
-
-        _withSquelch(() {
-          _controller.text = item.label;
-          _controller.selection = const TextSelection.collapsed(offset: 0);
-        });
-        _attemptSelectByInput(item.label);
-        _dismissDropdown();
+        _selectDropdownItem(item);
       }
     }
   }
@@ -650,42 +621,7 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
               safeSetState: _safeSetState,
               setHoverIndex: (index) => _keyboardNavManager.hoverIndex = index,
               onTap: () {
-                // Skip group headers
-                if (item.isGroupHeader) {
-                  return;
-                }
-
-                // Handle add item selection using shared handler
-                final addItemResult =
-                    ItemDropperSelectionHandler.handleAddItemIfNeeded<T>(
-                      item: item,
-                      originalItems: widget.items,
-                      onAddItem: widget.onAddItem,
-                      onItemCreated: (newItem) {
-                        _withSquelch(() {
-                          _controller.text = newItem.label;
-                          _controller.selection = const TextSelection.collapsed(
-                            offset: 0,
-                          );
-                        });
-                        _setSelected(newItem);
-                        _isUserEditing = false;
-                        _dismissDropdown();
-                      },
-                    );
-
-                if (addItemResult.handled) {
-                  return;
-                }
-
-                _withSquelch(() {
-                  _controller.text = item.label;
-                  _controller.selection = const TextSelection.collapsed(
-                    offset: 0,
-                  );
-                });
-                _attemptSelectByInput(item.label);
-                _dismissDropdown();
+                _selectDropdownItem(item);
               },
               customBuilder:
                   widget.popupItemBuilder ??
