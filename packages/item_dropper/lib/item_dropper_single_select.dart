@@ -135,6 +135,9 @@ class SingleItemDropper<T> extends ItemDropperBase<T> {
   @override
   final ItemDropperLocalizations? localizations;
 
+  /// Dependency factory hooks for tests and advanced integrations.
+  final SingleItemDropperDependencies<T>? dependencies;
+
   const SingleItemDropper({
     super.key,
     required this.items,
@@ -160,6 +163,7 @@ class SingleItemDropper<T> extends ItemDropperBase<T> {
     this.showDropdownPositionIcon = true,
     this.showDeleteAllIcon = true,
     this.localizations,
+    this.dependencies,
   });
 
   @override
@@ -186,7 +190,7 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
   final OverlayPortalController _overlayController = OverlayPortalController();
 
   // Use shared filter utils
-  final ItemDropperFilterUtils<T> _filterUtils = ItemDropperFilterUtils<T>();
+  late final ItemDropperFilterUtils<T> _filterUtils;
 
   // State management
   DropdownInteractionState _interactionState = DropdownInteractionState.idle;
@@ -200,7 +204,8 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
   late final KeyboardNavigationManager<T> _keyboardNavManager;
 
   // Decoration cache manager
-  final DecorationCacheManager _decorationManager = DecorationCacheManager();
+  late final DecorationCacheManager _decorationManager;
+  late final SingleItemDropperDependencies<T> _dependencies;
 
   // Live region for screen reader announcements
   late final LiveRegionManager _liveRegionManager;
@@ -249,19 +254,22 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
     _scrollController = ScrollController();
     _textScrollCtrl = ScrollController();
     _focusNode = FocusNode()..addListener(_handleFocusChange);
+    _dependencies = widget.dependencies ?? SingleItemDropperDependencies<T>();
+    _filterUtils = _dependencies.createFilterUtils();
+    _decorationManager = _dependencies.createDecorationCacheManager();
 
     _selected = widget.selectedItem;
     _filterUtils.initializeItems(widget.items);
 
     // Initialize keyboard navigation manager
-    _keyboardNavManager = KeyboardNavigationManager<T>(
+    _keyboardNavManager = _dependencies.createKeyboardNavigationManager(
       onRequestRebuild: () => _safeSetState(() {}),
       onEscape: _dismissDropdown,
       onOpenDropdown: _showOverlay,
     );
 
     // Initialize live region manager
-    _liveRegionManager = LiveRegionManager(
+    _liveRegionManager = _dependencies.createLiveRegionManager(
       onUpdate: () => _safeSetState(() {}),
     );
 

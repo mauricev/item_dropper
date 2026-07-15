@@ -5,11 +5,14 @@ import '../utils/item_dropper_filter_utils.dart';
 
 /// Owns filtered-item calculation and memoization for multi-select dropdowns.
 class MultiSelectFilterController<T> {
-  final ItemDropperFilterUtils<T> _filterUtils = ItemDropperFilterUtils<T>();
+  final ItemDropperFilterUtils<T> _filterUtils;
 
   List<ItemDropperItem<T>>? _cachedFilteredItems;
   String _lastSearchText = '';
   int _lastSelectedCount = -1;
+
+  MultiSelectFilterController({ItemDropperFilterUtils<T>? filterUtils})
+    : _filterUtils = filterUtils ?? ItemDropperFilterUtils<T>();
 
   void initializeItems(List<ItemDropperItem<T>> items) {
     _filterUtils.initializeItems(items);

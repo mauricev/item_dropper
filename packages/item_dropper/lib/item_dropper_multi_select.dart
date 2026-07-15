@@ -116,6 +116,9 @@ class MultiItemDropper<T> extends ItemDropperBase<T> {
   @override
   final ItemDropperLocalizations? localizations;
 
+  /// Dependency factory hooks for tests and advanced integrations.
+  final MultiItemDropperDependencies<T>? dependencies;
+
   const MultiItemDropper({
     super.key,
     required this.items,
@@ -142,6 +145,7 @@ class MultiItemDropper<T> extends ItemDropperBase<T> {
     this.showDropdownPositionIcon = true,
     this.showDeleteAllIcon = true,
     this.localizations,
+    this.dependencies,
   }) : assert(
          maxSelected == null || maxSelected >= 2,
          'maxSelected must be null or >= 2',
@@ -180,16 +184,13 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   // Unified focus manager handles both TextField and chip focus
   late final MultiSelectFocusManager<T> _focusManager;
 
-  final DecorationCacheManager _decorationManager = DecorationCacheManager();
+  late final DecorationCacheManager _decorationManager;
 
-  final MultiSelectFilterController<T> _filterController =
-      MultiSelectFilterController<T>();
-  final MultiSelectChipLayoutController _chipLayoutController =
-      MultiSelectChipLayoutController();
-  final MultiSelectChipFocusNodeController _chipFocusNodeController =
-      MultiSelectChipFocusNodeController();
-  final MultiSelectHighlightPolicy _highlightPolicy =
-      const MultiSelectHighlightPolicy();
+  late final MultiSelectFilterController<T> _filterController;
+  late final MultiSelectChipLayoutController _chipLayoutController;
+  late final MultiSelectChipFocusNodeController _chipFocusNodeController;
+  late final MultiSelectHighlightPolicy _highlightPolicy;
+  late final MultiItemDropperDependencies<T> _dependencies;
 
   // Live region for screen reader announcements
   late final LiveRegionManager _liveRegionManager;
@@ -201,9 +202,15 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     _searchController = TextEditingController();
     _scrollController = ScrollController();
     _focusNode = FocusNode();
+    _dependencies = widget.dependencies ?? MultiItemDropperDependencies<T>();
+    _decorationManager = _dependencies.createDecorationCacheManager();
+    _filterController = _dependencies.createFilterController();
+    _chipLayoutController = _dependencies.createChipLayoutController();
+    _chipFocusNodeController = _dependencies.createChipFocusNodeController();
+    _highlightPolicy = _dependencies.createHighlightPolicy();
 
     // Initialize unified focus manager (handles both TextField and chip focus)
-    _focusManager = MultiSelectFocusManager<T>(
+    _focusManager = _dependencies.createFocusManager(
       focusNode: _focusNode,
       onFocusVisualStateChanged: _updateFocusVisualState,
       onFocusChanged: _handleFocusChange,
@@ -211,7 +218,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     );
 
     // Initialize selection manager with callbacks
-    _selectionManager = MultiSelectSelectionManager<T>(
+    _selectionManager = _dependencies.createSelectionManager(
       maxSelected: widget.maxSelected,
       onSelectionChanged: () {
         // Selection changed - will notify parent via _handleSelectionChange
@@ -223,7 +230,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     _selectionManager.syncItems(widget.selectedItems ?? []);
 
     // Initialize keyboard navigation manager
-    _keyboardNavManager = KeyboardNavigationManager<T>(
+    _keyboardNavManager = _dependencies.createKeyboardNavigationManager(
       onRequestRebuild: () => _safeSetState(() {}),
       onEscape: () => _focusManager.loseFocus(),
       onOpenDropdown: () {
@@ -234,7 +241,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     );
 
     // Initialize live region manager
-    _liveRegionManager = LiveRegionManager(
+    _liveRegionManager = _dependencies.createLiveRegionManager(
       onUpdate: () => _safeSetState(() {}),
     );
 
