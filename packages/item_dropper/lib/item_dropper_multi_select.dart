@@ -5,21 +5,17 @@ import 'package:item_dropper/src/common/item_dropper_common.dart';
 import 'package:item_dropper/src/common/live_region_manager.dart';
 import 'package:item_dropper/src/common/keyboard_navigation_manager.dart';
 import 'package:item_dropper/src/multi/multi_select_constants.dart';
+import 'package:item_dropper/src/multi/multi_select_filter_controller.dart';
 import 'package:item_dropper/src/multi/multi_select_focus_manager.dart';
 import 'package:item_dropper/src/multi/multi_select_layout_calculator.dart';
 import 'package:item_dropper/src/multi/multi_select_selection_manager.dart';
 import 'package:item_dropper/src/multi/smartwrap.dart'
     show SmartWrapWithFlexibleLast;
-import 'package:item_dropper/src/utils/item_dropper_add_item_utils.dart';
 import 'package:item_dropper/src/utils/item_dropper_selection_handler.dart';
 import 'package:item_dropper/src/utils/dropdown_position_calculator.dart';
 import 'package:item_dropper/src/utils/item_dropper_items_utils.dart';
 import 'package:item_dropper/src/single/single_select_constants.dart';
 import 'package:item_dropper/src/common/item_dropper_localizations.dart';
-
-part 'src/multi/multi_item_dropper_state.dart';
-part 'src/multi/multi_item_dropper_handlers.dart';
-part 'src/multi/multi_item_dropper_builders.dart';
 
 /// Multi-select dropdown widget
 /// Allows selecting multiple items with chip-based display
@@ -148,11 +144,6 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   // Keyboard navigation manager
   late final KeyboardNavigationManager<T> _keyboardNavManager;
 
-  // Memoized filtered items - invalidated when search text or selected items change
-  List<ItemDropperItem<T>>? _cachedFilteredItems;
-  String _lastFilteredSearchText = '';
-  int _lastFilteredSelectedCount = -1;
-
   // Chip measurement state
   double? _chipHeight;
   double? _chipTextTop;
@@ -177,8 +168,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
 
   final DecorationCacheManager _decorationManager = DecorationCacheManager();
 
-  // Use shared filter utils
-  final ItemDropperFilterUtils<T> _filterUtils = ItemDropperFilterUtils<T>();
+  final MultiSelectFilterController<T> _filterController =
+      MultiSelectFilterController<T>();
 
   // Live region for screen reader announcements
   late final LiveRegionManager _liveRegionManager;
@@ -209,8 +200,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         // Selection changed - will notify parent via _handleSelectionChange
       },
       onFilterCacheInvalidated: () {
-        _filterUtils.clearCache();
-        _invalidateFilteredCache();
+        _invalidateFilteredCache(clearBaseFilterCache: true);
       },
     );
     _selectionManager.syncItems(widget.selectedItems ?? []);
@@ -234,7 +224,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     // Update focus manager with initial selected items
     _focusManager.updateSelectedItems(_selectionManager.selected);
 
-    _filterUtils.initializeItems(widget.items);
+    _filterController.initializeItems(widget.items);
 
     _focusNode.onKeyEvent = (node, event) {
       // Only process KeyDownEvent and KeyRepeatEvent (ignore KeyUpEvent)
@@ -296,40 +286,14 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   }
 
   List<ItemDropperItem<T>> get _filtered {
-    final String currentSearchText = _searchController.text;
-    final int currentSelectedCount = _selectionManager.selectedCount;
-
-    // Return cached result if search text and selected count haven't changed
-    if (_cachedFilteredItems != null &&
-        _lastFilteredSearchText == currentSearchText &&
-        _lastFilteredSelectedCount == currentSelectedCount) {
-      return _cachedFilteredItems!;
-    }
-
-    // Filter out already selected items - use existing Set for O(1) lookups
-    // getFiltered will reinitialize if items reference changed
-    final result = _filterUtils.getFiltered(
-      widget.items,
-      currentSearchText,
-      isUserEditing: true, // always filter in multi-select
-      excludeValues: _selectionManager.selectedValues,
-    );
-
-    // Add "add item" row if no matches, search text exists, and callback is provided
-    final filteredWithAdd = ItemDropperAddItemUtils.addAddItemIfNeeded<T>(
-      filteredItems: result,
-      searchText: currentSearchText,
-      originalItems: widget.items,
-      hasOnAddItemCallback: () => widget.onAddItem != null,
+    return _filterController.filteredItems(
+      items: widget.items,
+      searchText: _searchController.text,
+      selectedCount: _selectionManager.selectedCount,
+      selectedValues: _selectionManager.selectedValues,
+      hasOnAddItemCallback: widget.onAddItem != null,
       localizations: _localizations,
     );
-
-    // Cache the result
-    _cachedFilteredItems = filteredWithAdd;
-    _lastFilteredSearchText = currentSearchText;
-    _lastFilteredSelectedCount = currentSelectedCount;
-
-    return filteredWithAdd;
   }
 
   // Helper method to safely call setState (must stay in main class, not extension, because setState is protected)
@@ -375,8 +339,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
 
     // Invalidate filter cache if items list changed
     if (ItemDropperItemsUtils.hasItemsChanged(oldWidget.items, widget.items)) {
-      _filterUtils.initializeItems(widget.items);
-      _invalidateFilteredCache();
+      _filterController.initializeItems(widget.items);
       // Cache removed - overlay rebuilds automatically
       // Use central rebuild mechanism instead of direct setState
       // _requestRebuild() already checks _rebuildScheduled internally
@@ -421,6 +384,1141 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         // Live region for screen reader announcements
         _liveRegionManager.build(),
       ],
+    );
+  }
+}
+
+// State management and helper methods
+extension _MultiItemDropperStateHelpers<T> on _MultiItemDropperState<T> {
+  void _clearHighlights() {
+    _keyboardNavManager.clearHighlights();
+  }
+
+  /// Show overlay and trigger rebuild so OverlayPortal displays it
+  /// OverlayPortalController.show() doesn't trigger a rebuild automatically
+  void _showOverlay() {
+    if (!_overlayController.isShowing) {
+      _clearHighlights();
+      _overlayController.show();
+      // Trigger rebuild so OverlayPortal can show the overlay
+      _safeSetState(() {});
+    }
+  }
+
+  /// Invalidate filtered items cache - call when search text or selected items change
+  void _invalidateFilteredCache({bool clearBaseFilterCache = false}) {
+    if (clearBaseFilterCache) {
+      _filterController.clearFilterCache();
+    } else {
+      _filterController.invalidate();
+    }
+  }
+
+  // TextField padding calculation
+  ({double top, double bottom}) _calculateTextFieldPadding({
+    required double chipHeight,
+    required double fontSize,
+  }) {
+    final double textLineHeight =
+        fontSize * MultiSelectConstants.kTextLineHeightMultiplier;
+
+    if (_chipTextTop != null) {
+      // Use measured chip text center position to align TextField text
+      // chipTextTop is already the text center (rowTop + rowHeight/2)
+      final double chipTextCenter = _chipTextTop!;
+      // Adjust for TextField's text rendering - needs offset upward
+      final double top =
+          chipTextCenter -
+          (textLineHeight / 2.0) -
+          MultiSelectConstants.kTextFieldPaddingOffset;
+      final double bottom = chipHeight - textLineHeight - top;
+      return (top: top, bottom: bottom);
+    } else {
+      // Fallback: calculate same as chip structure
+      // Chip text center = chipVerticalPadding + rowHeight/2
+      final double rowContentHeight =
+          textLineHeight > MultiSelectConstants.kIconHeight
+          ? textLineHeight
+          : MultiSelectConstants.kIconHeight;
+      final double chipTextCenter =
+          MultiSelectConstants.kChipVerticalPadding + (rowContentHeight / 2.0);
+
+      // Same adjustment as measured case
+      final double top =
+          chipTextCenter -
+          (textLineHeight / 2.0) -
+          MultiSelectConstants.kTextFieldPaddingOffset;
+      final double bottom = chipHeight - textLineHeight - top;
+      return (top: top, bottom: bottom);
+    }
+  }
+
+  void _handleFocusChange() {
+    // When TextField gains focus, ensure chip focus index reflects this
+    // (Don't call focusTextField() here as it would cause infinite recursion)
+    if (_focusNode.hasFocus && !_focusManager.isTextFieldFocused) {
+      // Just update the chip focus index without requesting focus
+      _focusManager.clearChipFocus();
+    }
+    // Focus change is now handled by the FocusManager
+    // This method is kept for additional overlay logic
+
+    // Use manual focus state for overlay logic
+    // Only show overlay if not already showing (to avoid redundant work)
+    // The GestureDetector and TextField onTap handlers already show overlay immediately
+    if (_focusManager.isFocused && !_overlayController.isShowing) {
+      // Show overlay when focused - if max is reached, overlay will show max reached message
+      // _showOverlay() already triggers a rebuild, so we can show it synchronously
+      // If max is reached, show overlay (will display max reached message)
+      if (_selectionManager.isMaxReached()) {
+        _showOverlay();
+        return;
+      }
+
+      final filtered = _filtered;
+      // Only show if we have items
+      if (filtered.isNotEmpty) {
+        _showOverlay();
+      }
+    }
+  }
+
+  // Update visual state (border color) based on manual focus state
+  void _updateFocusVisualState() {
+    if (_rebuildScheduled) {
+      return;
+    }
+    _decorationManager.invalidate();
+    // Note: setState must be called from main class, so we'll call _safeSetState from there
+    // This is a helper that just invalidates the cache - the caller should trigger rebuild
+  }
+
+  /// Get decoration for the input field container.
+  BoxDecoration _getDecoration({
+    required bool isFocused,
+    BoxDecoration? customDecoration,
+  }) {
+    return _decorationManager.get(
+      isFocused: isFocused,
+      customDecoration: customDecoration,
+      borderRadius: MultiSelectConstants.kContainerBorderRadius,
+      borderWidth: MultiSelectConstants.kContainerBorderWidth,
+      gradientEndColor: const Color(0xFFE5E5E5),
+    );
+  }
+
+  void _updateSelection(void Function() selectionUpdate) {
+    // Preserve keyboard highlight state - only reset if keyboard navigation was active
+    final bool wasKeyboardActive =
+        _keyboardNavManager.keyboardHighlightIndex !=
+        ItemDropperConstants.kNoHighlight;
+    final int previousHoverIndex = _keyboardNavManager.hoverIndex;
+
+    // Use unified selection change handler
+    _handleSelectionChange(
+      stateUpdate: () {
+        // Update selection inside the rebuild callback
+        selectionUpdate();
+
+        // Update focus manager with new selection
+        _focusManager.updateSelectedItems(_selectionManager.selected);
+
+        // Clean up FocusNodes for chips that no longer exist
+        final currentIndices = _selectionManager.selected.asMap().keys.toSet();
+        final nodesToRemove = _chipFocusNodes.keys
+            .where((i) => !currentIndices.contains(i))
+            .toList();
+        for (final index in nodesToRemove) {
+          _chipFocusNodes[index]?.dispose();
+          _chipFocusNodes.remove(index);
+        }
+
+        // Update highlights based on filtered items
+        final List<ItemDropperItem<T>> remainingFilteredItems = _filtered;
+
+        if (remainingFilteredItems.isNotEmpty) {
+          // Only reset keyboard highlight if keyboard navigation was active
+          if (wasKeyboardActive) {
+            _keyboardNavManager.clearHighlights();
+            // Set keyboard highlight to first item
+            // Note: We can't directly set the index, so we'll clear it
+            // The manager will handle resetting on next arrow key
+          } else {
+            // Preserve hover index if still valid
+            if (previousHoverIndex >= 0 &&
+                previousHoverIndex < remainingFilteredItems.length) {
+              // Hover index is still valid, keep it
+              _keyboardNavManager.hoverIndex = previousHoverIndex;
+            } else {
+              // Hover index is invalid, clear it
+              _keyboardNavManager.clearHighlights();
+            }
+          }
+        } else {
+          _clearHighlights();
+          if (_overlayController.isShowing) {
+            _overlayController.hide();
+          }
+        }
+      },
+      postRebuildCallback: () {
+        // Restore focus if needed after selection update
+        _focusManager.restoreFocusIfNeeded();
+
+        // Measure Container height after selection change
+        // This detects when chips wrap to a new row and triggers overlay repositioning
+        _measureContainerHeight();
+      },
+    );
+  }
+
+  // Central rebuild mechanism - prevents cascading rebuilds
+  // Only allows one rebuild at a time - ignores further requests until rebuild completes
+  void _requestRebuild([void Function()? stateUpdate]) {
+    if (!mounted) {
+      return;
+    }
+
+    // If rebuild already in progress, ignore this request
+    if (_rebuildScheduled) {
+      return;
+    }
+
+    // Mark that rebuild is scheduled and trigger it immediately
+    _rebuildScheduled = true;
+
+    // Trigger immediate rebuild - state updates happen inside setState callback
+    // setState is synchronous, so the rebuild completes before setState returns
+    _safeSetState(() {
+      // Execute state update callback if provided
+      if (stateUpdate != null) {
+        stateUpdate.call();
+      }
+    });
+
+    // Reset flag immediately after setState completes
+    // setState is synchronous, so the rebuild has already completed
+    // No need to wait for the frame to complete
+    if (mounted) {
+      _rebuildScheduled = false;
+    }
+  }
+
+  /// Unified method to handle selection changes: rebuild + notify parent + cleanup
+  /// Consolidates the common pattern of rebuilding, notifying parent, and cleanup
+  void _handleSelectionChange({
+    required void Function() stateUpdate,
+    void Function()? postRebuildCallback,
+  }) {
+    // Update selection and all related state inside rebuild
+    _requestRebuild(stateUpdate);
+
+    // Notify parent immediately after rebuild
+    // setState is synchronous, so the rebuild has already completed
+    // didUpdateWidget will detect if we caused the change by comparing values
+    if (mounted) {
+      widget.onChanged(_selectionManager.selected);
+
+      // Execute optional post-rebuild callback (e.g., focus management, overlay updates)
+      if (postRebuildCallback != null) {
+        postRebuildCallback();
+      }
+    }
+  }
+
+  // Chip measurement methods
+  void _measureChip({
+    required BuildContext context,
+    required GlobalKey rowKey,
+    required double textSize,
+    required double chipVerticalPadding,
+  }) {
+    if (_isMeasuring) return;
+    _isMeasuring = true;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _isMeasuring = false;
+
+      final RenderBox? chipBox = context.findRenderObject() as RenderBox?;
+      final RenderBox? rowBox =
+          rowKey.currentContext?.findRenderObject() as RenderBox?;
+
+      if (chipBox != null && rowBox != null) {
+        final double newChipHeight = chipBox.size.height;
+        final double rowHeight = rowBox.size.height;
+        final double rowTop = chipVerticalPadding;
+        final double textCenter = rowTop + (rowHeight / 2.0);
+
+        // Chip measurements only need to be done once - they don't change
+        if (_chipHeight == null) {
+          _chipHeight = newChipHeight;
+          _chipTextTop = textCenter;
+        }
+      }
+    });
+  }
+
+  /// Measure Container height and trigger rebuild if it changed
+  /// This ensures overlay repositions immediately when chips wrap to a new row
+  void _measureContainerHeight() {
+    final fieldContext = (widget.inputKey ?? _fieldKey).currentContext;
+    if (fieldContext == null) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      final RenderBox? containerBox =
+          fieldContext.findRenderObject() as RenderBox?;
+      if (containerBox == null) return;
+
+      final double newContainerHeight = containerBox.size.height;
+
+      // If height changed and overlay is showing, trigger rebuild to reposition overlay
+      if (_lastContainerHeight != null &&
+          _lastContainerHeight != newContainerHeight &&
+          _overlayController.isShowing) {
+        _lastContainerHeight = newContainerHeight;
+        // Trigger rebuild so overlay recalculates position with new height
+        _safeSetState(() {});
+      } else {
+        // Update stored height (first measurement or no change)
+        _lastContainerHeight = newContainerHeight;
+      }
+    });
+  }
+
+  // Helper to check if two item lists are equal (by value)
+  // Delegates to shared utility
+  bool _areItemsEqual(List<ItemDropperItem<T>>? a, List<ItemDropperItem<T>> b) {
+    return ItemDropperItemsUtils.areItemsEqual(a, b);
+  }
+}
+
+// Event handler methods
+extension _MultiItemDropperStateHandlers<T> on _MultiItemDropperState<T> {
+  void _toggleItem(ItemDropperItem<T> item) {
+    // Group headers and disabled items cannot be selected
+    if (item.isGroupHeader || !item.isEnabled) {
+      return;
+    }
+
+    // Handle add item selection using shared handler
+    final addItemResult = ItemDropperSelectionHandler.handleAddItemIfNeeded<T>(
+      item: item,
+      originalItems: widget.items,
+      onAddItem: widget.onAddItem,
+      localizations: _localizations,
+      onItemCreated: (newItem) {
+        // Add the new item to the list and select it
+        // Note: The parent should update widget.items to include the new item
+        // For now, we'll just select it and let the parent handle adding to the list
+        _updateSelection(() {
+          _selectionManager.addItem(newItem);
+          _searchController.clear();
+
+          // If we just reached the max, close the overlay
+          if (_selectionManager.isMaxReached()) {
+            if (_overlayController.isShowing) {
+              _overlayController.hide();
+            }
+          }
+        });
+      },
+    );
+
+    if (addItemResult.handled) {
+      return;
+    }
+
+    // Manual focus management - maintain focus state when clicking overlay items
+    // Explicitly ensure focus state is maintained for this interaction
+    _focusManager.gainFocus();
+
+    final bool isCurrentlySelected = _selectionManager.isSelected(item);
+
+    // If maxSelected is set and already reached, only allow removal (toggle off)
+    if (_selectionManager.isMaxReached() && !isCurrentlySelected) {
+      // Block adding new items when max is reached
+      // Close the overlay and keep it closed
+      if (_overlayController.isShowing) {
+        _overlayController.hide();
+      }
+      return;
+    }
+    // Allow removing items even when max is reached (toggle behavior)
+
+    _updateSelection(() {
+      if (!isCurrentlySelected) {
+        _handleAddItem(item);
+      } else {
+        _handleRemoveItem(item);
+      }
+      // After selection change, clear highlights
+      _clearHighlights();
+    });
+  }
+
+  /// Handles adding an item to the selection
+  void _handleAddItem(ItemDropperItem<T> item) {
+    _selectionManager.addItem(item);
+
+    // Announce selection to screen readers
+    final loc = _localizations;
+    _liveRegionManager.announce('${item.label}${loc.itemSelectedSuffix}');
+
+    // If we just reached the max, close the overlay
+    if (_selectionManager.isMaxReached()) {
+      if (_overlayController.isShowing) {
+        _overlayController.hide();
+      }
+      // Clear search text after closing overlay
+      _searchController.clear();
+      // Announce max reached
+      if (widget.maxSelected != null) {
+        _liveRegionManager.announce(
+          '${loc.maxSelectionReachedPrefix}${widget.maxSelected}${loc.maxSelectionReachedSuffix}',
+        );
+      }
+    } else {
+      // Keep focus and overlay open for continued selection
+      // Ensure focus is maintained BEFORE clearing search text
+      _focusManager.gainFocus();
+
+      // Clear search text after selection for continued searching
+      // _handleTextChanged (triggered by clear()) already checks focus and shows overlay
+      // gainFocus() already calls requestFocus(), so no need for post-frame callback
+      _searchController.clear();
+    }
+  }
+
+  /// Handles removing an item from the selection
+  void _handleRemoveItem(ItemDropperItem<T> item) {
+    // Capture state before removal to check if we should reopen overlay
+    final bool wasAtMax = _selectionManager.isMaxReached();
+    _selectionManager.removeItem(item.value);
+
+    // Show overlay again if we're below maxSelected after removal
+    // This handles the case where user removes an item after reaching max
+    if (wasAtMax && _selectionManager.isBelowMax() && _focusManager.isFocused) {
+      final filtered = _filtered;
+      if (!_overlayController.isShowing && filtered.isNotEmpty) {
+        _showOverlay();
+      }
+    }
+  }
+
+  void _removeChip(ItemDropperItem<T> item) {
+    // Focus the field and set manual focus state when removing a chip (even if unfocused)
+    // This allows users to remove chips and immediately see the dropdown
+    _focusManager.gainFocus();
+
+    // Announce removal to screen readers
+    _liveRegionManager.announce(
+      '${item.label}${_localizations.itemRemovedSuffix}',
+    );
+
+    // Use unified selection change handler
+    _handleSelectionChange(
+      stateUpdate: () {
+        // Update selection inside the rebuild callback
+        _selectionManager.removeItem(item.value);
+
+        _clearHighlights();
+      },
+      postRebuildCallback: () {
+        // Restore focus if needed after chip removal
+        _focusManager.restoreFocusIfNeeded();
+
+        // Show overlay if we're below maxSelected and focused
+        if (_focusManager.isFocused && _selectionManager.isBelowMax()) {
+          final filtered = _filtered;
+          if (!_overlayController.isShowing && filtered.isNotEmpty) {
+            _showOverlay();
+          }
+        }
+      },
+    );
+  }
+
+  /// Handle delete requests coming from overlay items (right-click / long-press).
+  /// Uses a simple built-in confirmation dialog before invoking onDeleteItem.
+  void _handleRequestDeleteFromOverlay(
+    BuildContext context,
+    ItemDropperItem<T> item,
+  ) {
+    // Only allow delete for items explicitly marked as deletable.
+    if (!item.isDeletable) {
+      return;
+    }
+
+    // Run async flow without blocking the gesture handler.
+    _confirmAndDeleteItem(context, item);
+  }
+
+  Future<void> _confirmAndDeleteItem(
+    BuildContext context,
+    ItemDropperItem<T> item,
+  ) async {
+    // Show a simple confirmation dialog above the existing overlay/dialogs.
+    final loc = _localizations;
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text(loc.deleteDialogTitle.replaceAll('{label}', item.label)),
+          content: Text(loc.deleteDialogContent),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(loc.deleteDialogCancel),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(loc.deleteDialogDelete),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) {
+      return;
+    }
+
+    // If the item is currently selected, remove it from the selection.
+    if (_selectionManager.isSelected(item)) {
+      _safeSetState(() {
+        _selectionManager.removeItem(item.value);
+      });
+    }
+
+    // Notify parent so it can remove the item from the source list.
+    if (widget.onDeleteItem != null) {
+      widget.onDeleteItem!(item);
+    }
+
+    // Invalidate filtered cache and request a rebuild so overlay updates.
+    _invalidateFilteredCache();
+    // _requestRebuild() already checks _rebuildScheduled internally
+    _requestRebuild();
+  }
+
+  void _handleEnter() {
+    final List<ItemDropperItem<T>> filteredItems = _filtered;
+
+    if (_keyboardNavManager.keyboardHighlightIndex >= 0 &&
+        _keyboardNavManager.keyboardHighlightIndex < filteredItems.length) {
+      // Keyboard navigation is active, select highlighted item
+      final item = filteredItems[_keyboardNavManager.keyboardHighlightIndex];
+      // Skip group headers
+      if (!item.isGroupHeader) {
+        // Ensure focus is maintained before toggling
+        _focusManager.gainFocus();
+        _toggleItem(item);
+      }
+    } else {
+      // Find first selectable item for auto-select
+      final selectableItems = filteredItems
+          .where((item) => !item.isGroupHeader)
+          .toList();
+      if (selectableItems.length == 1) {
+        // No keyboard navigation, but exactly 1 selectable item - auto-select it
+        // Ensure focus is maintained before toggling
+        _focusManager.gainFocus();
+        _toggleItem(selectableItems[0]);
+      } else {}
+    }
+  }
+
+  /// Handle clear button press with two-stage behavior:
+  /// 1. If search text exists, clear search text
+  /// 2. If search text is empty, clear all selections
+  void _handleClearPressed() {
+    if (_searchController.text.isNotEmpty) {
+      // Stage 1: Clear search text
+      _searchController.clear();
+      _invalidateFilteredCache();
+      _safeSetState(() {
+        _clearHighlights();
+      });
+    } else {
+      // Stage 2: Clear all selections
+      if (_selectionManager.selectedCount > 0) {
+        _updateSelection(() {
+          _selectionManager.clear();
+        });
+      }
+    }
+  }
+
+  /// Handle arrow button press - toggle dropdown
+  void _handleArrowPressed() {
+    if (_overlayController.isShowing) {
+      _focusManager.loseFocus();
+      _overlayController.hide();
+    } else {
+      // Show dropdown - if max is reached, overlay will show max reached message
+      _focusManager.gainFocus();
+      _showOverlay();
+    }
+  }
+
+  void _handleTextChanged(String value) {
+    // Invalidate filtered cache since search text changed
+    _invalidateFilteredCache();
+
+    // Filter utils already handles text-based cache invalidation automatically
+    // Only need to clear highlights and trigger rebuild
+    _safeSetState(() {
+      _clearHighlights();
+    });
+
+    // Show overlay if focused - if max is reached, overlay will show max reached message
+    // This allows continued selection after clearing search text
+    // When we clear text after selection, focus is already set, so overlay stays open
+    if (_focusManager.isFocused) {
+      _showOverlay();
+    } else if (_filtered.isEmpty && !_selectionManager.isMaxReached()) {
+      // Hide overlay if no filtered items and not focused and not at max
+      if (_overlayController.isShowing) {
+        _overlayController.hide();
+      }
+    }
+  }
+}
+
+// Build methods
+extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
+  Widget _buildInputField() {
+    // Calculate first row height for icon alignment
+    final double chipHeight =
+        _chipHeight ??
+        MultiSelectLayoutCalculator.calculateTextFieldHeight(
+          fontSize: widget.fieldTextStyle?.fontSize,
+          chipVerticalPadding: MultiSelectConstants.kChipVerticalPadding,
+        );
+    final double firstRowHeight = chipHeight;
+    final double fontSize =
+        widget.fieldTextStyle?.fontSize ??
+        ItemDropperConstants.kDropdownItemFontSize;
+    final double iconContainerHeight =
+        fontSize * ItemDropperConstants.kSuffixIconHeightMultiplier;
+
+    return GestureDetector(
+      onTap: () {
+        // When container is tapped (but not on chips or icons), focus the TextField
+        if (widget.enabled) {
+          _focusManager.focusTextField();
+          _focusManager.gainFocus();
+          // Invalidate filter cache to ensure fresh calculation
+          _invalidateFilteredCache();
+          // Show overlay immediately
+          _showOverlay();
+        }
+      },
+      child: Container(
+        key: widget.inputKey ?? _fieldKey,
+        width: widget.width, // Constrain to 500px
+        // Let content determine height naturally to prevent overflow
+        decoration: _getDecoration(
+          isFocused: _focusManager.isFocused,
+          customDecoration: widget.fieldDecoration,
+        ),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              // Fill available space instead of min
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Integrated chips and text field area
+                Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    MultiSelectConstants.kContainerPaddingLeft,
+                    MultiSelectConstants.kContainerPaddingTop,
+                    // Add extra right padding to reserve space for suffix icons (if any are shown)
+                    MultiSelectConstants.kContainerPaddingRight +
+                        ((widget.showDropdownPositionIcon ||
+                                widget.showDeleteAllIcon)
+                            ? SingleSelectConstants.kSuffixIconWidth
+                            : 0.0),
+                    MultiSelectConstants.kContainerPaddingBottom,
+                  ),
+                  child: SmartWrapWithFlexibleLast(
+                    key: _wrapKey,
+                    spacing: MultiSelectConstants.kChipSpacing,
+                    runSpacing: MultiSelectConstants.kChipSpacing,
+                    children: [
+                      // Selected chips
+                      ..._selectionManager.selected.asMap().entries.map((
+                        entry,
+                      ) {
+                        final index = entry.key;
+                        final item = entry.value;
+                        return Container(
+                          key: ValueKey('chip_${item.value}'),
+                          // Unique key for each chip
+                          child: _buildChip(item, null, null, index),
+                        );
+                      }),
+                      _buildTextFieldChip(double.infinity),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            // Container-level suffix icons aligned with first row (only if at least one icon is enabled)
+            if (widget.showDropdownPositionIcon || widget.showDeleteAllIcon)
+              Positioned(
+                top:
+                    MultiSelectConstants.kContainerPaddingTop +
+                    (firstRowHeight - iconContainerHeight) / 2,
+                right: MultiSelectConstants.kContainerPaddingRight,
+                child: ItemDropperSuffixIcons(
+                  isDropdownShowing: _overlayController.isShowing,
+                  enabled: widget.enabled,
+                  onClearPressed: _handleClearPressed,
+                  onArrowPressed: _handleArrowPressed,
+                  iconSize: SingleSelectConstants.kIconSize,
+                  suffixIconWidth: SingleSelectConstants.kSuffixIconWidth,
+                  iconButtonSize: SingleSelectConstants.kIconButtonSize,
+                  clearButtonRightPosition:
+                      SingleSelectConstants.kClearButtonRightPosition,
+                  arrowButtonRightPosition:
+                      SingleSelectConstants.kArrowButtonRightPosition,
+                  textSize: fontSize,
+                  showDropdownPositionIcon: widget.showDropdownPositionIcon,
+                  showDeleteAllIcon: widget.showDeleteAllIcon,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChip(
+    ItemDropperItem<T> item, [
+    GlobalKey? chipKey,
+    Key? valueKey,
+    int? chipIndex,
+  ]) {
+    final index = chipIndex ?? _selectionManager.selected.indexOf(item);
+    final isFocused = _focusManager.isChipFocused(index);
+
+    // Only measure the first chip (index 0) to avoid GlobalKey conflicts
+    final bool isFirstChip =
+        _selectionManager.selected.isNotEmpty &&
+        _selectionManager.selected.first.value == item.value;
+    final GlobalKey? rowKey = isFirstChip ? _chipRowKey : null;
+
+    return LayoutBuilder(
+      key: valueKey, // Use stable ValueKey for widget preservation
+      builder: (context, constraints) {
+        // Schedule chip measurement after build completes - don't measure during build
+        // Measure chip dimensions after first render (only for first chip, only once)
+        // Chip measurements don't change, so we only need to measure once
+        if (isFirstChip && rowKey != null && _chipHeight == null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+
+            // Re-check conditions in case they changed
+            if (_chipHeight == null && rowKey.currentContext != null) {
+              _measureChip(
+                context: context,
+                rowKey: rowKey,
+                textSize:
+                    widget.fieldTextStyle?.fontSize ??
+                    ItemDropperConstants.kDropdownItemFontSize,
+                chipVerticalPadding: MultiSelectConstants.kChipVerticalPadding,
+              );
+            }
+          });
+        }
+
+        // Determine chip decoration.
+        // - If a custom BoxDecoration is provided, use it as-is.
+        // - Otherwise, fall back to the default blue vertical gradient.
+        final BoxDecoration effectiveDecoration =
+            widget.selectedChipDecoration ??
+            BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Colors.blue.shade100, Colors.blue.shade200],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+              borderRadius: BorderRadius.circular(
+                MultiSelectConstants.kChipBorderRadius,
+              ),
+            );
+
+        // Add focus border if focused
+        final BoxDecoration focusedDecoration = isFocused
+            ? effectiveDecoration.copyWith(
+                border: Border.all(color: Colors.blue.shade600, width: 2.0),
+              )
+            : effectiveDecoration;
+
+        // Get or create FocusNode for this chip
+        final chipFocusNode = _chipFocusNodes.putIfAbsent(
+          index,
+          () =>
+              FocusNode(skipTraversal: false, canRequestFocus: widget.enabled),
+        );
+
+        // Request focus when this chip becomes focused
+        if (isFocused) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            if (_focusManager.isChipFocused(index)) {
+              chipFocusNode.requestFocus();
+            }
+          });
+        }
+
+        return Semantics(
+          label: '${item.label}${_localizations.selectedSuffix}',
+          button: true,
+          excludeSemantics: true,
+          child: Focus(
+            focusNode: chipFocusNode,
+            onKeyEvent: (node, event) {
+              // Delegate to chip focus manager
+              return _focusManager.handleKeyEvent(event);
+            },
+            onFocusChange: (hasFocus) {
+              if (hasFocus) {
+                _focusManager.focusChip(index);
+              } else if (_focusManager.isChipFocused(index)) {
+                // Lost focus but we still think it's focused - move to TextField
+                _focusManager.focusTextField();
+              }
+            },
+            child: GestureDetector(
+              onTap: () {
+                _focusManager.focusChip(index);
+                chipFocusNode.requestFocus();
+              },
+              child: Container(
+                key: chipKey,
+                // Use provided GlobalKey (for last chip) or null
+                decoration: focusedDecoration,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: MultiSelectConstants.kChipHorizontalPadding,
+                  vertical: MultiSelectConstants.kChipVerticalPadding,
+                ),
+                margin: const EdgeInsets.only(
+                  right: MultiSelectConstants.kChipMarginRight,
+                ),
+                child: Row(
+                  key: rowKey, // Only first chip gets the key
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      item.label,
+                      style:
+                          (widget.fieldTextStyle ??
+                                  const TextStyle(
+                                    fontSize: ItemDropperConstants
+                                        .kDropdownItemFontSize,
+                                  ))
+                              .copyWith(
+                                color: widget.enabled
+                                    ? (widget.fieldTextStyle?.color ??
+                                          Colors.black)
+                                    : Colors.grey.shade500,
+                              ),
+                    ),
+                    if (widget.enabled)
+                      Container(
+                        width: MultiSelectConstants.kChipDeleteButtonSize,
+                        height: MultiSelectConstants.kChipDeleteButtonSize,
+                        alignment: Alignment.center,
+                        child: GestureDetector(
+                          onTap: () {
+                            _removeChip(item);
+                          },
+                          child: Icon(
+                            Icons.close,
+                            size: MultiSelectConstants.kChipDeleteIconSize,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildTextFieldChip(double width) {
+    // Use measured chip dimensions if available, otherwise fall back to calculation
+    final double chipHeight =
+        _chipHeight ??
+        MultiSelectLayoutCalculator.calculateTextFieldHeight(
+          fontSize: widget.fieldTextStyle?.fontSize,
+          chipVerticalPadding: MultiSelectConstants.kChipVerticalPadding,
+        );
+    final double fontSize =
+        widget.fieldTextStyle?.fontSize ??
+        ItemDropperConstants.kDropdownItemFontSize;
+    final padding = _calculateTextFieldPadding(
+      chipHeight: chipHeight,
+      fontSize: fontSize,
+    );
+    final double textFieldPaddingTop = padding.top;
+    final double textFieldPaddingBottom = padding.bottom;
+
+    // Use Container with exact width - Wrap will use this for layout
+    return SizedBox(
+      key: _textFieldKey, // Key to measure TextField position
+      width: width, // Exact width - Wrap will use this
+      height: chipHeight, // Use measured chip height
+      child: IgnorePointer(
+        ignoring: !widget.enabled,
+        child: Semantics(
+          label: _localizations.multiSelectFieldLabel,
+          textField: true,
+          child: TextField(
+            controller: _searchController,
+            focusNode: _focusNode,
+            style:
+                widget.fieldTextStyle ??
+                const TextStyle(
+                  fontSize: ItemDropperConstants.kDropdownItemFontSize,
+                ),
+            decoration: InputDecoration(
+              contentPadding: EdgeInsets.only(
+                right:
+                    ((widget.showDropdownPositionIcon ||
+                            widget.showDeleteAllIcon)
+                        ? SingleSelectConstants.kSuffixIconWidth
+                        : 0.0) +
+                    MultiSelectConstants.kContainerPaddingRight,
+                top: textFieldPaddingTop,
+                bottom: textFieldPaddingBottom,
+              ),
+              border: InputBorder.none,
+              hintText: widget.hintText,
+            ),
+            onChanged: (value) => _handleTextChanged(value),
+            onSubmitted: (value) => _handleEnter(),
+            enabled: widget.enabled,
+            // Ensure TextField can receive focus
+            autofocus: false,
+            onTap: () {
+              // When TextField is tapped, focus it and clear chip focus
+              _focusManager.focusTextField();
+              _focusManager.gainFocus();
+              // Show overlay immediately
+              _showOverlay();
+            },
+          ), // Close TextField
+        ), // Close Semantics
+      ), // Close IgnorePointer
+    );
+  }
+
+  Widget _buildDropdownOverlay(BuildContext context) {
+    // Don't build overlay if disabled
+    if (!widget.enabled) return const SizedBox.shrink();
+
+    final List<ItemDropperItem<T>> filteredItems = _filtered;
+
+    // Use the context from build() method for proper positioning
+    // Fall back to key-based context if needed, but prefer the passed context
+    final BuildContext inputContext =
+        (widget.inputKey ?? _fieldKey).currentContext ?? context;
+
+    final double effectiveItemHeight = _calculateEffectiveItemHeight();
+
+    // Show max reached overlay if max selection is reached
+    if (_selectionManager.isMaxReached()) {
+      return _buildInfoOverlay(
+        inputContext,
+        _localizations.maxItemsReachedOverlay,
+      );
+    }
+
+    // Show empty state if user is searching but no results found
+    if (filteredItems.isEmpty) {
+      if (_searchController.text.isNotEmpty) {
+        // User is searching but no results - show empty state
+        return _buildInfoOverlay(inputContext, _localizations.noResultsFound);
+      }
+      // No search text and no filtered items - check if we have items to show
+      // If widget.items has items (excluding selected), show them
+      final availableItems = widget.items
+          .where(
+            (item) =>
+                item.isGroupHeader ||
+                !_selectionManager.selectedValues.contains(item.value),
+          )
+          .toList();
+      if (availableItems.isEmpty) {
+        // No items available - hide overlay
+        return const SizedBox.shrink();
+      }
+      // We have items but filteredItems is empty - use availableItems instead
+      // This can happen during initialization before _filtered is properly calculated
+      return _buildOverlayContent(
+        items: availableItems,
+        inputContext: inputContext,
+        effectiveItemHeight: effectiveItemHeight,
+      );
+    }
+
+    // Build overlay with filtered items
+    return _buildOverlayContent(
+      items: filteredItems,
+      inputContext: inputContext,
+      effectiveItemHeight: effectiveItemHeight,
+    );
+  }
+
+  /// Calculates the effective item height from widget.itemHeight or popupTextStyle
+  double _calculateEffectiveItemHeight() {
+    return ItemDropperLayoutUtils.calculateEffectiveItemHeight(
+      itemHeight: widget.itemHeight,
+      popupTextStyle: widget.popupTextStyle,
+    );
+  }
+
+  /// Gets the item builder function for a given item in a list
+  Widget Function(BuildContext, ItemDropperItem<T>, bool) _getItemBuilder(
+    List<ItemDropperItem<T>> items,
+    int itemIndex,
+  ) {
+    // Use custom builder if provided
+    if (widget.popupItemBuilder != null) {
+      return widget.popupItemBuilder!;
+    }
+
+    // Otherwise, use default builder with style parameters
+    final bool hasPrevious = itemIndex > 0;
+    final bool previousIsGroupHeader =
+        hasPrevious && items[itemIndex - 1].isGroupHeader;
+
+    return (context, item, isSelected) {
+      return ItemDropperRenderUtils.defaultDropdownPopupItemBuilder(
+        context,
+        item,
+        isSelected,
+        popupTextStyle: widget.popupTextStyle,
+        popupGroupHeaderStyle: widget.popupGroupHeaderStyle,
+        hasPreviousItem: hasPrevious,
+        previousItemIsGroupHeader: previousIsGroupHeader,
+      );
+    };
+  }
+
+  /// Builds the overlay content with the given items
+  Widget _buildOverlayContent({
+    required List<ItemDropperItem<T>> items,
+    required BuildContext inputContext,
+    required double effectiveItemHeight,
+  }) {
+    // Use Container's full height for overlay positioning (not Wrap height)
+    // The Container includes border and padding, which must be accounted for
+    // Don't pass preferredFieldHeight - use inputBox.size.height directly
+    // This ensures overlay is positioned correctly relative to the Container
+    return ItemDropperRenderUtils.buildDropdownOverlay<T>(
+      context: inputContext,
+      items: items,
+      maxDropdownHeight: widget.maxDropdownHeight,
+      width: widget.width,
+      controller: _overlayController,
+      scrollController: _scrollController,
+      layerLink: _layerLink,
+      isSelected: (ItemDropperItem<T> item) =>
+          _selectionManager.isSelected(item),
+      builder:
+          (
+            BuildContext builderContext,
+            ItemDropperItem<T> item,
+            bool isSelected,
+          ) {
+            final int itemIndex = items.indexWhere(
+              (x) => x.value == item.value,
+            );
+            final itemBuilder = _getItemBuilder(items, itemIndex);
+
+            return ItemDropperRenderUtils.buildDropdownItemWithHover<T>(
+              context: builderContext,
+              item: item,
+              isSelected: isSelected,
+              filteredItems: items,
+              hoverIndex: _keyboardNavManager.hoverIndex,
+              keyboardHighlightIndex:
+                  _keyboardNavManager.keyboardHighlightIndex,
+              safeSetState: _safeSetState,
+              setHoverIndex: (index) => _keyboardNavManager.hoverIndex = index,
+              onTap: () {
+                _toggleItem(item);
+              },
+              customBuilder: itemBuilder,
+              itemHeight: effectiveItemHeight,
+              onRequestDelete: _handleRequestDeleteFromOverlay,
+            );
+          },
+      itemHeight: effectiveItemHeight,
+      // Don't pass preferredFieldHeight - use Container's full height from inputBox
+    );
+  }
+
+  /// Builds an informational overlay for non-list dropdown states.
+  Widget _buildInfoOverlay(BuildContext inputContext, String message) {
+    // Don't build overlay if disabled
+    if (!widget.enabled) return const SizedBox.shrink();
+
+    final RenderBox? inputBox = inputContext.findRenderObject() as RenderBox?;
+    if (inputBox == null) return const SizedBox.shrink();
+
+    final double inputFieldHeight = inputBox.size.height;
+    // Use actual measured field width to ensure overlay matches field width exactly
+    final double actualFieldWidth = inputBox.size.width;
+    final double maxDropdownHeight = widget.maxDropdownHeight;
+
+    final position = DropdownPositionCalculator.calculate(
+      context: inputContext,
+      inputBox: inputBox,
+      inputFieldHeight: inputFieldHeight,
+      maxDropdownHeight: maxDropdownHeight,
+    );
+
+    return CompositedTransformFollower(
+      link: _layerLink,
+      showWhenUnlinked: false,
+      offset: position.offset,
+      child: SizedBox(
+        width: actualFieldWidth,
+        child: Material(
+          elevation: ItemDropperConstants.kDropdownElevation,
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: MultiSelectConstants.kEmptyStatePaddingHorizontal,
+              vertical: MultiSelectConstants.kEmptyStatePaddingVertical,
+            ),
+            child: Text(
+              message,
+              style:
+                  (widget.popupTextStyle ??
+                          widget.fieldTextStyle ??
+                          const TextStyle(
+                            fontSize:
+                                ItemDropperConstants.kDropdownItemFontSize,
+                          ))
+                      .copyWith(color: Colors.grey.shade600),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
