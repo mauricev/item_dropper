@@ -307,7 +307,10 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
       // Announce selection to screen readers
       if (newVal != null) {
         _liveRegionManager.announce(
-          ItemDropperSemantics.announceItemSelected(newVal.label),
+          ItemDropperSemantics.announceItemSelected(
+            newVal.label,
+            localizations: _localizations,
+          ),
         );
       }
     }
