@@ -728,10 +728,13 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
       _safeSetState(() {});
     }
 
-    final T? newVal = widget.selectedItem?.value;
-    final T? oldVal = _selected?.value;
+    final shouldSyncSelection = ControlledValueSync.shouldSync(
+      current: _selected,
+      incoming: widget.selectedItem,
+      equals: (current, incoming) => current?.value == incoming?.value,
+    );
 
-    if (newVal != oldVal) {
+    if (shouldSyncSelection) {
       // Keep internal selection in sync
       _selected = widget.selectedItem;
 

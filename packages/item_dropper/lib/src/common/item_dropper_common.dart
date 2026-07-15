@@ -15,6 +15,7 @@ export 'item_dropper_constants.dart';
 export 'item_dropper_with_overlay.dart';
 export 'decoration_cache_manager.dart';
 export 'rebuild_scheduler.dart';
+export 'controlled_value_sync.dart';
 
 // Utility classes
 export '../utils/item_dropper_render_utils.dart';

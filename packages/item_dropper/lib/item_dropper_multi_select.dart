@@ -343,16 +343,15 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       }
     }
 
-    // Sync selected items if parent changed them (and we didn't cause the change)
-    // Detect if we caused the change by comparing our selection with widget's selection
-    // If they match, we caused the change (parent hasn't updated yet)
-    // If they don't match, parent changed it
     final ourSelection = _selectionManager.selected;
     final widgetSelection = widget.selectedItems ?? [];
-    final weCausedChange = _areItemsEqual(ourSelection, widgetSelection);
+    final shouldSyncSelection = ControlledValueSync.shouldSync(
+      current: ourSelection,
+      incoming: widgetSelection,
+      equals: _areItemsEqual,
+    );
 
-    if (!weCausedChange &&
-        !_areItemsEqual(widget.selectedItems, ourSelection)) {
+    if (shouldSyncSelection) {
       _selectionManager.syncItems(widgetSelection);
       // Don't trigger rebuild here if we're already rebuilding
       // Parent change will be reflected in the current rebuild cycle
