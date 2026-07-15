@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:item_dropper/src/common/item_dropper_common.dart';
 import 'package:item_dropper/src/common/live_region_manager.dart';
 import 'package:item_dropper/src/common/keyboard_navigation_manager.dart';
+import 'package:item_dropper/src/multi/multi_select_chip_focus_node_controller.dart';
 import 'package:item_dropper/src/multi/multi_select_chip_layout_controller.dart';
 import 'package:item_dropper/src/multi/multi_select_constants.dart';
 import 'package:item_dropper/src/multi/multi_select_filter_controller.dart';
@@ -164,12 +165,11 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       MultiSelectFilterController<T>();
   final MultiSelectChipLayoutController _chipLayoutController =
       MultiSelectChipLayoutController();
+  final MultiSelectChipFocusNodeController _chipFocusNodeController =
+      MultiSelectChipFocusNodeController();
 
   // Live region for screen reader announcements
   late final LiveRegionManager _liveRegionManager;
-
-  // Map to store FocusNodes for each chip (keyed by chip index)
-  final Map<int, FocusNode> _chipFocusNodes = {};
 
   @override
   void initState() {
@@ -343,12 +343,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
 
   @override
   void dispose() {
-    // Dispose chip focus nodes
-    for (final focusNode in _chipFocusNodes.values) {
-      focusNode.dispose();
-    }
-    _chipFocusNodes.clear();
-
+    _chipFocusNodeController.dispose();
     _liveRegionManager.dispose();
     _focusManager.dispose();
     _focusNode.dispose();
@@ -478,15 +473,9 @@ extension _MultiItemDropperStateHelpers<T> on _MultiItemDropperState<T> {
         // Update focus manager with new selection
         _focusManager.updateSelectedItems(_selectionManager.selected);
 
-        // Clean up FocusNodes for chips that no longer exist
-        final currentIndices = _selectionManager.selected.asMap().keys.toSet();
-        final nodesToRemove = _chipFocusNodes.keys
-            .where((i) => !currentIndices.contains(i))
-            .toList();
-        for (final index in nodesToRemove) {
-          _chipFocusNodes[index]?.dispose();
-          _chipFocusNodes.remove(index);
-        }
+        _chipFocusNodeController.retainIndices(
+          _selectionManager.selected.asMap().keys,
+        );
 
         // Update highlights based on filtered items
         final List<ItemDropperItem<T>> remainingFilteredItems = _filtered;
@@ -1056,10 +1045,9 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
             : effectiveDecoration;
 
         // Get or create FocusNode for this chip
-        final chipFocusNode = _chipFocusNodes.putIfAbsent(
+        final chipFocusNode = _chipFocusNodeController.nodeForIndex(
           index,
-          () =>
-              FocusNode(skipTraversal: false, canRequestFocus: widget.enabled),
+          enabled: widget.enabled,
         );
 
         // Request focus when this chip becomes focused
