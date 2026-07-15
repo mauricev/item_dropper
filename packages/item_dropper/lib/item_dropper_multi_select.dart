@@ -21,8 +21,9 @@ import 'package:item_dropper/src/common/item_dropper_localizations.dart';
 
 /// Multi-select dropdown widget
 /// Allows selecting multiple items with chip-based display
-class MultiItemDropper<T> extends StatefulWidget {
+class MultiItemDropper<T> extends ItemDropperBase<T> {
   /// The items to display in the dropdown (required).
+  @override
   final List<ItemDropperItem<T>> items;
 
   /// The currently selected items (optional for controlled usage).
@@ -32,68 +33,87 @@ class MultiItemDropper<T> extends StatefulWidget {
   final void Function(List<ItemDropperItem<T>>) onChanged;
 
   /// Optional custom builder for popup items.
+  @override
   final Widget Function(BuildContext, ItemDropperItem<T>, bool)?
   popupItemBuilder;
 
   /// The width of the dropdown field (required).
+  @override
   final double width;
 
   /// Whether the dropdown is enabled (defaults to true).
+  @override
   final bool enabled;
 
   /// Hint/placeholder text for input field (if null, no hint).
+  @override
   final String? hintText;
 
   /// Maximum number of items selectable (null means unlimited).
   final int? maxSelected;
 
   /// Callback for adding new items based on search text (optional).
+  @override
   final ItemDropperItem<T>? Function(String searchText)? onAddItem;
 
   /// Callback for deleting items, provides the deleted item (optional).
+  @override
   final void Function(ItemDropperItem<T> item)? onDeleteItem;
 
   /// Optional GlobalKey for the input field container.
+  @override
   final GlobalKey<State<StatefulWidget>>? inputKey;
 
   /// Maximum dropdown popup height.
+  @override
   final double maxDropdownHeight;
 
   /// Whether to show a vertical scrollbar in popup.
+  @override
   final bool showScrollbar;
 
   /// Popup vertical scrollbar thickness.
+  @override
   final double scrollbarThickness;
 
   /// Height for popup dropdown items.
+  @override
   final double? itemHeight;
 
   /// Text style for popup dropdown items.
+  @override
   final TextStyle? popupTextStyle;
 
   /// Text style for group headers in popup.
+  @override
   final TextStyle? popupGroupHeaderStyle;
 
   /// Text style for input/search field and chips.
+  @override
   final TextStyle? fieldTextStyle;
 
   /// Custom BoxDecoration for selected chips.
   final BoxDecoration? selectedChipDecoration;
 
   /// Optional BoxDecoration for the main field/container.
+  @override
   final BoxDecoration? fieldDecoration;
 
   /// Popup shadow elevation.
+  @override
   final double? elevation;
 
   /// Whether to show the dropdown position arrow (defaults to true).
+  @override
   final bool showDropdownPositionIcon;
 
   /// Whether to show the clear/X icon (defaults to true).
+  @override
   final bool showDeleteAllIcon;
 
   /// Localization strings for user-facing text (optional).
   /// If not provided, uses default English strings.
+  @override
   final ItemDropperLocalizations? localizations;
 
   const MultiItemDropper({

@@ -7,6 +7,7 @@
 
 // Common components
 export 'measure_size.dart';
+export 'item_dropper_base.dart';
 export 'item_dropper_item.dart';
 export 'item_dropper_suffix_icons.dart';
 export 'item_dropper_constants.dart';

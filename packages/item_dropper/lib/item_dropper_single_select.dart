@@ -12,8 +12,9 @@ import 'package:item_dropper/src/utils/item_dropper_items_utils.dart';
 
 /// Single-select dropdown widget
 /// Allows selecting a single item from a searchable list
-class SingleItemDropper<T> extends StatefulWidget {
+class SingleItemDropper<T> extends ItemDropperBase<T> {
   /// The items to display in the dropdown (required).
+  @override
   final List<ItemDropperItem<T>> items;
 
   /// The currently selected item (optional for controlled usage).
@@ -23,25 +24,31 @@ class SingleItemDropper<T> extends StatefulWidget {
   final ItemDropperItemCallback<T> onChanged;
 
   /// Hint/placeholder text for input field (if null, no hint).
+  @override
   final String? hintText;
 
   /// Optional custom builder for popup items.
+  @override
   final Widget Function(BuildContext, ItemDropperItem<T>, bool)?
   popupItemBuilder;
 
   /// The width of the dropdown field (required).
+  @override
   final double width;
 
   /// Whether the dropdown is enabled (defaults to true).
+  @override
   final bool enabled;
 
   /// Whether to show the mobile keyboard (defaults to false).
   final bool showKeyboard;
 
   /// Callback for adding new items based on search text (optional).
+  @override
   final ItemDropperItem<T>? Function(String searchText)? onAddItem;
 
   /// Callback for deleting items, provides the deleted item (optional).
+  @override
   final void Function(ItemDropperItem<T> item)? onDeleteItem;
 
   /// Optional GlobalKey for the input field.
@@ -64,55 +71,68 @@ class SingleItemDropper<T> extends StatefulWidget {
   /// // Later, access the input field:
   /// final context = key.currentContext;
   /// ```
+  @override
   final GlobalKey? inputKey;
 
   /// Maximum dropdown popup height.
+  @override
   final double maxDropdownHeight;
 
   /// Popup shadow elevation.
+  @override
   final double elevation;
 
   /// Whether to show a vertical scrollbar in popup.
+  @override
   final bool showScrollbar;
 
   /// Popup vertical scrollbar thickness.
+  @override
   final double scrollbarThickness;
 
   /// Text style for input/search field.
   /// If null, defaults to fontSize 12 with black color.
+  @override
   final TextStyle? fieldTextStyle;
 
   /// Text style for popup dropdown items (used by default popupItemBuilder).
   /// If null, defaults to fontSize 10.
   /// Ignored if custom popupItemBuilder is provided.
+  @override
   final TextStyle? popupTextStyle;
 
   /// Text style for group headers in popup (used by default popupItemBuilder).
   /// If null, defaults to fontSize 9, bold, with reduced opacity.
   /// Ignored if custom popupItemBuilder is provided.
+  @override
   final TextStyle? popupGroupHeaderStyle;
 
   /// Height for popup dropdown items.
+  @override
   final double? itemHeight;
 
   /// Optional custom decoration for the dropdown field container.
   ///
   /// - If provided, this BoxDecoration is used as-is for the field container.
   /// - If null, a default white-to-grey gradient with rounded corners is applied.
+  @override
   final BoxDecoration? fieldDecoration;
 
   /// Whether to show the dropdown position icon (arrow up/down).
   /// When true, displays an arrow icon that toggles the dropdown visibility.
   /// Defaults to true.
+  @override
   final bool showDropdownPositionIcon;
 
   /// Whether to show the delete all icon (clear/X button).
   /// When true, displays a clear button that clears the current selection.
   /// Defaults to true.
+  @override
   final bool showDeleteAllIcon;
 
   /// Localization strings for user-facing text (optional).
   /// If not provided, uses default English strings.
+  @override
   final ItemDropperLocalizations? localizations;
 
   const SingleItemDropper({
