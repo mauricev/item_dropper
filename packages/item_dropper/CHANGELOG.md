@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.5] - 2026-09-07
+
+### Fixed
+
+- Close an open dropdown when Tab moves focus past its final suffix button.
+- Keep the multi-select dropdown arrow in sync after closing the menu.
+
 ## [0.0.4] - 2026-07-15
 - Several bugs were fixed; several deficiencies in architecture were addressed.
 
@@ -97,6 +104,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 See [GitHub Issues](https://github.com/mauricev/item_dropper/issues) for planned features
 and bug reports.
 
+[0.0.5]: https://github.com/mauricev/item_dropper/releases/tag/v0.0.5
 [0.0.4]: https://github.com/mauricev/item_dropper/releases/tag/v0.0.4
 [0.0.3]: https://github.com/mauricev/item_dropper/releases/tag/v0.0.3
 [0.0.2]: https://github.com/mauricev/item_dropper/releases/tag/v0.0.2
