@@ -870,6 +870,11 @@ extension _MultiItemDropperStateHandlers<T> on _MultiItemDropperState<T> {
     if (_overlayController.isShowing) {
       _focusManager.loseFocus();
       _overlayController.hide();
+      // OverlayPortalController.hide does not rebuild the suffix icon, whose
+      // glyph depends on the controller's visibility state.
+      _safeSetState(() {
+        _clearHighlights();
+      });
     } else {
       // Show dropdown - if max is reached, overlay will show max reached message
       _focusManager.gainFocus();
@@ -995,6 +1000,12 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
                   enabled: widget.enabled,
                   onClearPressed: _handleClearPressed,
                   onArrowPressed: _handleArrowPressed,
+                  onTabExit: () {
+                    _focusManager.loseFocus();
+                    if (_overlayController.isShowing) {
+                      _overlayController.hide();
+                    }
+                  },
                   iconSize: SingleSelectConstants.kIconSize,
                   suffixIconWidth: SingleSelectConstants.kSuffixIconWidth,
                   iconButtonSize: SingleSelectConstants.kIconButtonSize,

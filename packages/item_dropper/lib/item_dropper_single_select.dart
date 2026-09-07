@@ -885,6 +885,7 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
                                   _focusNode.requestFocus();
                                 }
                               },
+                              onTabExit: _dismissDropdown,
                               iconSize: SingleSelectConstants.kIconSize,
                               suffixIconWidth:
                                   SingleSelectConstants.kSuffixIconWidth,

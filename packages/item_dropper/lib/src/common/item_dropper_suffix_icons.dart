@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'item_dropper_constants.dart';
 
 /// Shared suffix icon widget for dropdown fields
@@ -8,6 +9,9 @@ class ItemDropperSuffixIcons extends StatelessWidget {
   final bool enabled;
   final VoidCallback onClearPressed;
   final VoidCallback onArrowPressed;
+
+  /// Called when focus leaves the final suffix button with Tab.
+  final VoidCallback? onTabExit;
   final double iconSize;
   final double suffixIconWidth;
   final double iconButtonSize;
@@ -29,6 +33,7 @@ class ItemDropperSuffixIcons extends StatelessWidget {
     required this.enabled,
     required this.onClearPressed,
     required this.onArrowPressed,
+    this.onTabExit,
     this.iconSize = 16.0,
     this.suffixIconWidth = 60.0,
     this.iconButtonSize = 24.0,
@@ -46,22 +51,25 @@ class ItemDropperSuffixIcons extends StatelessWidget {
     // Add clear icon if enabled
     if (showDeleteAllIcon) {
       children.add(
-        SizedBox(
-          width: iconButtonSize,
-          height: iconButtonSize,
-          child: IconButton(
-            icon: Icon(
-              Icons.clear,
-              size: iconSize,
-              color: enabled ? Colors.black : Colors.grey,
+        _wrapFinalTabStop(
+          isFinalTabStop: !showDropdownPositionIcon,
+          child: SizedBox(
+            width: iconButtonSize,
+            height: iconButtonSize,
+            child: IconButton(
+              icon: Icon(
+                Icons.clear,
+                size: iconSize,
+                color: enabled ? Colors.black : Colors.grey,
+              ),
+              iconSize: iconSize,
+              padding: EdgeInsets.zero,
+              constraints: BoxConstraints.tightFor(
+                width: iconButtonSize,
+                height: iconButtonSize,
+              ),
+              onPressed: enabled ? onClearPressed : null,
             ),
-            iconSize: iconSize,
-            padding: EdgeInsets.zero,
-            constraints: BoxConstraints.tightFor(
-              width: iconButtonSize,
-              height: iconButtonSize,
-            ),
-            onPressed: enabled ? onClearPressed : null,
           ),
         ),
       );
@@ -70,22 +78,25 @@ class ItemDropperSuffixIcons extends StatelessWidget {
     // Add arrow icon if enabled
     if (showDropdownPositionIcon) {
       children.add(
-        SizedBox(
-          width: iconButtonSize,
-          height: iconButtonSize,
-          child: IconButton(
-            icon: Icon(
-              isDropdownShowing ? Icons.arrow_drop_up : Icons.arrow_drop_down,
-              size: iconSize,
-              color: enabled ? Colors.black : Colors.grey,
+        _wrapFinalTabStop(
+          isFinalTabStop: true,
+          child: SizedBox(
+            width: iconButtonSize,
+            height: iconButtonSize,
+            child: IconButton(
+              icon: Icon(
+                isDropdownShowing ? Icons.arrow_drop_up : Icons.arrow_drop_down,
+                size: iconSize,
+                color: enabled ? Colors.black : Colors.grey,
+              ),
+              iconSize: iconSize,
+              padding: EdgeInsets.zero,
+              constraints: BoxConstraints.tightFor(
+                width: iconButtonSize,
+                height: iconButtonSize,
+              ),
+              onPressed: enabled ? onArrowPressed : null,
             ),
-            iconSize: iconSize,
-            padding: EdgeInsets.zero,
-            constraints: BoxConstraints.tightFor(
-              width: iconButtonSize,
-              height: iconButtonSize,
-            ),
-            onPressed: enabled ? onArrowPressed : null,
           ),
         ),
       );
@@ -104,6 +115,31 @@ class ItemDropperSuffixIcons extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: children,
       ),
+    );
+  }
+
+  Widget _wrapFinalTabStop({
+    required bool isFinalTabStop,
+    required Widget child,
+  }) {
+    if (!isFinalTabStop || onTabExit == null) return child;
+
+    // This Focus node observes key events from its child without becoming an
+    // additional tab stop. Returning ignored lets normal focus traversal move
+    // on to the next control after the dropdown has been closed.
+    return Focus(
+      canRequestFocus: false,
+      skipTraversal: true,
+      onKeyEvent: (_, event) {
+        if (enabled &&
+            isDropdownShowing &&
+            event is KeyDownEvent &&
+            event.logicalKey == LogicalKeyboardKey.tab) {
+          onTabExit!();
+        }
+        return KeyEventResult.ignored;
+      },
+      child: child,
     );
   }
 }

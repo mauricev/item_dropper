@@ -371,6 +371,7 @@ void main() {
       await tester.tap(arrowButtonUp);
       await tester.pumpAndSettle();
       expect(find.text('Item 1'), findsNothing);
+      expect(find.byIcon(Icons.arrow_drop_down), findsOneWidget);
     });
 
     testWidgets('overlay shows when typing in TextField', (
