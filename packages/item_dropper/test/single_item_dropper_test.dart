@@ -4,6 +4,60 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:item_dropper/item_dropper.dart';
 
 void main() {
+  for (final controlled in [false, true]) {
+    testWidgets(
+      'selects a shorter prefix item on the first click (controlled: $controlled)',
+      (tester) async {
+        final items = [
+          ItemDropperItem<String>(value: '1', label: 'chanin'),
+          ItemDropperItem<String>(value: '2', label: 'Chanin 543C'),
+          ItemDropperItem<String>(value: '3', label: 'G21'),
+        ];
+        final changes = <ItemDropperItem<String>?>[];
+        ItemDropperItem<String>? selectedItem;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: StatefulBuilder(
+                builder: (context, setState) => SingleItemDropper<String>(
+                  items: items,
+                  selectedItem: controlled ? selectedItem : null,
+                  width: 300,
+                  onChanged: (item) {
+                    changes.add(item);
+                    if (controlled) {
+                      setState(() => selectedItem = item);
+                    }
+                  },
+                ),
+              ),
+            ),
+          ),
+        );
+
+        final field = find.byType(TextField);
+        for (final item in [items[1], items[0]]) {
+          await tester.tap(field);
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(item.label));
+          await tester.pumpAndSettle();
+
+          expect(changes.last, same(item));
+          expect(tester.widget<TextField>(field).controller!.text, item.label);
+        }
+        expect(changes, [items[1], items[0]]);
+
+        // Reopening must preserve the selection and show the full item list.
+        await tester.tap(field);
+        await tester.pumpAndSettle();
+        expect(find.text('Chanin 543C'), findsOneWidget);
+        expect(find.text('G21'), findsOneWidget);
+        expect(changes, [items[1], items[0]]);
+      },
+    );
+  }
+
   group('SingleItemDropper - Basic Functionality', () {
     testWidgets('should display items list', (WidgetTester tester) async {
       final items = [

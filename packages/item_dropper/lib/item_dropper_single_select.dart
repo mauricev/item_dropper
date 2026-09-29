@@ -525,7 +525,9 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
       _controller.text = item.label;
       _controller.selection = const TextSelection.collapsed(offset: 0);
     });
-    _attemptSelectByInput(item.label);
+    // An explicit choice must bypass text-editing/backspace validation.
+    _setSelected(item);
+    _isUserEditing = false;
     _dismissDropdown();
   }
 
