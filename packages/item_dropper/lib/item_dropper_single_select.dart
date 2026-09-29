@@ -944,7 +944,7 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
                           (widget.showDropdownPositionIcon ||
                               widget.showDeleteAllIcon)
                           ? BoxConstraints.tightFor(
-                              width: SingleSelectConstants.kSuffixIconWidth,
+                              width: ItemDropperConstants.kSuffixIconWidth,
                               height:
                                   (widget.fieldTextStyle?.fontSize ??
                                       ItemDropperConstants
@@ -978,14 +978,14 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
                                 }
                               },
                               onTabExit: _dismissDropdown,
-                              iconSize: SingleSelectConstants.kIconSize,
+                              iconSize: ItemDropperConstants.kIconSize,
                               suffixIconWidth:
-                                  SingleSelectConstants.kSuffixIconWidth,
+                                  ItemDropperConstants.kSuffixIconWidth,
                               iconButtonSize:
-                                  SingleSelectConstants.kIconButtonSize,
-                              clearButtonRightPosition: SingleSelectConstants
+                                  ItemDropperConstants.kIconButtonSize,
+                              clearButtonRightPosition: ItemDropperConstants
                                   .kClearButtonRightPosition,
-                              arrowButtonRightPosition: SingleSelectConstants
+                              arrowButtonRightPosition: ItemDropperConstants
                                   .kArrowButtonRightPosition,
                               textSize:
                                   widget.fieldTextStyle?.fontSize ??

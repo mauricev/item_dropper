@@ -29,7 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   nodes after parent-driven selection changes.
 - Honor popup `elevation` in both dropdowns, including multi-select information
   overlays, and pass multi-select `showScrollbar` and `scrollbarThickness` through
-  to the popup renderer.
+  to the popup renderer. Parent updates apply while the popup is open; defaults
+  remain elevation `4.0`, persistent scrollbar visibility, and thickness `6.0`.
 - Wire single-select item deletion to right-click and long-press confirmation,
   clearing the selection and text when the selected item is deleted.
 - Allow creating the first item from an empty single- or multi-select dropdown.
@@ -39,6 +40,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Explicit `selectedItem: null` now means controlled and empty.
 - Select a clicked single-select item directly, including when its label is a
   shorter prefix of the previous selection (for example, `Chanin 543C` → `chanin`).
+
+### Changed
+
+- Centralize suffix-icon dimensions in shared dropdown constants and remove
+  duplicated documentation, stale comments, and redundant control flow.
 
 ## [0.0.5] - 2026-09-07
 

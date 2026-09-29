@@ -26,7 +26,13 @@ class ItemDropperConstants {
   static const double kDropdownDeleteIconSize = 16.0;
   static const double kDropdownTextToDeleteIconSpacing = 8.0;
 
-  // Suffix icon constants
+  // Suffix icon layout
+  static const double kSuffixIconWidth = 60.0;
+  static const double kIconSize = 16.0;
+  static const double kIconButtonSize = 24.0;
+  static const double kClearButtonRightPosition = 40.0;
+  static const double kArrowButtonRightPosition = 10.0;
+
   static const double kSuffixIconHeightMultiplier = 3.2;
 
   // Scrollbar constants

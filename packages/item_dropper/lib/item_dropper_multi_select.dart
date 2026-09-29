@@ -16,7 +16,6 @@ import 'package:item_dropper/src/multi/smartwrap.dart'
 import 'package:item_dropper/src/utils/item_dropper_selection_handler.dart';
 import 'package:item_dropper/src/utils/item_dropper_overlay_content.dart';
 import 'package:item_dropper/src/utils/item_dropper_items_utils.dart';
-import 'package:item_dropper/src/single/single_select_constants.dart';
 import 'package:item_dropper/src/common/item_dropper_localizations.dart';
 
 /// Multi-select dropdown widget
@@ -360,9 +359,6 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
 
     if (shouldSyncSelection) {
       _selectionManager.syncItems(widgetSelection);
-      // Don't trigger rebuild here if we're already rebuilding
-      // Parent change will be reflected in the current rebuild cycle
-      // _requestRebuild() coalesces nested requests internally
       _requestRebuild();
     }
 
@@ -376,9 +372,6 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     if (ItemDropperItemsUtils.hasItemsChanged(_itemsSnapshot, widget.items)) {
       _itemsSnapshot = List<ItemDropperItem<T>>.of(widget.items);
       _filterController.initializeItems(widget.items);
-      // Cache removed - overlay rebuilds automatically
-      // Use central rebuild mechanism instead of direct setState
-      // _requestRebuild() coalesces nested requests internally
       _requestRebuild();
     }
   }
@@ -569,9 +562,7 @@ extension _MultiItemDropperStateHelpers<T> on _MultiItemDropperState<T> {
     // Update selection and all related state inside rebuild
     _requestRebuild(stateUpdate);
 
-    // Notify parent immediately after rebuild
-    // setState is synchronous, so the rebuild has already completed
-    // didUpdateWidget will detect if we caused the change by comparing values
+    // Notify the parent of the current selection.
     if (mounted) {
       widget.onChanged(_selectionManager.selected);
 
@@ -854,7 +845,7 @@ extension _MultiItemDropperStateHandlers<T> on _MultiItemDropperState<T> {
         // Ensure focus is maintained before toggling
         _focusManager.gainFocus();
         _toggleItem(selectableItems[0]);
-      } else {}
+      }
     }
   }
 
@@ -900,8 +891,6 @@ extension _MultiItemDropperStateHandlers<T> on _MultiItemDropperState<T> {
     // Invalidate filtered cache since search text changed
     _invalidateFilteredCache();
 
-    // Filter utils already handles text-based cache invalidation automatically
-    // Only need to clear highlights and trigger rebuild
     _safeSetState(() {
       _clearHighlights();
     });
@@ -952,7 +941,7 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
       },
       child: Container(
         key: widget.inputKey ?? _fieldKey,
-        width: widget.width, // Constrain to 500px
+        width: widget.width,
         // Let content determine height naturally to prevent overflow
         decoration: _getDecoration(
           isFocused: _focusManager.isFocused,
@@ -975,7 +964,7 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
                     MultiSelectConstants.kContainerPaddingRight +
                         ((widget.showDropdownPositionIcon ||
                                 widget.showDeleteAllIcon)
-                            ? SingleSelectConstants.kSuffixIconWidth
+                            ? ItemDropperConstants.kSuffixIconWidth
                             : 0.0),
                     MultiSelectConstants.kContainerPaddingBottom,
                   ),
@@ -1020,13 +1009,13 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
                       _overlayController.hide();
                     }
                   },
-                  iconSize: SingleSelectConstants.kIconSize,
-                  suffixIconWidth: SingleSelectConstants.kSuffixIconWidth,
-                  iconButtonSize: SingleSelectConstants.kIconButtonSize,
+                  iconSize: ItemDropperConstants.kIconSize,
+                  suffixIconWidth: ItemDropperConstants.kSuffixIconWidth,
+                  iconButtonSize: ItemDropperConstants.kIconButtonSize,
                   clearButtonRightPosition:
-                      SingleSelectConstants.kClearButtonRightPosition,
+                      ItemDropperConstants.kClearButtonRightPosition,
                   arrowButtonRightPosition:
-                      SingleSelectConstants.kArrowButtonRightPosition,
+                      ItemDropperConstants.kArrowButtonRightPosition,
                   textSize: fontSize,
                   showDropdownPositionIcon: widget.showDropdownPositionIcon,
                   showDeleteAllIcon: widget.showDeleteAllIcon,
@@ -1224,7 +1213,7 @@ extension _MultiItemDropperStateBuilders<T> on _MultiItemDropperState<T> {
                 right:
                     ((widget.showDropdownPositionIcon ||
                             widget.showDeleteAllIcon)
-                        ? SingleSelectConstants.kSuffixIconWidth
+                        ? ItemDropperConstants.kSuffixIconWidth
                         : 0.0) +
                     MultiSelectConstants.kContainerPaddingRight,
                 top: textFieldPaddingTop,

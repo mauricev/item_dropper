@@ -2,29 +2,7 @@ import '../common/item_dropper_item.dart';
 import '../common/item_dropper_localizations.dart';
 import 'item_dropper_add_item_utils.dart';
 
-/// Shared handler for processing add item selections in dropdown widgets.
-///
-/// This utility consolidates the common pattern of:
-/// 1. Checking if an item is an "add item"
-/// 2. Extracting search text
-/// 3. Calling the onAddItem callback
-/// 4. Handling the newly created item
-///
-/// Example usage:
-/// ```dart
-/// final result = ItemDropperSelectionHandler.handleAddItemIfNeeded(
-///   item: selectedItem,
-///   onAddItem: widget.onAddItem,
-///   onItemCreated: (newItem) {
-///     // Handle the new item (select it, update UI, etc.)
-///   },
-/// );
-///
-/// if (result.handled) {
-///   return; // Add item was handled, don't process as normal item
-/// }
-/// ```
-/// Result of add item handling attempt
+/// Result of an add-item handling attempt.
 class AddItemResult<T> {
   /// Whether the add item was handled
   final bool handled;

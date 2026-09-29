@@ -43,7 +43,6 @@ class _ItemDropperWithOverlayState extends State<ItemDropperWithOverlay> {
     // Current behavior dismisses for any overlay-portal click outside the field.
     if (_isClickOutsideField(event)) {
       widget.onDismiss();
-      return;
     }
   }
 

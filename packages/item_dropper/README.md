@@ -253,6 +253,29 @@ MultiItemDropper<String>(
 )
 ```
 
+### Popup Elevation and Scrollbar
+
+Both dropdowns use `elevation` for the popup's Material shadow (default `4.0`);
+`0` removes the shadow. In multi-select, this also applies to the no-results and
+maximum-selection messages. A null multi-select `elevation` uses the default.
+
+For list popups, `showScrollbar` controls persistent thumb visibility (default
+`true`); `false` lets the scrollbar appear while scrolling and fade afterward.
+`scrollbarThickness` sets its width in logical pixels (default `6.0`). These
+settings and `elevation` update when the parent rebuilds, including while open.
+
+```dart
+MultiItemDropper<String>(
+  items: items,
+  width: 300,
+  selectedItems: selectedItems,
+  elevation: 8,
+  showScrollbar: true,
+  scrollbarThickness: 10,
+  onChanged: (items) => setState(() => selectedItems = items),
+)
+```
+
 ### Disabled State
 
 ```dart
@@ -368,7 +391,7 @@ See `ItemDropperLocalizations` class for all available strings.
 | `onDeleteItem`             | `Function(ItemDropperItem<T>)?`         | `null`   | Callback for deleting items                                        |
 | `maxDropdownHeight`        | `double`                                | `200.0`  | Maximum dropdown popup height                                      |
 | `elevation`                | `double`                                | `4.0`    | Popup shadow elevation                                             |
-| `showScrollbar`            | `bool`                                  | `true`   | Whether to show a vertical scrollbar in popup                      |
+| `showScrollbar`            | `bool`                                  | `true`   | Keep the popup scrollbar thumb visible                             |
 | `scrollbarThickness`       | `double`                                | `6.0`    | Popup vertical scrollbar thickness                                 |
 | `fieldTextStyle`           | `TextStyle?`                            | `null`   | Text style for input/search field                                  |
 | `popupTextStyle`           | `TextStyle?`                            | `null`   | Text style for popup dropdown items                                |
@@ -396,7 +419,7 @@ See `ItemDropperLocalizations` class for all available strings.
 | `onAddItem`                | `ItemDropperItem<T>? Function(String)?` | `null`   | Callback for adding new items based on search text entered by user |
 | `onDeleteItem`             | `Function(ItemDropperItem<T>)?`         | `null`   | Callback for deleting items                                        |
 | `maxDropdownHeight`        | `double`                                | `200.0`  | Maximum dropdown popup height                                      |
-| `showScrollbar`            | `bool`                                  | `true`   | Whether to show a vertical scrollbar in popup                      |
+| `showScrollbar`            | `bool`                                  | `true`   | Keep the popup scrollbar thumb visible                             |
 | `scrollbarThickness`       | `double`                                | `6.0`    | Popup vertical scrollbar thickness                                 |
 | `itemHeight`               | `double?`                               | `null`   | Height for popup dropdown items                                    |
 | `popupTextStyle`           | `TextStyle?`                            | `null`   | Text style for popup dropdown items                                |
@@ -404,7 +427,7 @@ See `ItemDropperLocalizations` class for all available strings.
 | `fieldTextStyle`           | `TextStyle?`                            | `null`   | Text style for input/search field and chips                        |
 | `selectedChipDecoration`   | `BoxDecoration?`                        | `null`   | Custom BoxDecoration for selected chips                            |
 | `fieldDecoration`          | `BoxDecoration?`                        | `null`   | Optional BoxDecoration for field container                         |
-| `elevation`                | `double?`                               | `4.0`    | Popup shadow elevation                                             |
+| `elevation`                | `double?`                               | `null`   | Popup shadow elevation (null uses `4.0`)                            |
 | `inputKey`                 | `GlobalKey?`                            | `null`   | Key for programmatic access to widget                              |
 | `showDropdownPositionIcon` | `bool`                                  | `true`   | Show the dropdown position arrow (down/up)                         |
 | `showDeleteAllIcon`        | `bool`                                  | `true`   | Show the clear (X) icon (clears search/all selections)             |

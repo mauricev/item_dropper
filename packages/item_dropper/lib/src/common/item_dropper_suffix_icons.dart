@@ -34,11 +34,13 @@ class ItemDropperSuffixIcons extends StatelessWidget {
     required this.onClearPressed,
     required this.onArrowPressed,
     this.onTabExit,
-    this.iconSize = 16.0,
-    this.suffixIconWidth = 60.0,
-    this.iconButtonSize = 24.0,
-    this.clearButtonRightPosition = 40.0,
-    this.arrowButtonRightPosition = 10.0,
+    this.iconSize = ItemDropperConstants.kIconSize,
+    this.suffixIconWidth = ItemDropperConstants.kSuffixIconWidth,
+    this.iconButtonSize = ItemDropperConstants.kIconButtonSize,
+    this.clearButtonRightPosition =
+        ItemDropperConstants.kClearButtonRightPosition,
+    this.arrowButtonRightPosition =
+        ItemDropperConstants.kArrowButtonRightPosition,
     this.textSize = 14.0,
     this.showDropdownPositionIcon = true,
     this.showDeleteAllIcon = true,
