@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Honor popup `elevation` in both dropdowns, including multi-select information
+  overlays, and pass multi-select `showScrollbar` and `scrollbarThickness` through
+  to the popup renderer.
 - Wire single-select item deletion to right-click and long-press confirmation,
   clearing the selection and text when the selected item is deleted.
 - Allow creating the first item from an empty single- or multi-select dropdown.

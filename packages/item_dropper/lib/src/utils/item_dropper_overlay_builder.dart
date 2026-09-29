@@ -24,6 +24,7 @@ class ItemDropperOverlayBuilder {
     double scrollbarThickness = ItemDropperConstants.kDefaultScrollbarThickness,
     required double itemHeight,
     double? preferredFieldHeight,
+    double elevation = ItemDropperConstants.kDropdownElevation,
   }) {
     return buildContent<T>(
       context: context,
@@ -39,6 +40,7 @@ class ItemDropperOverlayBuilder {
       scrollController: scrollController,
       layerLink: layerLink,
       preferredFieldHeight: preferredFieldHeight,
+      elevation: elevation,
     );
   }
 
@@ -50,6 +52,7 @@ class ItemDropperOverlayBuilder {
     required ScrollController scrollController,
     required LayerLink layerLink,
     double? preferredFieldHeight,
+    double elevation = ItemDropperConstants.kDropdownElevation,
   }) {
     if (content.isEmpty) return const SizedBox.shrink();
 
@@ -79,7 +82,7 @@ class ItemDropperOverlayBuilder {
         child: FocusScope(
           canRequestFocus: false,
           child: Material(
-            elevation: ItemDropperConstants.kDropdownElevation,
+            elevation: elevation,
             child: ConstrainedBox(
               constraints: BoxConstraints(
                 maxHeight: position.constrainedMaxHeight,

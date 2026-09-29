@@ -114,6 +114,7 @@ class ItemDropperRenderUtils {
     double scrollbarThickness = ItemDropperConstants.kDefaultScrollbarThickness,
     required double itemHeight,
     double? preferredFieldHeight,
+    double elevation = ItemDropperConstants.kDropdownElevation,
     ItemDropperOverlayContent<T>? content,
   }) {
     return ItemDropperOverlayBuilder.buildContent<T>(
@@ -132,6 +133,7 @@ class ItemDropperRenderUtils {
       scrollController: scrollController,
       layerLink: layerLink,
       preferredFieldHeight: preferredFieldHeight,
+      elevation: elevation,
     );
   }
 }

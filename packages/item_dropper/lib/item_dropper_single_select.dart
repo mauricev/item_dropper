@@ -708,6 +708,7 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
       controller: _overlayController,
       scrollController: _scrollController,
       layerLink: _layerLink,
+      elevation: widget.elevation,
       showScrollbar: widget.showScrollbar,
       scrollbarThickness: widget.scrollbarThickness,
       isSelected: (ItemDropperItem<T> item) =>
