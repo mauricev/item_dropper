@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Clear single-select text when the parent clears `selectedItem`, and preserve
+  internal selection across parent rebuilds when `selectedItem` is omitted.
+  Explicit `selectedItem: null` now means controlled and empty.
 - Select a clicked single-select item directly, including when its label is a
   shorter prefix of the previous selection (for example, `Chanin 543C` → `chanin`).
 

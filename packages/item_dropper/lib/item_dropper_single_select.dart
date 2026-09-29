@@ -10,6 +10,25 @@ import 'package:item_dropper/src/common/live_region_manager.dart';
 import 'package:item_dropper/src/common/keyboard_navigation_manager.dart';
 import 'package:item_dropper/src/utils/item_dropper_items_utils.dart';
 
+// A typed sentinel distinguishes omission from an explicitly empty selection
+// without weakening the constructor's selectedItem type or its const support.
+class _UnspecifiedSelection implements ItemDropperItem<Never> {
+  const _UnspecifiedSelection();
+
+  @override
+  Never get value => throw StateError('An unspecified selection has no value');
+  @override
+  String get label => '';
+  @override
+  bool get isGroupHeader => false;
+  @override
+  bool get isDeletable => false;
+  @override
+  bool get isEnabled => false;
+  @override
+  bool get isAddItem => false;
+}
+
 /// Single-select dropdown widget
 /// Allows selecting a single item from a searchable list
 class SingleItemDropper<T> extends ItemDropperBase<T> {
@@ -17,8 +36,16 @@ class SingleItemDropper<T> extends ItemDropperBase<T> {
   @override
   final List<ItemDropperItem<T>> items;
 
-  /// The currently selected item (optional for controlled usage).
-  final ItemDropperItem<T>? selectedItem;
+  /// The parent-owned selection. Explicit null means controlled and empty.
+  ///
+  /// Omit this argument for uncontrolled usage: the dropdown retains its own
+  /// selection across parent rebuilds. Parent updates do not call [onChanged].
+  ItemDropperItem<T>? get selectedItem => _isControlled ? _selectedItem : null;
+
+  final ItemDropperItem<T>? _selectedItem;
+
+  bool get _isControlled =>
+      !identical(_selectedItem, const _UnspecifiedSelection());
 
   /// Called when the selection changes (required).
   final ItemDropperItemCallback<T> onChanged;
@@ -141,7 +168,7 @@ class SingleItemDropper<T> extends ItemDropperBase<T> {
   const SingleItemDropper({
     super.key,
     required this.items,
-    this.selectedItem,
+    ItemDropperItem<T>? selectedItem = const _UnspecifiedSelection(),
     required this.onChanged,
     this.hintText,
     this.popupItemBuilder,
@@ -164,7 +191,7 @@ class SingleItemDropper<T> extends ItemDropperBase<T> {
     this.showDeleteAllIcon = true,
     this.localizations,
     this.dependencies,
-  });
+  }) : _selectedItem = selectedItem;
 
   @override
   State<SingleItemDropper<T>> createState() => _SingleItemDropperState<T>();
@@ -274,6 +301,7 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
     );
 
     _controller.addListener(() {
+      if (_squelchOnChanged) return;
       if (_focusNode.hasFocus) {
         if (!_isUserEditing) _isUserEditing = true;
         // Don't auto-select while user is actively typing - let them continue typing
@@ -730,21 +758,24 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
       _safeSetState(() {});
     }
 
-    final shouldSyncSelection = ControlledValueSync.shouldSync(
-      current: _selected,
-      incoming: widget.selectedItem,
-      equals: (current, incoming) => current?.value == incoming?.value,
-    );
+    final shouldSyncSelection =
+        widget._isControlled &&
+        ControlledValueSync.shouldSync(
+          current: _selected,
+          incoming: widget.selectedItem,
+          equals: (current, incoming) => current?.value == incoming?.value,
+        );
 
     if (shouldSyncSelection) {
       // Keep internal selection in sync
       _selected = widget.selectedItem;
+      _isUserEditing = false;
+      _keyboardNavManager.clearHighlights();
 
       final String newLabel = widget.selectedItem?.label ?? '';
       final String currentText = _controller.text;
 
-      if (newLabel.isNotEmpty &&
-          currentText.trim().toLowerCase() != newLabel.toLowerCase()) {
+      if (currentText != newLabel) {
         _withSquelch(() {
           _controller.text = newLabel;
           _controller.selection = TextSelection.collapsed(

@@ -100,6 +100,11 @@ SingleItemDropper<String>(
 )
 ```
 
+Omit `selectedItem` to let the single-select dropdown manage its own selection
+across parent rebuilds. Passing `selectedItem` makes the selection parent-owned;
+an explicit `selectedItem: null` clears both the selection and displayed text on
+the next rebuild. Parent-driven changes do not invoke `onChanged`.
+
 ### Multi-Select Dropdown
 
 ```dart

@@ -20,17 +20,27 @@ void main() {
           MaterialApp(
             home: Scaffold(
               body: StatefulBuilder(
-                builder: (context, setState) => SingleItemDropper<String>(
-                  items: items,
-                  selectedItem: controlled ? selectedItem : null,
-                  width: 300,
-                  onChanged: (item) {
+                builder: (context, setState) {
+                  void onChanged(ItemDropperItem<String>? item) {
                     changes.add(item);
                     if (controlled) {
                       setState(() => selectedItem = item);
                     }
-                  },
-                ),
+                  }
+
+                  return controlled
+                      ? SingleItemDropper<String>(
+                          items: items,
+                          selectedItem: selectedItem,
+                          width: 300,
+                          onChanged: onChanged,
+                        )
+                      : SingleItemDropper<String>(
+                          items: items,
+                          width: 300,
+                          onChanged: onChanged,
+                        );
+                },
               ),
             ),
           ),
