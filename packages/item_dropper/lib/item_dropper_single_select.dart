@@ -971,6 +971,7 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
                                   _dismissDropdown();
                                 } else {
                                   _focusNode.requestFocus();
+                                  _showOverlay();
                                 }
                               },
                               onTabExit: _dismissDropdown,
