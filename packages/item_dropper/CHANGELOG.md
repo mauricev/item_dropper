@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Wire single-select item deletion to right-click and long-press confirmation,
+  clearing the selection and text when the selected item is deleted.
 - Allow creating the first item from an empty single- or multi-select dropdown.
   Add-action rows no longer borrow a placeholder value from an existing item.
 - Clear single-select text when the parent clears `selectedItem`, and preserve

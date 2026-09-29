@@ -75,6 +75,9 @@ class SingleItemDropper<T> extends ItemDropperBase<T> {
   final ItemDropperItem<T>? Function(String searchText)? onAddItem;
 
   /// Callback for deleting items, provides the deleted item (optional).
+  /// Invoked after confirming a right-click or long-press on a deletable row.
+  /// The parent removes the item from [items]. Deleting the selected item also
+  /// clears the field and calls [onChanged] with null.
   @override
   final void Function(ItemDropperItem<T> item)? onDeleteItem;
 
@@ -631,6 +634,55 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
     }
   }
 
+  Future<void> _confirmAndDeleteItem(
+    BuildContext context,
+    ItemDropperItem<T> item,
+  ) async {
+    if (widget.onDeleteItem == null ||
+        item.isAddItem ||
+        item.isGroupHeader ||
+        !item.isEnabled ||
+        !item.isDeletable) {
+      return;
+    }
+
+    final loc = _localizations;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(loc.deleteDialogTitle.replaceAll('{label}', item.label)),
+        content: Text(loc.deleteDialogContent),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(loc.deleteDialogCancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(loc.deleteDialogDelete),
+          ),
+        ],
+      ),
+    );
+
+    if (!mounted || confirmed != true || !widget.enabled) return;
+    final onDeleteItem = widget.onDeleteItem;
+    if (onDeleteItem == null) return;
+
+    if (_selected?.value == item.value) {
+      _withSquelch(_controller.clear);
+      _isUserEditing = false;
+      _setSelected(null);
+    }
+
+    // The parent owns the source list and removes the confirmed item.
+    onDeleteItem(item);
+    if (!mounted) return;
+    _filterUtils.initializeItems(widget.items);
+    _keyboardNavManager.clearHighlights();
+    _safeSetState(() {});
+  }
+
   Widget _buildDropdownOverlay() {
     // Don't build overlay if disabled
     if (!widget.enabled) return const SizedBox.shrink();
@@ -702,6 +754,9 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
                     );
                   },
               itemHeight: effectiveItemHeight,
+              onRequestDelete: widget.onDeleteItem == null
+                  ? null
+                  : _confirmAndDeleteItem,
             );
           },
       itemHeight: effectiveItemHeight,
