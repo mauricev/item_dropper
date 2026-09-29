@@ -100,14 +100,15 @@ SingleItemDropper<String>(
 )
 ```
 
-Omit `selectedItem` to let the single-select dropdown manage its own selection
-across parent rebuilds. Passing `selectedItem` makes the selection parent-owned;
-an explicit `selectedItem: null` clears both the selection and displayed text on
-the next rebuild. Parent-driven changes do not invoke `onChanged`.
+`selectedItem` supplies the initial selection and subsequent parent updates.
+Changing it updates the dropdown; changing a non-null value to null clears both
+selection and text. Unchanged values, including null or an omitted argument,
+preserve the user's selection across parent rebuilds. Parent-driven changes do
+not invoke `onChanged`.
 
-When migrating, a nullable variable passed as `selectedItem` must be updated
-from `onChanged`, as above. Leaving that variable null will clear user selections
-on parent rebuilds. Omit the parameter entirely for uncontrolled selection.
+To clear a selection through this parameter, keep the parent variable updated
+from `onChanged`, as above, then set it to null. A variable that stays null cannot
+signal a new clear request.
 
 ### Multi-Select Dropdown
 

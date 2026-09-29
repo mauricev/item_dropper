@@ -50,8 +50,8 @@ void main() {
     });
   }
 
-  for (final controlled in [false, true]) {
-    testWidgets('rebuild respects omitted versus explicit null ($controlled)', (
+  for (final scenario in ['omitted', 'null', 'initial value']) {
+    testWidgets('unchanged parent selection preserves user choice ($scenario)', (
       tester,
     ) async {
       late StateSetter rebuild;
@@ -62,10 +62,12 @@ void main() {
             body: StatefulBuilder(
               builder: (context, setState) {
                 rebuild = setState;
-                return controlled
+                return scenario != 'omitted'
                     ? SingleItemDropper<String>(
                         items: items,
-                        selectedItem: null,
+                        selectedItem: scenario == 'initial value'
+                            ? banana
+                            : null,
                         width: 300,
                         onChanged: changes.add,
                       )
@@ -88,20 +90,15 @@ void main() {
 
       rebuild(() {});
       await tester.pumpAndSettle();
-      expect(
-        tester.widget<TextField>(field).controller!.text,
-        controlled ? '' : 'Apple',
-      );
+      expect(tester.widget<TextField>(field).controller!.text, 'Apple');
       expect(changes, [apple]);
 
-      if (!controlled) {
-        // Clearing proves that the internal selection also survived rebuilding.
-        await tester.tap(field);
-        await tester.pumpAndSettle();
-        await tester.tap(find.byIcon(Icons.clear));
-        await tester.pumpAndSettle();
-        expect(changes, [apple, null]);
-      }
+      // Clearing proves that the internal selection also survived rebuilding.
+      await tester.tap(field);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.clear));
+      await tester.pumpAndSettle();
+      expect(changes, [apple, null]);
     });
   }
 }

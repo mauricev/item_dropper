@@ -10,25 +10,6 @@ import 'package:item_dropper/src/common/live_region_manager.dart';
 import 'package:item_dropper/src/common/keyboard_navigation_manager.dart';
 import 'package:item_dropper/src/utils/item_dropper_items_utils.dart';
 
-// A typed sentinel distinguishes omission from an explicitly empty selection
-// without weakening the constructor's selectedItem type or its const support.
-class _UnspecifiedSelection implements ItemDropperItem<Never> {
-  const _UnspecifiedSelection();
-
-  @override
-  Never get value => throw StateError('An unspecified selection has no value');
-  @override
-  String get label => '';
-  @override
-  bool get isGroupHeader => false;
-  @override
-  bool get isDeletable => false;
-  @override
-  bool get isEnabled => false;
-  @override
-  bool get isAddItem => false;
-}
-
 /// Single-select dropdown widget
 /// Allows selecting a single item from a searchable list
 class SingleItemDropper<T> extends ItemDropperBase<T> {
@@ -36,16 +17,12 @@ class SingleItemDropper<T> extends ItemDropperBase<T> {
   @override
   final List<ItemDropperItem<T>> items;
 
-  /// The parent-owned selection. Explicit null means controlled and empty.
+  /// The initial selection and subsequent parent updates.
   ///
-  /// Omit this argument for uncontrolled usage: the dropdown retains its own
-  /// selection across parent rebuilds. Parent updates do not call [onChanged].
-  ItemDropperItem<T>? get selectedItem => _isControlled ? _selectedItem : null;
-
-  final ItemDropperItem<T>? _selectedItem;
-
-  bool get _isControlled =>
-      !identical(_selectedItem, const _UnspecifiedSelection());
+  /// Changing this value updates the selection without calling [onChanged].
+  /// Changing a non-null value to null clears the selection and text. An
+  /// unchanged value (including null) preserves user selection across rebuilds.
+  final ItemDropperItem<T>? selectedItem;
 
   /// Called when the selection changes (required).
   final ItemDropperItemCallback<T> onChanged;
@@ -171,7 +148,7 @@ class SingleItemDropper<T> extends ItemDropperBase<T> {
   const SingleItemDropper({
     super.key,
     required this.items,
-    ItemDropperItem<T>? selectedItem = const _UnspecifiedSelection(),
+    this.selectedItem,
     required this.onChanged,
     this.hintText,
     this.popupItemBuilder,
@@ -194,7 +171,7 @@ class SingleItemDropper<T> extends ItemDropperBase<T> {
     this.showDeleteAllIcon = true,
     this.localizations,
     this.dependencies,
-  }) : _selectedItem = selectedItem;
+  });
 
   @override
   State<SingleItemDropper<T>> createState() => _SingleItemDropperState<T>();
@@ -823,13 +800,7 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
       _safeSetState(() {});
     }
 
-    final shouldSyncSelection =
-        widget._isControlled &&
-        ControlledValueSync.shouldSync(
-          current: _selected,
-          incoming: widget.selectedItem,
-          equals: (current, incoming) => current == incoming,
-        );
+    final shouldSyncSelection = oldWidget.selectedItem != widget.selectedItem;
 
     if (shouldSyncSelection) {
       // Keep internal selection in sync

@@ -9,10 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Breaking changes
 
-- Explicit `SingleItemDropper(selectedItem: null)` now means controlled and
-  empty. If you pass a nullable variable, update it from `onChanged`; otherwise
-  a selection will revert to the parent's value on rebuild. Omit `selectedItem`
-  entirely to keep the dropdown uncontrolled.
 - Add-item action rows no longer have a placeholder value. Reading their
   `.value` throws a `StateError`. Custom `popupItemBuilder` implementations must
   check `item.isAddItem` and render add rows using their label before reading
@@ -50,9 +46,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   clearing the selection and text when the selected item is deleted.
 - Allow creating the first item from an empty single- or multi-select dropdown.
   Add-action rows no longer borrow a placeholder value from an existing item.
-- Clear single-select text when the parent clears `selectedItem`, and preserve
-  internal selection across parent rebuilds when `selectedItem` is omitted.
-  Explicit `selectedItem: null` now means controlled and empty.
+- Clear single-select text when the parent changes `selectedItem` from a value
+  to null. Preserve user selections on rebuilds when the parent value is
+  unchanged, including explicit null and omitted arguments.
 - Select a clicked single-select item directly, including when its label is a
   shorter prefix of the previous selection (for example, `Chanin 543C` → `chanin`).
 
