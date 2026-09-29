@@ -50,6 +50,8 @@ class MultiItemDropper<T> extends ItemDropperBase<T> {
   final String? hintText;
 
   /// Maximum number of items selectable (null means unlimited).
+  /// Changes take effect on rebuild. Lowering the limit preserves existing
+  /// selections and blocks additions until the count is below the new limit.
   final int? maxSelected;
 
   /// Callback for adding new items based on search text (optional).
@@ -331,6 +333,11 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   @override
   void didUpdateWidget(covariant MultiItemDropper<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.maxSelected != widget.maxSelected) {
+      _selectionManager.maxSelected = widget.maxSelected;
+      _clearHighlights();
+    }
 
     // If widget became disabled, unfocus and hide overlay
     if (oldWidget.enabled && !widget.enabled) {

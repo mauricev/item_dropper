@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Apply parent changes to multi-select `maxSelected`, including removing the
+  limit with null. Lowering the limit preserves existing selections while
+  preventing further additions until the selection is below the new limit.
 - Synchronize multi-select chip keyboard focus and dispose obsolete chip focus
   nodes after parent-driven selection changes.
 - Honor popup `elevation` in both dropdowns, including multi-select information

@@ -3,7 +3,8 @@ import '../common/item_dropper_item.dart';
 
 /// Manages selection state for multi-select dropdown
 class MultiSelectSelectionManager<T> {
-  final int? maxSelected;
+  /// Current limit. Updating it preserves existing selections.
+  int? maxSelected;
   final VoidCallback onSelectionChanged;
   final VoidCallback? onFilterCacheInvalidated;
 
