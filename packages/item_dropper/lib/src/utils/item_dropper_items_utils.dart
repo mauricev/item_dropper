@@ -75,23 +75,19 @@ class ItemDropperItemsUtils {
     return valueCounts.isEmpty;
   }
 
-  /// Check if items list has changed between old and new widget
+  /// Compares ordered item contents, including labels and row properties.
   ///
-  /// Uses fast path checks (reference equality, length) before doing
-  /// expensive deep comparison.
-  ///
-  /// Returns true if items have changed, false otherwise.
+  /// To detect in-place mutations, [oldItems] must be a saved snapshot, not
+  /// another reference to the caller's mutable list.
   static bool hasItemsChanged<T>(
     List<ItemDropperItem<T>> oldItems,
     List<ItemDropperItem<T>> newItems,
   ) {
-    // Fast path: check reference equality first (O(1))
     if (identical(newItems, oldItems)) return false;
-
-    // Fast path: check length (O(1))
     if (newItems.length != oldItems.length) return true;
-
-    // Only do expensive comparison if reference changed but length is same
-    return !areItemsEqual(newItems, oldItems);
+    for (var i = 0; i < newItems.length; i++) {
+      if (oldItems[i] != newItems[i]) return true;
+    }
+    return false;
   }
 }

@@ -159,6 +159,7 @@ class MultiItemDropper<T> extends ItemDropperBase<T> {
 
 class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   final GlobalKey _fieldKey = GlobalKey();
+  late List<ItemDropperItem<T>> _itemsSnapshot;
   late final TextEditingController _searchController;
   late final ScrollController _scrollController;
   late final FocusNode _focusNode;
@@ -249,6 +250,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     // Update focus manager with initial selected items
     _focusManager.updateSelectedItems(_selectionManager.selected);
 
+    _itemsSnapshot = List<ItemDropperItem<T>>.of(widget.items);
     _filterController.initializeItems(widget.items);
 
     _focusNode.onKeyEvent = (node, event) {
@@ -371,7 +373,8 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
     _chipFocusNodeController.retainIndices(selectedItems.asMap().keys);
 
     // Invalidate filter cache if items list changed
-    if (ItemDropperItemsUtils.hasItemsChanged(oldWidget.items, widget.items)) {
+    if (ItemDropperItemsUtils.hasItemsChanged(_itemsSnapshot, widget.items)) {
+      _itemsSnapshot = List<ItemDropperItem<T>>.of(widget.items);
       _filterController.initializeItems(widget.items);
       // Cache removed - overlay rebuilds automatically
       // Use central rebuild mechanism instead of direct setState

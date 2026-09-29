@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Detect in-place item-list changes on parent rebuilds in both dropdowns using
+  saved snapshots, refreshing search caches for additions, removals, reordering,
+  and replaced row labels or properties.
 - Open the single-select popup from its arrow button even when the field already
   has focus and no focus-change event occurs.
 - Check live widget mount state before deferred keyboard scrolling instead of

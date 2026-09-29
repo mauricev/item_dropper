@@ -211,6 +211,7 @@ enum DropdownInteractionState {
 
 class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
   final GlobalKey _internalFieldKey = GlobalKey();
+  late List<ItemDropperItem<T>> _itemsSnapshot;
   late final TextEditingController _controller;
   late final ScrollController _scrollController;
   late final ScrollController _textScrollCtrl;
@@ -295,6 +296,7 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
     _decorationManager = _dependencies.createDecorationCacheManager();
 
     _selected = widget.selectedItem;
+    _itemsSnapshot = List<ItemDropperItem<T>>.of(widget.items);
     _filterUtils.initializeItems(widget.items);
 
     // Initialize keyboard navigation manager
@@ -805,7 +807,8 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
     }
 
     // Reinitialize filter utils if items list changed
-    if (ItemDropperItemsUtils.hasItemsChanged(oldWidget.items, widget.items)) {
+    if (ItemDropperItemsUtils.hasItemsChanged(_itemsSnapshot, widget.items)) {
+      _itemsSnapshot = List<ItemDropperItem<T>>.of(widget.items);
       _filterUtils.initializeItems(widget.items);
       // Clear filter cache to ensure fresh filtering
       _filterUtils.clearCache();

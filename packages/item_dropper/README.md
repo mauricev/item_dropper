@@ -175,6 +175,11 @@ SingleItemDropper<String>(
 
 ### Allow Adding New Items
 
+Both dropdowns refresh their item caches when the parent rebuilds, including
+after in-place list changes such as `setState(() => items.add(newItem))`.
+Replacing the list also works. Item rows are immutable; replace a row to update
+its label or other properties.
+
 Both dropdowns support `onAddItem` with an initially empty `items` list. The
 callback runs when the user selects the add row, and may return `null` to cancel.
 Custom popup builders must check `item.isAddItem` before reading `item.value`:

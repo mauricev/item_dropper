@@ -134,6 +134,23 @@ void main() {
     });
 
     group('hasItemsChanged', () {
+      test('detects row property changes without changing values', () {
+        const before = ItemDropperItem<String>(value: 'a', label: 'Apple');
+        const after = ItemDropperItem<String>(
+          value: 'a',
+          label: 'Apple',
+          isEnabled: false,
+        );
+        expect(
+          ItemDropperItemsUtils.hasItemsChanged([before], [after]),
+          isTrue,
+        );
+        expect(
+          ItemDropperItemsUtils.hasItemsChanged([before], [before]),
+          isFalse,
+        );
+      });
+
       test('detects changed duplicate counts', () {
         final oldItems = [item('A'), item('A'), item('B')];
         final newItems = [item('A'), item('B'), item('B')];
