@@ -15,6 +15,57 @@ void main() {
   const apple = ItemDropperItem<String>(value: 'a', label: 'Apple');
   const banana = ItemDropperItem<String>(value: 'b', label: 'Banana');
   const cherry = ItemDropperItem<String>(value: 'c', label: 'Cherry');
+  for (final inPlace in [false, true]) {
+    testWidgets('parent reorders chips (in-place: $inPlace)', (tester) async {
+      var selection = [apple, banana, cherry];
+      final changes = <List<ItemDropperItem<String>>>[];
+      late StateSetter rebuild;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: StatefulBuilder(
+              builder: (context, setState) {
+                rebuild = setState;
+                return MultiItemDropper<String>(
+                  items: const [apple, banana, cherry],
+                  selectedItems: selection,
+                  width: 400,
+                  onChanged: (items) {
+                    changes.add(items);
+                    setState(() => selection = items);
+                  },
+                );
+              },
+            ),
+          ),
+        ),
+      );
+      rebuild(() {
+        if (inPlace) {
+          selection.insert(0, selection.removeLast());
+        } else {
+          selection = [cherry, apple, banana];
+        }
+      });
+      await tester.pumpAndSettle();
+      expect(changes, isEmpty);
+      expect(
+        tester
+            .widgetList<Text>(find.byType(Text))
+            .map((text) => text.data)
+            .where((label) => ['Apple', 'Banana', 'Cherry'].contains(label)),
+        ['Cherry', 'Apple', 'Banana'],
+      );
+      await tester.tap(find.text('Apple'));
+      await tester.pumpAndSettle();
+      await tester.sendKeyEvent(LogicalKeyboardKey.backspace);
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(changes, [
+        [cherry, banana],
+      ]);
+    });
+  }
   for (final key in [LogicalKeyboardKey.backspace, LogicalKeyboardKey.delete]) {
     for (final scenario in ['replace', 'shrink', 'grow', 'clear']) {
       testWidgets('parent $scenario then ${key.keyLabel} uses current chips', (

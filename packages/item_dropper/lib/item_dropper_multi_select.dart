@@ -607,10 +607,9 @@ extension _MultiItemDropperStateHelpers<T> on _MultiItemDropperState<T> {
     );
   }
 
-  // Helper to compare selected item contents, including labels and properties
-  // Delegates to shared utility
-  bool _areItemsEqual(List<ItemDropperItem<T>>? a, List<ItemDropperItem<T>> b) {
-    return ItemDropperItemsUtils.areItemsEqual(a, b);
+  // Chip order follows the parent, as do selected item labels and properties.
+  bool _areItemsEqual(List<ItemDropperItem<T>> a, List<ItemDropperItem<T>> b) {
+    return !ItemDropperItemsUtils.hasItemsChanged(a, b);
   }
 }
 

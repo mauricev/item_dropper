@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Reorder multi-select chips when the parent only changes `selectedItems` order,
+  including in-place reordering, and keep keyboard deletion synchronized.
 - Preserve the chosen single-select item on blur when multiple items have the
   same label, rather than resolving its text to the first matching item.
 - Refresh single-select text and multi-select chips when the parent updates a
