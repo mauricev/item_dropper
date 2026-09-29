@@ -58,7 +58,7 @@ Add `item_dropper` to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  item_dropper: ^0.0.5
+  item_dropper: ^1.0.0
 ```
 
 Then run:
