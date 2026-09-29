@@ -105,6 +105,10 @@ across parent rebuilds. Passing `selectedItem` makes the selection parent-owned;
 an explicit `selectedItem: null` clears both the selection and displayed text on
 the next rebuild. Parent-driven changes do not invoke `onChanged`.
 
+When migrating, a nullable variable passed as `selectedItem` must be updated
+from `onChanged`, as above. Leaving that variable null will clear user selections
+on parent rebuilds. Omit the parameter entirely for uncontrolled selection.
+
 ### Multi-Select Dropdown
 
 ```dart
@@ -180,10 +184,14 @@ after in-place list changes such as `setState(() => items.add(newItem))`.
 Replacing the list also works. Item rows are immutable; replace a row to update
 its label or other properties.
 
+Detecting these changes takes O(n) item comparisons per parent rebuild and an
+O(n) saved snapshot per dropdown. Account for this cost with very large lists.
+
 Both dropdowns support `onAddItem` with an initially empty `items` list. The
 callback runs when the user selects the add row, and may return `null` to cancel.
 Custom popup builders must check `item.isAddItem` before reading `item.value`:
-add rows are actions with a label, not values of your item type.
+add rows are actions with a label, not values of your item type. Reading `.value`
+on an add row throws a `StateError`; render its `label` instead.
 
 ```dart
 SingleItemDropper<String>(

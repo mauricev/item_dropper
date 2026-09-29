@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Breaking changes
+
+- Explicit `SingleItemDropper(selectedItem: null)` now means controlled and
+  empty. If you pass a nullable variable, update it from `onChanged`; otherwise
+  a selection will revert to the parent's value on rebuild. Omit `selectedItem`
+  entirely to keep the dropdown uncontrolled.
+- Add-item action rows no longer have a placeholder value. Reading their
+  `.value` throws a `StateError`. Custom `popupItemBuilder` implementations must
+  check `item.isAddItem` and render add rows using their label before reading
+  `.value` for normal items.
+
 ### Fixed
 
 - Preserve the chosen single-select item on blur when multiple items have the
@@ -45,6 +56,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Detecting in-place item changes compares item contents on each parent rebuild
+  in O(n) time and retains an O(n) snapshot per dropdown. This is suitable for
+  normal lists, but callers with very large lists should account for this cost.
 - Centralize suffix-icon dimensions in shared dropdown constants and remove
   duplicated documentation, stale comments, and redundant control flow.
 
