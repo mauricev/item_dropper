@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Use the effective rendered row height for keyboard scrolling in both dropdowns
+  and for single-select search scrolling and selected-item centering, including
+  heights derived from `popupTextStyle`.
 - Apply parent changes to multi-select `maxSelected`, including removing the
   limit with null. Lowering the limit preserves existing selections while
   preventing further additions until the selection is below the new limit.

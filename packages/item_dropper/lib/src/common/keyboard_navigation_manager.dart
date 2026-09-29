@@ -52,11 +52,13 @@ class KeyboardNavigationManager<T> {
   ///
   /// Returns [KeyEventResult.handled] if the key was processed,
   /// [KeyEventResult.ignored] otherwise.
+  /// [itemHeight] is the effective rendered row height supplied by the dropdown.
   KeyEventResult handleKeyEvent({
     required KeyEvent event,
     required List<ItemDropperItem<T>> filteredItems,
     required ScrollController scrollController,
     required bool mounted,
+    double? itemHeight,
     required bool isDropdownOpen,
   }) {
     // Handle both KeyDownEvent (initial press) and KeyRepeatEvent (auto-repeat when held)
@@ -69,6 +71,7 @@ class KeyboardNavigationManager<T> {
         filteredItems: filteredItems,
         scrollController: scrollController,
         mounted: mounted,
+        itemHeight: itemHeight,
       );
       return KeyEventResult.handled;
     } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
@@ -76,6 +79,7 @@ class KeyboardNavigationManager<T> {
         filteredItems: filteredItems,
         scrollController: scrollController,
         mounted: mounted,
+        itemHeight: itemHeight,
       );
       return KeyEventResult.handled;
     } else if (event.logicalKey == LogicalKeyboardKey.escape) {
@@ -101,6 +105,7 @@ class KeyboardNavigationManager<T> {
     required List<ItemDropperItem<T>> filteredItems,
     required ScrollController scrollController,
     required bool mounted,
+    double? itemHeight,
   }) {
     _keyboardHighlightIndex =
         ItemDropperKeyboardNavigation.nextIndexForArrowDown<T>(
@@ -112,6 +117,7 @@ class KeyboardNavigationManager<T> {
     _afterHighlightChanged(
       scrollController: scrollController,
       mounted: mounted,
+      itemHeight: itemHeight,
     );
   }
 
@@ -120,6 +126,7 @@ class KeyboardNavigationManager<T> {
     required List<ItemDropperItem<T>> filteredItems,
     required ScrollController scrollController,
     required bool mounted,
+    double? itemHeight,
   }) {
     _keyboardHighlightIndex =
         ItemDropperKeyboardNavigation.nextIndexForArrowUp<T>(
@@ -131,23 +138,35 @@ class KeyboardNavigationManager<T> {
     _afterHighlightChanged(
       scrollController: scrollController,
       mounted: mounted,
+      itemHeight: itemHeight,
     );
   }
 
   void _afterHighlightChanged({
     required ScrollController scrollController,
     required bool mounted,
+    double? itemHeight,
   }) {
     hoverIndex = ItemDropperConstants.kNoHighlight;
     onRequestRebuild();
-    _scrollToHighlight(scrollController: scrollController, mounted: mounted);
+    _scrollToHighlight(
+      scrollController: scrollController,
+      mounted: mounted,
+      itemHeight: itemHeight,
+    );
   }
 
   void _scrollToHighlight({
     required ScrollController scrollController,
     required bool mounted,
+    double? itemHeight,
   }) {
     if (_keyboardHighlightIndex < 0) return;
+    final effectiveItemHeight =
+        ItemDropperLayoutUtils.calculateEffectiveItemHeight(
+          itemHeight: itemHeight,
+          popupTextStyle: null,
+        );
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -155,11 +174,8 @@ class KeyboardNavigationManager<T> {
       try {
         if (scrollController.hasClients &&
             scrollController.position.hasContentDimensions) {
-          final double itemTop =
-              _keyboardHighlightIndex *
-              ItemDropperConstants.kDropdownItemHeight;
-          final double itemBottom =
-              itemTop + ItemDropperConstants.kDropdownItemHeight;
+          final double itemTop = _keyboardHighlightIndex * effectiveItemHeight;
+          final double itemBottom = itemTop + effectiveItemHeight;
           final double viewportStart = scrollController.offset;
           final double viewportEnd =
               viewportStart + scrollController.position.viewportDimension;

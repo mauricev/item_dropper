@@ -255,6 +255,12 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
 
   String get _selectedLabelText => _selected?.label ?? '';
 
+  double get _effectiveItemHeight =>
+      ItemDropperLayoutUtils.calculateEffectiveItemHeight(
+        itemHeight: widget.itemHeight,
+        popupTextStyle: widget.popupTextStyle,
+      );
+
   List<ItemDropperItem<T>> get _filtered {
     final result = _filterUtils.getFiltered(
       widget.items,
@@ -335,6 +341,7 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
         scrollController: _scrollController,
         mounted: mounted,
         isDropdownOpen: _overlayController.isShowing,
+        itemHeight: _effectiveItemHeight,
       );
     };
 
@@ -482,8 +489,7 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
         );
         if (itemIndex >= 0) {
           _scrollController.animateTo(
-            itemIndex *
-                (widget.itemHeight ?? ItemDropperConstants.kDropdownItemHeight),
+            itemIndex * _effectiveItemHeight,
             duration: ItemDropperConstants.kScrollAnimationDuration,
             curve: Curves.easeInOut,
           );
@@ -596,16 +602,13 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
       }
 
       // Center the selected item in the viewport if possible
-      final double itemTop =
-          selectedIndex *
-          (widget.itemHeight ?? ItemDropperConstants.kDropdownItemHeight);
+      final double itemTop = selectedIndex * _effectiveItemHeight;
       final double viewportHeight =
           _scrollController.position.viewportDimension;
       final double centeredOffset =
           (itemTop -
                   (viewportHeight / ItemDropperConstants.kCenteringDivisor) +
-                  ((widget.itemHeight ??
-                          ItemDropperConstants.kDropdownItemHeight) /
+                  (_effectiveItemHeight /
                       ItemDropperConstants.kCenteringDivisor))
               .clamp(0.0, _scrollController.position.maxScrollExtent);
 
@@ -694,11 +697,7 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
         (widget.inputKey ?? _internalFieldKey).currentContext;
     if (inputContext == null) return const SizedBox.shrink();
 
-    final double effectiveItemHeight =
-        ItemDropperLayoutUtils.calculateEffectiveItemHeight(
-          itemHeight: widget.itemHeight,
-          popupTextStyle: widget.popupTextStyle,
-        );
+    final double effectiveItemHeight = _effectiveItemHeight;
 
     return ItemDropperRenderUtils.buildDropdownOverlay(
       context: inputContext,
