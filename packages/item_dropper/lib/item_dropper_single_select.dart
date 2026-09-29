@@ -368,7 +368,7 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
   }
 
   void _setSelected(ItemDropperItem<T>? newVal) {
-    if (_selected?.value != newVal?.value) {
+    if (_selected != newVal) {
       _selected = newVal;
       widget.onChanged(newVal);
 
@@ -401,7 +401,7 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
     // Case 1: Exact match → select (but only if user is not actively editing)
     // If user is editing, don't auto-select - let them continue typing
     if (match != null && !_isUserEditing) {
-      if (_selected?.value != match.value) {
+      if (_selected != match) {
         _setSelected(match);
       }
       return;
@@ -821,7 +821,7 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
         ControlledValueSync.shouldSync(
           current: _selected,
           incoming: widget.selectedItem,
-          equals: (current, incoming) => current?.value == incoming?.value,
+          equals: (current, incoming) => current == incoming,
         );
 
     if (shouldSyncSelection) {

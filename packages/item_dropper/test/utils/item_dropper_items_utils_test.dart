@@ -99,6 +99,23 @@ void main() {
     });
 
     group('areItemsEqual', () {
+      test('detects changed labels and row properties for the same value', () {
+        const original = ItemDropperItem<String>(value: 'a', label: 'Apple');
+        for (final changed in [
+          const ItemDropperItem<String>(value: 'a', label: 'Apricot'),
+          const ItemDropperItem<String>(
+            value: 'a',
+            label: 'Apple',
+            isEnabled: false,
+          ),
+        ]) {
+          expect(
+            ItemDropperItemsUtils.areItemsEqual([original], [changed]),
+            isFalse,
+          );
+        }
+      });
+
       test('treats null and empty lists as equal', () {
         expect(ItemDropperItemsUtils.areItemsEqual<String>(null, []), isTrue);
       });

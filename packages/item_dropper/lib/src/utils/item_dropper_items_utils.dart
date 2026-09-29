@@ -30,12 +30,11 @@ class ItemDropperItemsUtils {
     );
   }
 
-  /// Check if two item lists are equal (by value)
+  /// Check if two item lists have equal item contents, ignoring order.
   ///
-  /// Optimized for performance: early returns and efficient Set-based comparison
-  /// Time complexity: O(n) where n is the length of the lists
+  /// Uses occurrence counts with expected O(n) time for n items.
   ///
-  /// Returns true if both lists contain the same items (by value), false otherwise.
+  /// Includes labels and row properties, and preserves duplicate counts.
   /// Handles null lists (treats null as empty list).
   static bool areItemsEqual<T>(
     List<ItemDropperItem<T>>? a,
@@ -53,26 +52,26 @@ class ItemDropperItemsUtils {
     // Fast path: empty lists
     if (a.isEmpty) return true;
 
-    final valueCounts = <T, int>{};
+    final itemCounts = <ItemDropperItem<T>, int>{};
 
     for (final item in a) {
-      valueCounts[item.value] = (valueCounts[item.value] ?? 0) + 1;
+      itemCounts[item] = (itemCounts[item] ?? 0) + 1;
     }
 
     for (final item in b) {
-      final count = valueCounts[item.value];
+      final count = itemCounts[item];
       if (count == null) {
         return false;
       }
 
       if (count == 1) {
-        valueCounts.remove(item.value);
+        itemCounts.remove(item);
       } else {
-        valueCounts[item.value] = count - 1;
+        itemCounts[item] = count - 1;
       }
     }
 
-    return valueCounts.isEmpty;
+    return itemCounts.isEmpty;
   }
 
   /// Compares ordered item contents, including labels and row properties.

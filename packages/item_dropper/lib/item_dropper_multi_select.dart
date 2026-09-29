@@ -616,7 +616,7 @@ extension _MultiItemDropperStateHelpers<T> on _MultiItemDropperState<T> {
     );
   }
 
-  // Helper to check if two item lists are equal (by value)
+  // Helper to compare selected item contents, including labels and properties
   // Delegates to shared utility
   bool _areItemsEqual(List<ItemDropperItem<T>>? a, List<ItemDropperItem<T>> b) {
     return ItemDropperItemsUtils.areItemsEqual(a, b);

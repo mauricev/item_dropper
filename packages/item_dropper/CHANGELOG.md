@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Refresh single-select text and multi-select chips when the parent updates a
+  selected item's label or properties without changing its value. Explicit
+  single-select choices also retain and report the updated item contents.
 - Detect in-place item-list changes on parent rebuilds in both dropdowns using
   saved snapshots, refreshing search caches for additions, removals, reordering,
   and replaced row labels or properties.
