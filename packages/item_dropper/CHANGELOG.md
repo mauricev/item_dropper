@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Synchronize multi-select chip keyboard focus and dispose obsolete chip focus
+  nodes after parent-driven selection changes.
 - Honor popup `elevation` in both dropdowns, including multi-select information
   overlays, and pass multi-select `showScrollbar` and `scrollbarThickness` through
   to the popup renderer.

@@ -332,9 +332,6 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
   void didUpdateWidget(covariant MultiItemDropper<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    // Update focus manager with new selection
-    _focusManager.updateSelectedItems(_selectionManager.selected);
-
     // If widget became disabled, unfocus and hide overlay
     if (oldWidget.enabled && !widget.enabled) {
       _focusManager.loseFocus();
@@ -358,6 +355,12 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
       // _requestRebuild() coalesces nested requests internally
       _requestRebuild();
     }
+
+    // Chip keyboard handling and node ownership must use the synchronized list,
+    // including parent-driven replacements, additions, and removals.
+    final selectedItems = _selectionManager.selected;
+    _focusManager.updateSelectedItems(selectedItems);
+    _chipFocusNodeController.retainIndices(selectedItems.asMap().keys);
 
     // Invalidate filter cache if items list changed
     if (ItemDropperItemsUtils.hasItemsChanged(oldWidget.items, widget.items)) {
