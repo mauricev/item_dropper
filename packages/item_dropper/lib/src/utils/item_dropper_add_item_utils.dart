@@ -27,40 +27,18 @@ class ItemDropperAddItemUtils {
   /// Create an "add item" for the given search text
   ///
   /// [searchText] - The search text entered by the user
-  /// [originalItems] - The original list of items (must not be empty)
-  /// [localizations] - Optional localizations (defaults to English)
+  /// [originalItems] - Retained for compatibility; may be empty.
+  /// [localizations] - Optional localizations (defaults to English).
   ///
-  /// The value for the add item is a placeholder taken from the first item in
-  /// [originalItems], because Dart cannot synthesize an arbitrary unique [T].
-  /// The [ItemDropperItem.isAddItem] flag identifies the sentinel; neither its
-  /// value nor its localized label participates in identification.
-  ///
-  /// Throws [ArgumentError] if [originalItems] is empty. When using the add item
-  /// feature, always ensure your items list has at least one item, or provide
-  /// a default item for type reference.
+  /// This row represents an action, not a selected value. Check [isAddItem]
+  /// before accessing its value, including in custom popup builders.
   static ItemDropperItem<T> createAddItem<T>(
     String searchText,
     List<ItemDropperItem<T>> originalItems, {
     ItemDropperLocalizations? localizations,
   }) {
-    if (originalItems.isEmpty) {
-      throw ArgumentError(
-        'Cannot create add item when originalItems is empty. '
-        'The items list must contain at least one item to provide a type reference for T. '
-        'If your list can be empty, provide a default item or disable the onAddItem feature.',
-      );
-    }
-
     final loc = localizations ?? ItemDropperLocalizations.english;
-    // Use the first item's value as a type-compatible placeholder.
-    final T addItemValue = originalItems.first.value;
-
-    return ItemDropperItem<T>(
-      value: addItemValue,
-      label: '${loc.addItemPrefix}$searchText${loc.addItemSuffix}',
-      isGroupHeader: false,
-      isAddItem: true,
-    );
+    return _AddItem<T>('${loc.addItemPrefix}$searchText${loc.addItemSuffix}');
   }
 
   /// Add "add item" to filtered list if conditions are met
@@ -93,4 +71,35 @@ class ItemDropperAddItemUtils {
     }
     return filteredItems;
   }
+}
+
+/// A UI action with no fabricated value of the caller's generic type.
+class _AddItem<T> implements ItemDropperItem<T> {
+  const _AddItem(this.label);
+
+  @override
+  final String label;
+  @override
+  T get value => throw StateError('Add-item action rows have no item value.');
+  @override
+  bool get isGroupHeader => false;
+  @override
+  bool get isDeletable => false;
+  @override
+  bool get isEnabled => true;
+  @override
+  bool get isAddItem => true;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ItemDropperItem<T> &&
+          other.isAddItem &&
+          other.label == label &&
+          !other.isGroupHeader &&
+          !other.isDeletable &&
+          other.isEnabled;
+
+  @override
+  int get hashCode => Object.hash(null, label, false, false, true, true);
 }

@@ -175,6 +175,11 @@ SingleItemDropper<String>(
 
 ### Allow Adding New Items
 
+Both dropdowns support `onAddItem` with an initially empty `items` list. The
+callback runs when the user selects the add row, and may return `null` to cancel.
+Custom popup builders must check `item.isAddItem` before reading `item.value`:
+add rows are actions with a label, not values of your item type.
+
 ```dart
 SingleItemDropper<String>(
   items: items,

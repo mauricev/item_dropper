@@ -157,18 +157,15 @@ void main() {
         expect(addItem.isAddItem, isTrue);
       });
 
-      test(
-        'created add item is detected despite placeholder value collision',
-        () {
-          final addItem = ItemDropperAddItemUtils.createAddItem<String>(
-            'Orange',
-            testItems,
-          );
+      test('created add item is identified without a placeholder value', () {
+        final addItem = ItemDropperAddItemUtils.createAddItem<String>(
+          'Orange',
+          testItems,
+        );
 
-          expect(addItem.value, equals(testItems.first.value));
-          expect(ItemDropperAddItemUtils.isAddItem(addItem), isTrue);
-        },
-      );
+        expect(() => addItem.value, throwsStateError);
+        expect(ItemDropperAddItemUtils.isAddItem(addItem), isTrue);
+      });
 
       test('created item is not a group header', () {
         final addItem = ItemDropperAddItemUtils.createAddItem<String>(
@@ -179,25 +176,21 @@ void main() {
         expect(addItem.isGroupHeader, isFalse);
       });
 
-      test('throws ArgumentError when items list is empty', () {
-        expect(
-          () => ItemDropperAddItemUtils.createAddItem<String>('Orange', []),
-          throwsA(isA<ArgumentError>()),
-        );
+      test('creates an action for an empty list of non-nullable values', () {
+        final addItem = ItemDropperAddItemUtils.createAddItem<int>('First', []);
+        expect(addItem.isAddItem, isTrue);
+        expect(addItem.label, 'Add "First"');
+        expect(addItem.isEnabled, isTrue);
       });
 
-      test('error message explains the issue', () {
-        try {
-          ItemDropperAddItemUtils.createAddItem<String>('Orange', []);
-          fail('Should have thrown ArgumentError');
-        } catch (e) {
-          expect(e, isA<ArgumentError>());
-          expect(
-            e.toString(),
-            contains('Cannot create add item when originalItems is empty'),
-          );
-          expect(e.toString(), contains('must contain at least one item'));
-        }
+      test('action equality and hashing do not require an item value', () {
+        final first = ItemDropperAddItemUtils.createAddItem<int>('First', []);
+        final second = ItemDropperAddItemUtils.createAddItem<int>('First', []);
+        const real = ItemDropperItem<int>(value: 1, label: 'Add "First"');
+        expect(first, second);
+        expect(first.hashCode, second.hashCode);
+        expect(first == real, isFalse);
+        expect(real == first, isFalse);
       });
     });
 

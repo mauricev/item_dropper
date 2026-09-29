@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Allow creating the first item from an empty single- or multi-select dropdown.
+  Add-action rows no longer borrow a placeholder value from an existing item.
 - Clear single-select text when the parent clears `selectedItem`, and preserve
   internal selection across parent rebuilds when `selectedItem` is omitted.
   Explicit `selectedItem: null` now means controlled and empty.

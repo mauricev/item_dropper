@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:item_dropper/item_dropper.dart';
 import 'package:item_dropper/src/utils/item_dropper_items_utils.dart';
+import 'package:item_dropper/src/utils/item_dropper_add_item_utils.dart';
 
 void main() {
   group('ItemDropperItemsUtils', () {
@@ -9,6 +10,22 @@ void main() {
     }
 
     group('findItemIndex', () {
+      test('finds a reconstructed add action without reading its value', () {
+        final action = ItemDropperAddItemUtils.createAddItem<String>('A', []);
+        final reconstructed = ItemDropperAddItemUtils.createAddItem<String>(
+          'A',
+          [],
+        );
+        expect(
+          ItemDropperItemsUtils.findItemIndex([
+            item('A'),
+            action,
+          ], reconstructed),
+          1,
+        );
+        expect(ItemDropperItemsUtils.findItemIndex([action], item('A')), -1);
+      });
+
       test('preserves the position of an identical duplicate', () {
         final first = item('A');
         final second = item('A');

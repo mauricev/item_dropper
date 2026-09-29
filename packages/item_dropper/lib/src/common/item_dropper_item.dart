@@ -5,6 +5,7 @@ typedef ItemDropperItemCallback<T> =
 /// Generic dropdown item with value and display label
 class ItemDropperItem<T> {
   /// Value associated with this item.
+  /// Internal add-action rows have no value; check [isAddItem] before reading.
   final T value;
 
   /// Text displayed for this item.
@@ -23,9 +24,8 @@ class ItemDropperItem<T> {
 
   /// Whether this item is the internal "add item" sentinel row.
   ///
-  /// Add rows still carry a placeholder [value] to satisfy the generic item
-  /// shape, but value-based selection logic must treat them as non-selected
-  /// sentinels rather than real data items.
+  /// Add rows represent actions and have no selectable [value]. Custom popup
+  /// builders should render their [label] without reading [value].
   final bool isAddItem;
 
   const ItemDropperItem({
@@ -41,18 +41,18 @@ class ItemDropperItem<T> {
   bool operator ==(Object other) {
     return identical(this, other) ||
         other is ItemDropperItem<T> &&
-            other.value == value &&
+            other.isAddItem == isAddItem &&
+            (isAddItem || other.value == value) &&
             other.label == label &&
             other.isGroupHeader == isGroupHeader &&
             other.isDeletable == isDeletable &&
-            other.isEnabled == isEnabled &&
-            other.isAddItem == isAddItem;
+            other.isEnabled == isEnabled;
   }
 
   @override
   int get hashCode {
     return Object.hash(
-      value,
+      isAddItem ? null : value,
       label,
       isGroupHeader,
       isDeletable,

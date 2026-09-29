@@ -573,7 +573,7 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
     if (_selected == null) return;
 
     final int selectedIndex = _filtered.indexWhere(
-      (it) => it.value == _selected?.value,
+      (it) => !it.isAddItem && it.value == _selected?.value,
     );
     if (selectedIndex < 0) return;
 

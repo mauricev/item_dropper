@@ -10,7 +10,7 @@ class ItemDropperItemsUtils {
   /// Identity is preferred because two rows may intentionally share a value.
   /// A value-and-role fallback supports equivalent items reconstructed by a
   /// filtering or mapping step without confusing normal rows, group headers,
-  /// and add-item sentinels that reuse the same value.
+  /// and the add-item action, which has no value.
   static int findItemIndex<T>(
     List<ItemDropperItem<T>> items,
     ItemDropperItem<T> item,
@@ -24,8 +24,8 @@ class ItemDropperItemsUtils {
 
     return items.indexWhere(
       (candidate) =>
-          candidate.value == item.value &&
           candidate.isAddItem == item.isAddItem &&
+          (item.isAddItem || candidate.value == item.value) &&
           candidate.isGroupHeader == item.isGroupHeader,
     );
   }
