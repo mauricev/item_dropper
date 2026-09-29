@@ -304,7 +304,7 @@ class _MultiItemDropperState<T> extends State<MultiItemDropper<T>> {
         event: event,
         filteredItems: _filtered,
         scrollController: _scrollController,
-        mounted: mounted,
+        isMounted: () => mounted,
         isDropdownOpen: _overlayController.isShowing,
         itemHeight: _calculateEffectiveItemHeight(),
       );

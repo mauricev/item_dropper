@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Check live widget mount state before deferred keyboard scrolling instead of
+  retaining the mount state from when the key event was handled.
 - Use the effective rendered row height for keyboard scrolling in both dropdowns
   and for single-select search scrolling and selected-item centering, including
   heights derived from `popupTextStyle`.

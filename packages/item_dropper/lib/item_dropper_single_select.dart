@@ -339,7 +339,7 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
         event: event,
         filteredItems: _filtered,
         scrollController: _scrollController,
-        mounted: mounted,
+        isMounted: () => mounted,
         isDropdownOpen: _overlayController.isShowing,
         itemHeight: _effectiveItemHeight,
       );
