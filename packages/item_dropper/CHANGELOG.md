@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Preserve the chosen single-select item on blur when multiple items have the
+  same label, rather than resolving its text to the first matching item.
 - Refresh single-select text and multi-select chips when the parent updates a
   selected item's label or properties without changing its value. Explicit
   single-select choices also retain and report the updated item contents.

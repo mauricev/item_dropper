@@ -386,6 +386,15 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
 
   void _attemptSelectByInput(String input) {
     final String trimmedInput = input.trim().toLowerCase();
+    final String currentSelected = _selected?.label.trim().toLowerCase() ?? '';
+
+    // A matching label validates the current choice; it must not resolve a
+    // duplicate label to a different item. Empty input still clears selection.
+    if (_selected != null &&
+        trimmedInput.isNotEmpty &&
+        currentSelected == trimmedInput) {
+      return;
+    }
 
     // Find exact match among enabled items
     ItemDropperItem<T>? match;
@@ -395,8 +404,6 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
         break;
       }
     }
-
-    final String currentSelected = _selected?.label.trim().toLowerCase() ?? '';
 
     // Case 1: Exact match → select (but only if user is not actively editing)
     // If user is editing, don't auto-select - let them continue typing
