@@ -47,6 +47,12 @@ class SingleItemDropper<T> extends ItemDropperBase<T> {
   /// Whether to show the mobile keyboard (defaults to false).
   final bool showKeyboard;
 
+  /// Allows users to activate typing with a search button when [showKeyboard]
+  /// is false. Defaults to false to preserve selection-only behavior.
+  /// Closing the dropdown resets this temporary keyboard override.
+  /// When [showKeyboard] is true, typing remains available as before.
+  final bool searchEnabled;
+
   /// Callback for adding new items based on search text (optional).
   @override
   final ItemDropperItem<T>? Function(String searchText)? onAddItem;
@@ -155,6 +161,7 @@ class SingleItemDropper<T> extends ItemDropperBase<T> {
     required this.width,
     this.enabled = true,
     this.showKeyboard = false,
+    this.searchEnabled = false,
     this.onAddItem,
     this.onDeleteItem,
     this.inputKey,
@@ -204,6 +211,10 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
   DropdownInteractionState _interactionState = DropdownInteractionState.idle;
   ItemDropperItem<T>? _selected;
   bool _squelchOnChanged = false;
+  bool _searchActivated = false;
+
+  bool get _typingEnabled =>
+      widget.showKeyboard || (widget.searchEnabled && _searchActivated);
 
   // Scroll debouncing
   Timer? _scrollDebounceTimer;
@@ -496,10 +507,28 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
     _overlayController.show();
   }
 
+  void _activateSearch() {
+    if (!widget.enabled) return;
+    // Re-focus after rebuilding the editable field to attach the input
+    // connection even when the read-only field was already focused.
+    _focusNode.unfocus();
+    _safeSetState(() => _searchActivated = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !widget.enabled || !_typingEnabled) return;
+      _focusNode.requestFocus();
+      _controller.selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: _controller.text.length,
+      );
+      _showOverlay();
+    });
+  }
+
   void _dismissDropdown() {
     _focusNode.unfocus();
     _removeOverlay();
     _safeSetState(() {
+      _searchActivated = false;
       _keyboardNavManager.clearHighlights();
     });
   }
@@ -780,8 +809,15 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
   void didUpdateWidget(covariant SingleItemDropper<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
 
+    if (oldWidget.searchEnabled != widget.searchEnabled ||
+        oldWidget.showKeyboard != widget.showKeyboard) {
+      _searchActivated = false;
+      if (!widget.showKeyboard) _focusNode.unfocus();
+    }
+
     // If widget became disabled, unfocus and hide overlay
     if (oldWidget.enabled && !widget.enabled) {
+      _searchActivated = false;
       if (_focusNode.hasFocus) {
         _focusNode.unfocus();
       }
@@ -863,8 +899,8 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
                     controller: _controller,
                     focusNode: _focusNode,
                     scrollController: _textScrollCtrl,
-                    readOnly: !widget.showKeyboard,
-                    showCursor: true,
+                    readOnly: !_typingEnabled,
+                    showCursor: _typingEnabled,
                     enableInteractiveSelection: false,
                     style:
                         (widget.fieldTextStyle ??
@@ -907,6 +943,47 @@ class _SingleItemDropperState<T> extends State<SingleItemDropper<T>> {
                       // No selection → normal typing; live search managed by controller listener
                     },
                     decoration: InputDecoration(
+                      prefixIconConstraints:
+                          widget.searchEnabled && !widget.showKeyboard
+                          ? const BoxConstraints.tightFor(width: 42, height: 42)
+                          : null,
+                      prefixIcon: widget.searchEnabled && !widget.showKeyboard
+                          ? Padding(
+                              padding: const EdgeInsets.all(5),
+                              child: IconButton.outlined(
+                                tooltip: _searchActivated
+                                    ? _localizations.hideSearchKeyboard
+                                    : _localizations.activateSearch,
+                                style: IconButton.styleFrom(
+                                  fixedSize: const Size.square(32),
+                                  minimumSize: const Size.square(32),
+                                  maximumSize: const Size.square(32),
+                                  padding: const EdgeInsets.all(6),
+                                  tapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                ),
+                                icon: SizedBox.square(
+                                  dimension: 20,
+                                  child: Stack(
+                                    alignment: Alignment.center,
+                                    children: [
+                                      const Icon(
+                                        Icons.keyboard_outlined,
+                                        size: 18,
+                                      ),
+                                      if (!_searchActivated)
+                                        const Icon(Icons.block, size: 20),
+                                    ],
+                                  ),
+                                ),
+                                onPressed: widget.enabled
+                                    ? (_searchActivated
+                                          ? _dismissDropdown
+                                          : _activateSearch)
+                                    : null,
+                              ),
+                            )
+                          : null,
                       filled: false,
                       border: InputBorder.none,
                       enabledBorder: InputBorder.none,

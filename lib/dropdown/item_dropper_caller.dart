@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:item_dropper/item_dropper.dart';
 
-Widget popupItemBuilder<T>(BuildContext context, ItemDropperItem<T> item,
-    bool isSelected) {
+Widget popupItemBuilder<T>(
+  BuildContext context,
+  ItemDropperItem<T> item,
+  bool isSelected,
+) {
   return Container(
     color: isSelected ? Colors.grey.shade200 : null,
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -26,6 +29,7 @@ Widget dropDown<T>({
   required Function(ItemDropperItem<T>?) onChanged,
   String? hintText,
   bool showKeyboard = false,
+  bool searchEnabled = false,
   double? maxDropdownHeight,
   bool enabled = true,
   TextStyle? fieldTextStyle,
@@ -42,6 +46,8 @@ Widget dropDown<T>({
     onChanged: onChanged,
     popupItemBuilder: popupItemBuilder,
     showKeyboard: showKeyboard,
+    searchEnabled: searchEnabled,
+    hintText: hintText,
     fieldTextStyle: fieldTextStyle,
     popupTextStyle: popupTextStyle,
     popupGroupHeaderStyle: popupGroupHeaderStyle,

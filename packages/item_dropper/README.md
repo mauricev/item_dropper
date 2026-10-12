@@ -58,7 +58,7 @@ Add `item_dropper` to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  item_dropper: ^1.0.0
+  item_dropper: ^1.1.0
 ```
 
 Then run:
@@ -157,6 +157,27 @@ SingleItemDropper<String>(
   // Search is built-in - no configuration needed!
 )
 ```
+
+### Optional search without opening the keyboard
+
+For dialogs, single-select dropdowns can start in selection-only mode and let
+users explicitly activate typing:
+
+```dart
+SingleItemDropper<String>(
+  items: fruits,
+  width: 300,
+  onChanged: (item) {},
+  showKeyboard: false,
+  searchEnabled: true,
+)
+```
+
+Tap the outlined, crossed-out keyboard button to activate typing and show the keyboard.
+The prohibition sign disappears while typing is enabled; tap the same keyboard
+button again to close search. Selection or other dropdown dismissal also resets the override, so the next opening starts
+without the keyboard. `searchEnabled` defaults to `false`; existing
+`showKeyboard: true` dropdowns continue to support typing immediately.
 
 ### With Group Headers
 
@@ -396,6 +417,7 @@ See `ItemDropperLocalizations` class for all available strings.
 | `enabled`                  | `bool`                                  | `true`   | Whether the dropdown is enabled                                    |
 | `hintText`                 | `String?`                               | `null`   | Hint/placeholder text for input field                              |
 | `showKeyboard`             | `bool`                                  | `false`  | Whether to show the mobile keyboard                                |
+| `searchEnabled`            | `bool`                                  | `false`  | Allow explicit search activation when `showKeyboard` is false      |
 | `onAddItem`                | `ItemDropperItem<T>? Function(String)?` | `null`   | Callback for adding new items based on search text entered by user |
 | `onDeleteItem`             | `Function(ItemDropperItem<T>)?`         | `null`   | Callback for deleting items                                        |
 | `maxDropdownHeight`        | `double`                                | `200.0`  | Maximum dropdown popup height                                      |

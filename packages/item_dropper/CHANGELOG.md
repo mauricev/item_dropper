@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-10-12
+
+### Added
+
+- Add `searchEnabled` to `SingleItemDropper`, defaulting to `false`. With
+  `showKeyboard: false` and `searchEnabled: true`, users can browse without
+  opening the virtual keyboard and explicitly enable typing with a keyboard
+  button. Closing the dropdown resets the temporary override.
+- Add customizable `activateSearch` and `hideSearchKeyboard` localization strings
+  for the keyboard toggle's tooltip and accessible label.
+
+### Fixed
+
+- Hide the insertion cursor when single-select typing is disabled.
+- Keep optional search controls within the standard field height, with stable
+  button dimensions and padding. The same keyboard icon is used in both states;
+  the prohibition sign appears only when typing is disabled.
+
 ## [1.0.0] - 2026-09-29
 
 ### Breaking changes
@@ -159,6 +177,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 See [GitHub Issues](https://github.com/mauricev/item_dropper/issues) for planned features
 and bug reports.
 
+[1.1.0]: https://github.com/mauricev/item_dropper/releases/tag/v1.1.0
 [1.0.0]: https://github.com/mauricev/item_dropper/releases/tag/v1.0.0
 [0.0.5]: https://github.com/mauricev/item_dropper/releases/tag/v0.0.5
 [0.0.4]: https://github.com/mauricev/item_dropper/releases/tag/v0.0.4

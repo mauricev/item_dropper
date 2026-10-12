@@ -96,6 +96,8 @@ class DropdownTestPage extends StatefulWidget {
 }
 
 class _DropdownTestPageState extends State<DropdownTestPage> {
+  ItemDropperItem<String>? selectedOptionalSearchFruit;
+
   // Selected values for single-select dropdowns
   ItemDropperItem<String>? selectedFruit;
   ItemDropperItem<int>? selectedNumber;
@@ -392,6 +394,51 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
     ];
   }
 
+  void _showOptionalSearchDialog() {
+    showDialog<void>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, updateDialog) => AlertDialog(
+          title: const Text('Optional search'),
+          content: SizedBox(
+            width: 320,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Open the dropdown to browse without the keyboard. '
+                  'Tap the outlined keyboard button to type and filter. '
+                  'Tap the keyboard button again to finish searching.',
+                ),
+                const SizedBox(height: 16),
+                dropDown<String>(
+                  width: 320,
+                  listItems: fruits,
+                  initiallySelected: selectedOptionalSearchFruit,
+                  showKeyboard: false,
+                  searchEnabled: true,
+                  hintText: 'Choose a fruit',
+                  onChanged: (item) => updateDialog(() {
+                    selectedOptionalSearchFruit = item;
+                  }),
+                ),
+                const SizedBox(height: 12),
+                Text('Selected: ${selectedOptionalSearchFruit?.label ?? "None"}'),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Done'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _randomizeDisabledDemoItems() {
     final rand = math.Random();
 
@@ -464,6 +511,13 @@ class _DropdownTestPageState extends State<DropdownTestPage> {
                   style: TextStyle(fontSize: 14, color: Colors.grey),
                 ),
                 const SizedBox(height: 32),
+
+                FilledButton.icon(
+                  onPressed: _showOptionalSearchDialog,
+                  icon: const Icon(Icons.search),
+                  label: const Text('Try optional search in a dialog'),
+                ),
+                const SizedBox(height: 24),
 
                 // Five-column layout
                 Row(

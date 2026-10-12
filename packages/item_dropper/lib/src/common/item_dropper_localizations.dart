@@ -56,7 +56,15 @@ class ItemDropperLocalizations {
   /// Message shown in overlay when maximum allowed items is reached (multi-select)
   final String maxItemsReachedOverlay;
 
+  /// Tooltip and accessible label for optional search activation.
+  final String activateSearch;
+
+  /// Tooltip and accessible label for ending optional search.
+  final String hideSearchKeyboard;
+
   const ItemDropperLocalizations({
+    this.activateSearch = 'Enable search keyboard',
+    this.hideSearchKeyboard = 'Hide search keyboard',
     this.addItemPrefix = 'Add "',
     this.addItemSuffix = '"',
     this.noResultsFound = 'No results found',
